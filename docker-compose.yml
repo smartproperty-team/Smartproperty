@@ -104,6 +104,46 @@ services:
     networks:
       - smartproperty-network
 
+  # =====================
+  # AI Services (FastAPI)
+  # =====================
+  ai-services:
+    build:
+      context: ./ai-services
+      dockerfile: Dockerfile
+    container_name: smartproperty-ai
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_ENV: development
+      DEBUG: "true"
+      HOST: 0.0.0.0
+      PORT: 8000
+      MONGODB_URI: mongodb://smartproperty_user:smartproperty_pass_2024@mongodb:27017/smartproperty?authSource=admin
+      MONGODB_DB_NAME: smartproperty
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: redis_dev_password_2024
+      BACKEND_API_URL: http://localhost:3000/api
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ai-services/app:/app/app
+      - ./ai-services/models:/app/models
+    networks:
+      - smartproperty-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
 # =====================
 # Volumes
 # =====================

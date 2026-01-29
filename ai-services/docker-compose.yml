@@ -1,0 +1,75 @@
+# ===========================================
+# SmartProperty AI Services - Docker Compose
+# ===========================================
+
+version: "3.8"
+
+services:
+  # ===========================================
+  # AI Services - FastAPI Application
+  # ===========================================
+  ai-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smartproperty-ai
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=development
+      - DEBUG=true
+      - MONGODB_URI=mongodb://smartproperty:smartproperty123@mongodb:27017/smartproperty?authSource=admin
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=smartproperty_redis_secret
+      - BACKEND_API_URL=http://backend:3000/api
+    volumes:
+      - ./app:/app/app
+      - ./models:/app/models
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - smartproperty-network
+
+  # ===========================================
+  # MongoDB (shared with backend)
+  # ===========================================
+  mongodb:
+    image: mongo:7.0
+    container_name: smartproperty-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: smartproperty
+      MONGO_INITDB_ROOT_PASSWORD: smartproperty123
+      MONGO_INITDB_DATABASE: smartproperty
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - smartproperty-network
+
+  # ===========================================
+  # Redis (shared with backend)
+  # ===========================================
+  redis:
+    image: redis:7.2-alpine
+    container_name: smartproperty-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass smartproperty_redis_secret
+    volumes:
+      - redis_data:/data
+    networks:
+      - smartproperty-network
+
+networks:
+  smartproperty-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+  redis_data:
