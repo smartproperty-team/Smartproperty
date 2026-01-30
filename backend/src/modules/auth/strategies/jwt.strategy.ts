@@ -30,8 +30,10 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       throw new UnauthorizedException('User not found');
     }
 
+    // Allow active and pending_verification users
+    // Suspended/inactive users should not be allowed
     if (user.status !== UserStatus.ACTIVE) {
-      throw new UnauthorizedException('Account is not active');
+      throw new UnauthorizedException('Account is suspended or inactive');
     }
 
     return {
@@ -40,6 +42,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       role: user.role,
       firstName: user.firstName,
       lastName: user.lastName,
+      status: user.status,
     };
   }
 }

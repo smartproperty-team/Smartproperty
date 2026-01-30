@@ -8,6 +8,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import { ObjectId } from 'mongodb';
 import { Repository } from 'typeorm';
 
 import { User, UserRole, UserStatus } from '../users/entities/user.entity';
@@ -27,6 +29,8 @@ import {
   ResetPasswordDto,
   VerifyEmailDto,
 } from './dto/auth.dto';
+import { Session } from './entities/session.entity';
+import { DeviceInfo, SessionService } from './session.service';
 
 // ===========================================
 // Types
@@ -47,6 +51,7 @@ export interface AuthTokens {
 export interface AuthResponse {
   user: Partial<User>;
   tokens: AuthTokens;
+  sessionId?: string;
 }
 
 // ===========================================
@@ -61,13 +66,17 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly mailerService: MailerService,
+    private readonly sessionService: SessionService,
   ) {}
 
   // ===========================================
   // Registration
   // ===========================================
 
-  async register(registerDto: RegisterDto): Promise<AuthResponse> {
+  async register(
+    registerDto: RegisterDto,
+    deviceInfo?: DeviceInfo,
+  ): Promise<AuthResponse> {
     const {
       email,
       password,
@@ -118,12 +127,17 @@ export class AuthService {
     // Generate tokens
     const tokens = await this.generateTokens(user);
 
-    // Update refresh token in database
-    await this.updateRefreshToken(user._id.toHexString(), tokens.refreshToken);
+    // Create session for this device
+    const session = await this.sessionService.createSession(
+      user._id.toHexString(),
+      tokens.refreshToken,
+      deviceInfo || { deviceName: 'Unknown Device' },
+    );
 
     return {
       user: user.toJSON(),
       tokens,
+      sessionId: session.id,
     };
   }
 
@@ -131,7 +145,10 @@ export class AuthService {
   // Login
   // ===========================================
 
-  async login(loginDto: LoginDto): Promise<AuthResponse> {
+  async login(
+    loginDto: LoginDto,
+    deviceInfo?: DeviceInfo,
+  ): Promise<AuthResponse> {
     const { email, password } = loginDto;
 
     // Find user
@@ -176,12 +193,17 @@ export class AuthService {
     // Generate tokens
     const tokens = await this.generateTokens(user);
 
-    // Update refresh token in database
-    await this.updateRefreshToken(user._id.toHexString(), tokens.refreshToken);
+    // Create session for this device
+    const session = await this.sessionService.createSession(
+      user._id.toHexString(),
+      tokens.refreshToken,
+      deviceInfo || { deviceName: 'Unknown Device' },
+    );
 
     return {
       user: user.toJSON(),
       tokens,
+      sessionId: session.id,
     };
   }
 
@@ -189,9 +211,11 @@ export class AuthService {
   // Token Refresh
   // ===========================================
 
-  async refreshTokens(refreshToken: string): Promise<AuthTokens> {
+  async refreshTokens(
+    refreshToken: string,
+  ): Promise<AuthTokens & { sessionId?: string }> {
     try {
-      // Verify refresh token
+      // Verify refresh token JWT
       const payload = await this.jwtService.verifyAsync(refreshToken, {
         secret: this.configService.get<string>('jwt.refreshSecret'),
       });
@@ -201,30 +225,33 @@ export class AuthService {
         where: { _id: payload.sub },
       });
 
-      if (!user || !user.refreshToken) {
+      if (!user) {
         throw new UnauthorizedException('Invalid refresh token');
       }
 
-      // Verify stored refresh token matches
-      const isRefreshTokenValid = await bcrypt.compare(
+      // Validate session
+      const session = await this.sessionService.validateSession(
+        user._id.toHexString(),
         refreshToken,
-        user.refreshToken,
       );
 
-      if (!isRefreshTokenValid) {
-        throw new UnauthorizedException('Invalid refresh token');
+      if (!session) {
+        throw new UnauthorizedException('Invalid or expired session');
       }
 
       // Generate new tokens
       const tokens = await this.generateTokens(user);
 
-      // Update refresh token in database
-      await this.updateRefreshToken(
-        user._id.toHexString(),
+      // Update session with new refresh token
+      await this.sessionService.updateSessionToken(
+        session.id,
         tokens.refreshToken,
       );
 
-      return tokens;
+      return {
+        ...tokens,
+        sessionId: session.id,
+      };
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
@@ -234,11 +261,37 @@ export class AuthService {
   // Logout
   // ===========================================
 
-  async logout(userId: string): Promise<void> {
-    await this.userRepository.update(
-      { _id: userId as any },
-      { refreshToken: undefined },
+  async logout(userId: string, refreshToken?: string): Promise<void> {
+    if (refreshToken) {
+      // Revoke specific session
+      await this.sessionService.revokeSessionByToken(userId, refreshToken);
+    } else {
+      // Revoke all sessions for the user
+      await this.sessionService.revokeAllSessions(userId);
+    }
+  }
+
+  // ===========================================
+  // Session Management
+  // ===========================================
+
+  async getSessions(userId: string): Promise<Session[]> {
+    return this.sessionService.getUserSessions(userId);
+  }
+
+  async revokeSession(userId: string, sessionId: string): Promise<void> {
+    return this.sessionService.revokeSession(userId, sessionId);
+  }
+
+  async revokeAllSessions(
+    userId: string,
+    currentSessionId?: string,
+  ): Promise<{ revokedCount: number }> {
+    const revokedCount = await this.sessionService.revokeAllSessions(
+      userId,
+      currentSessionId,
     );
+    return { revokedCount };
   }
 
   // ===========================================
@@ -279,9 +332,17 @@ export class AuthService {
   }
 
   async resendVerificationEmail(email: string): Promise<{ message: string }> {
+    const logger = new Logger(AuthService.name);
+    logger.log(`resendVerificationEmail called for: ${email}`);
+
     const user = await this.userRepository.findOne({
       where: { email: email.toLowerCase() },
     });
+
+    logger.log(
+      `user found: ${!!user}` +
+        (user ? `, isEmailVerified=${user.isEmailVerified}` : ''),
+    );
 
     if (!user) {
       // Don't reveal if email exists
@@ -558,9 +619,15 @@ export class AuthService {
   // ===========================================
 
   async validateUser(userId: string): Promise<User | null> {
-    return this.userRepository.findOne({
-      where: { _id: userId as any },
-    });
+    try {
+      const objectId = new ObjectId(userId);
+      return this.userRepository.findOne({
+        where: { _id: objectId as any },
+      });
+    } catch {
+      // Invalid ObjectId format
+      return null;
+    }
   }
 
   async findByEmail(email: string): Promise<User | null> {

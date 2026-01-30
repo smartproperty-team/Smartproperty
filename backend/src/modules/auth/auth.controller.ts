@@ -5,21 +5,26 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
   ApiOperation,
+  ApiParam,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 
 import { Throttle } from '@nestjs/throttler';
+import type { Request } from 'express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { AuthResponse, AuthService, AuthTokens } from './auth.service';
@@ -33,8 +38,10 @@ import {
   ResetPasswordDto,
   VerifyEmailDto,
 } from './dto/auth.dto';
+import { Session } from './entities/session.entity';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { JwtRefreshAuthGuard } from './guards/jwt-refresh-auth.guard';
+import { SessionService } from './session.service';
 
 // ===========================================
 // Auth Controller
@@ -43,7 +50,24 @@ import { JwtRefreshAuthGuard } from './guards/jwt-refresh-auth.guard';
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly sessionService: SessionService,
+  ) {}
+
+  // ===========================================
+  // Helper: Extract Device Info from Request
+  // ===========================================
+
+  private getDeviceInfo(req: Request) {
+    const userAgent = req.headers['user-agent'] || '';
+    const deviceInfo = this.sessionService.parseUserAgent(userAgent);
+    deviceInfo.ipAddress =
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
+      req.socket?.remoteAddress ||
+      'Unknown';
+    return deviceInfo;
+  }
 
   // ===========================================
   // Registration
@@ -66,8 +90,12 @@ export class AuthController {
     status: 409,
     description: 'Email already registered',
   })
-  async register(@Body() registerDto: RegisterDto): Promise<AuthResponse> {
-    return this.authService.register(registerDto);
+  async register(
+    @Body() registerDto: RegisterDto,
+    @Req() req: Request,
+  ): Promise<AuthResponse> {
+    const deviceInfo = this.getDeviceInfo(req);
+    return this.authService.register(registerDto, deviceInfo);
   }
 
   // ===========================================
@@ -87,8 +115,12 @@ export class AuthController {
     status: 401,
     description: 'Invalid credentials or account locked',
   })
-  async login(@Body() loginDto: LoginDto): Promise<AuthResponse> {
-    return this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Req() req: Request,
+  ): Promise<AuthResponse> {
+    const deviceInfo = this.getDeviceInfo(req);
+    return this.authService.login(loginDto, deviceInfo);
   }
 
   // ===========================================
@@ -123,16 +155,40 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Logout and invalidate refresh token' })
+  @ApiOperation({ summary: 'Logout current session' })
   @ApiResponse({
     status: 200,
     description: 'Logged out successfully',
   })
   async logout(
     @CurrentUser('id') userId: string,
+    @Body() body: { refreshToken?: string },
   ): Promise<{ message: string }> {
-    await this.authService.logout(userId);
+    await this.authService.logout(userId, body.refreshToken);
     return { message: 'Logged out successfully' };
+  }
+
+  @Post('logout-all')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Logout from all devices' })
+  @ApiResponse({
+    status: 200,
+    description: 'Logged out from all devices',
+  })
+  async logoutAll(
+    @CurrentUser('id') userId: string,
+    @Body() body: { currentSessionId?: string },
+  ): Promise<{ message: string; revokedCount: number }> {
+    const { revokedCount } = await this.authService.revokeAllSessions(
+      userId,
+      body.currentSessionId,
+    );
+    return {
+      message: `Logged out from ${revokedCount} device(s)`,
+      revokedCount,
+    };
   }
 
   // ===========================================
@@ -247,5 +303,43 @@ export class AuthController {
   })
   async getCurrentUser(@CurrentUser() user: any) {
     return user;
+  }
+
+  // ===========================================
+  // Session Management
+  // ===========================================
+
+  @Get('sessions')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all active sessions for the current user' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of active sessions',
+  })
+  async getSessions(@CurrentUser('id') userId: string): Promise<Session[]> {
+    return this.authService.getSessions(userId);
+  }
+
+  @Delete('sessions/:sessionId')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Revoke a specific session' })
+  @ApiParam({ name: 'sessionId', description: 'ID of the session to revoke' })
+  @ApiResponse({
+    status: 200,
+    description: 'Session revoked successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Session not found',
+  })
+  async revokeSession(
+    @CurrentUser('id') userId: string,
+    @Param('sessionId') sessionId: string,
+  ): Promise<{ message: string }> {
+    await this.authService.revokeSession(userId, sessionId);
+    return { message: 'Session revoked successfully' };
   }
 }

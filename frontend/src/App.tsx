@@ -13,7 +13,7 @@ import {
   ResetPasswordPage,
   VerifyEmailPage,
 } from "./pages/auth";
-import { DashboardPage } from "./pages/dashboard";
+import { DashboardPage, SessionsPage } from "./pages/dashboard";
 import { useAuthStore } from "./store";
 
 function App() {
@@ -53,6 +53,14 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/sessions"
+        element={
+          <ProtectedRoute>
+            <SessionsPage />
           </ProtectedRoute>
         }
       />

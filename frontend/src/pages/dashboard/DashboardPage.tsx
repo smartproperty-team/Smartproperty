@@ -11,6 +11,7 @@ import {
   Home,
   LogOut,
   Mail,
+  Monitor,
   Settings,
   Shield,
   User,
@@ -128,6 +129,16 @@ export default function DashboardPage() {
                 <button className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                   <User className="mr-3 h-4 w-4" />
                   Profile
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDropdown(false);
+                    navigate("/sessions");
+                  }}
+                  className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  <Monitor className="mr-3 h-4 w-4" />
+                  Active Sessions
                 </button>
                 <button className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                   <Settings className="mr-3 h-4 w-4" />

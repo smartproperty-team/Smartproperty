@@ -51,7 +51,7 @@ This document outlines all features to be implemented in the SmartProperty platf
 - [x] Refresh token (long-lived: 7-30 days)
 - [x] Token refresh endpoint
 - [x] Token blacklisting on logout
-- [ ] Multiple device session management
+- [x] Multiple device session management (max 5 sessions, device tracking, revocation)
 
 ### Password Management
 
@@ -59,7 +59,7 @@ This document outlines all features to be implemented in the SmartProperty platf
 - [x] Password reset email
 - [x] Password reset with token
 - [x] Password change (authenticated)
-- [ ] Password history (prevent reuse)
+- [x] Password history (prevent reuse of last 5 passwords)
 
 ### OAuth Integration (Optional)
 
@@ -72,7 +72,7 @@ This document outlines all features to be implemented in the SmartProperty platf
 - [x] Rate limiting on auth endpoints
 - [ ] CAPTCHA integration (optional)
 - [ ] Two-factor authentication (2FA)
-- [ ] Session management
+- [x] Session management (Session entity with device info, expiry, revocation)
 - [ ] Audit logging for auth events
 
 ---

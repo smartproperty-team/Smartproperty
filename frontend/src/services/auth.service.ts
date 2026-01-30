@@ -9,6 +9,7 @@ import type {
   LoginCredentials,
   RegisterData,
   ResetPasswordData,
+  Session,
   User,
   VerifyEmailData,
 } from "../types/auth";
@@ -98,6 +99,31 @@ export const authService = {
     refreshToken: string,
   ): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
     const response = await api.post("/auth/refresh", { refreshToken });
+    return response.data;
+  },
+
+  // ===========================================
+  // Session Management
+  // ===========================================
+
+  // Get all active sessions
+  async getSessions(): Promise<Session[]> {
+    const response = await api.get<Session[]>("/auth/sessions");
+    return response.data;
+  },
+
+  // Revoke a specific session
+  async revokeSession(sessionId: string): Promise<{ message: string }> {
+    const response = await api.delete<{ message: string }>(
+      `/auth/sessions/${sessionId}`,
+    );
+    return response.data;
+  },
+
+  // Logout from all devices
+  async logoutAll(): Promise<{ message: string }> {
+    const response = await api.post<{ message: string }>("/auth/logout-all");
+    clearTokens();
     return response.data;
   },
 };

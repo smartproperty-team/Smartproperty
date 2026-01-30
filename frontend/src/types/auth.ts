@@ -84,3 +84,26 @@ export interface ApiError {
   statusCode: number;
   error?: string;
 }
+
+// ===========================================
+// Session Management Types
+// ===========================================
+
+export interface Session {
+  id: string;
+  deviceName: string;
+  deviceType: "desktop" | "mobile" | "tablet" | "unknown";
+  browser: string;
+  os: string;
+  ipAddress: string;
+  location?: string;
+  isActive: boolean;
+  lastActivityAt: string;
+  createdAt: string;
+  expiresAt: string;
+  isCurrent?: boolean;
+}
+
+export interface AuthResponseWithSession extends AuthResponse {
+  sessionId: string;
+}
