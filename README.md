@@ -329,12 +329,28 @@ cd frontend
 npm install
 ```
 
-**Example `.env` configuration (already created):**
+**Frontend `.env` configuration:**
 
 ```env
-VITE_API_URL=http://localhost:3000/api
+# API Configuration - Use relative path for Vite proxy
+VITE_API_URL=/api
+VITE_API_GRAPHQL_URL=/graphql
+
+# App Configuration
 VITE_APP_NAME=SmartProperty
-VITE_MAPBOX_TOKEN=your_mapbox_token_here
+VITE_APP_VERSION=1.0.0
+
+# Mapbox Configuration (for maps)
+VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_access_token_here
+```
+
+### 5. Quick Setup (Alternative)
+
+You can also install all dependencies at once from the project root:
+
+```bash
+# From project root - installs all dependencies
+npm run install:all
 ```
 
 ---
@@ -897,18 +913,76 @@ For partnership or business inquiries:
 
 ### Current Version: 1.0.0-alpha
 
-**Development Status**: 🟡 In Active Development
+**Development Status**: 🔄 Phase 2 - Authentication Complete | Phase 3 In Progress
+
+### Current Progress (February 2026)
+
+#### ✅ Completed Features
+
+**Phase 1: Environment & Infrastructure**
+
+- [x] Monorepo setup with npm workspaces
+- [x] Docker Compose configuration for local development
+  - MongoDB (port 27017)
+  - Redis (port 6379)
+  - Mongo Express (port 8081)
+  - Redis Commander (port 8082)
+  - MailHog for email testing (ports 1025/8025)
+- [x] Backend NestJS configuration with TypeORM
+- [x] Frontend React + Vite + TypeScript setup
+- [x] TailwindCSS styling configuration
+- [x] Environment variables configuration
+
+**Phase 2: Authentication System (Complete)**
+
+- [x] User registration with email verification
+- [x] Login with JWT access/refresh tokens
+- [x] Password hashing with bcrypt
+- [x] Account lockout after failed attempts
+- [x] Email verification flow
+- [x] Forgot password / Reset password
+- [x] Change password functionality
+- [x] Protected routes with JWT guards
+- [x] Role-based access control (admin, owner, tenant, manager, agent)
+- [x] Refresh token rotation
+- [x] Session management with device tracking
+- [x] Multi-device session support (max 5 sessions)
+- [x] Session revocation (single & all devices)
+- [x] Password history (prevent reuse of last 5)
+
+**Frontend Authentication UI (Complete)**
+
+- [x] Login page with form validation
+- [x] Registration page with password requirements
+- [x] Forgot password page
+- [x] Reset password page
+- [x] Email verification page with auto-redirect
+- [x] Dashboard with user profile and email verification status
+- [x] Sessions management page (view/revoke sessions)
+- [x] Protected routes component
+- [x] Zustand state management with localStorage persistence
+- [x] Axios API client with token refresh interceptors
+- [x] UI components (Button, Input, Card, Alert, etc.)
+- [x] Complete auth service with all 13+ endpoints
+- [x] Custom useAuth hook with auto-initialization
+- [x] Form validation utilities (email, password, phone)
+- [x] Error handling utilities
 
 ### Roadmap
 
-#### Phase 1: MVP (Q1 2026) - In Progress
+#### Phase 1: MVP (Q1 2026) - ✅ Nearly Complete
 
 - [x] Project setup and architecture
-- [x] Basic authentication system
-- [x] Property listing CRUD operations
-- [ ] User management
+- [x] Docker development environment
+- [x] Complete authentication system (13+ endpoints)
+- [x] User registration & login with session management
+- [x] Email verification with auto-redirect
+- [x] Password reset flow
+- [x] Full frontend auth UI with all pages
+- [x] Session management UI
+- [ ] Property listing CRUD operations
+- [ ] User profile management
 - [ ] Property search functionality
-- [ ] Basic frontend UI
 
 #### Phase 2: Core Features (Q2 2026)
 
@@ -933,6 +1007,32 @@ For partnership or business inquiries:
 - [ ] Multi-language support
 - [ ] Mobile app (React Native)
 - [ ] Third-party integrations
+
+### Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/smartproperty.git
+cd smartproperty
+
+# Start Docker services
+docker-compose up -d
+
+# Install all dependencies
+npm run install:all
+
+# Run both frontend and backend
+npm run dev
+```
+
+**Access Points:**
+
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:3000/api
+- Swagger Docs: http://localhost:3000/api/docs
+- MailHog: http://localhost:8025
+- Mongo Express: http://localhost:8081
+- Redis Commander: http://localhost:8082
 
 ### Known Limitations
 

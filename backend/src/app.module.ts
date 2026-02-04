@@ -28,9 +28,9 @@ import {
 } from './config';
 import { validationSchema } from './config/validation.schema';
 
-// Feature Modules (will be added as we build them)
-// import { AuthModule } from './modules/auth/auth.module';
-// import { UsersModule } from './modules/users/users.module';
+// Feature Modules
+import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
 // import { PropertiesModule } from './modules/properties/properties.module';
 
 @Module({
@@ -118,35 +118,43 @@ import { validationSchema } from './config/validation.schema';
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        transport: {
+      useFactory: (configService: ConfigService) => {
+        const smtpUser = configService.get<string>('mail.auth.user');
+        const smtpPass = configService.get<string>('mail.auth.pass');
+
+        // Build transport config - only include auth if credentials are provided
+        const transport: Record<string, unknown> = {
           host: configService.get<string>('mail.host'),
           port: configService.get<number>('mail.port'),
           secure: configService.get<boolean>('mail.secure'),
-          auth: {
-            user: configService.get<string>('mail.auth.user'),
-            pass: configService.get<string>('mail.auth.pass'),
+        };
+
+        // Add auth only if both user and password are provided (MailHog doesn't need auth)
+        if (smtpUser && smtpPass) {
+          transport.auth = { user: smtpUser, pass: smtpPass };
+        }
+
+        return {
+          transport,
+          defaults: {
+            from: `"${configService.get<string>('mail.defaults.from.name')}" <${configService.get<string>('mail.defaults.from.address')}>`,
           },
-        },
-        defaults: {
-          from: `"${configService.get<string>('mail.defaults.from.name')}" <${configService.get<string>('mail.defaults.from.address')}>`,
-        },
-        template: {
-          dir: join(__dirname, 'templates', 'emails'),
-          adapter: new HandlebarsAdapter(),
-          options: {
-            strict: true,
+          template: {
+            dir: join(__dirname, 'templates', 'emails'),
+            adapter: new HandlebarsAdapter(),
+            options: {
+              strict: true,
+            },
           },
-        },
-      }),
+        };
+      },
     }),
 
     // =====================
     // Feature Modules
     // =====================
-    // Uncomment as modules are implemented:
-    // AuthModule,
-    // UsersModule,
+    AuthModule,
+    UsersModule,
     // PropertiesModule,
   ],
   controllers: [AppController],

@@ -20,6 +20,8 @@ const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const config_2 = require("./config");
 const validation_schema_1 = require("./config/validation.schema");
+const auth_module_1 = require("./modules/auth/auth.module");
+const users_module_1 = require("./modules/users/users.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -86,28 +88,34 @@ exports.AppModule = AppModule = __decorate([
             mailer_1.MailerModule.forRootAsync({
                 imports: [config_1.ConfigModule],
                 inject: [config_1.ConfigService],
-                useFactory: (configService) => ({
-                    transport: {
+                useFactory: (configService) => {
+                    const smtpUser = configService.get('mail.auth.user');
+                    const smtpPass = configService.get('mail.auth.pass');
+                    const transport = {
                         host: configService.get('mail.host'),
                         port: configService.get('mail.port'),
                         secure: configService.get('mail.secure'),
-                        auth: {
-                            user: configService.get('mail.auth.user'),
-                            pass: configService.get('mail.auth.pass'),
+                    };
+                    if (smtpUser && smtpPass) {
+                        transport.auth = { user: smtpUser, pass: smtpPass };
+                    }
+                    return {
+                        transport,
+                        defaults: {
+                            from: `"${configService.get('mail.defaults.from.name')}" <${configService.get('mail.defaults.from.address')}>`,
                         },
-                    },
-                    defaults: {
-                        from: `"${configService.get('mail.defaults.from.name')}" <${configService.get('mail.defaults.from.address')}>`,
-                    },
-                    template: {
-                        dir: (0, path_1.join)(__dirname, 'templates', 'emails'),
-                        adapter: new handlebars_adapter_1.HandlebarsAdapter(),
-                        options: {
-                            strict: true,
+                        template: {
+                            dir: (0, path_1.join)(__dirname, 'templates', 'emails'),
+                            adapter: new handlebars_adapter_1.HandlebarsAdapter(),
+                            options: {
+                                strict: true,
+                            },
                         },
-                    },
-                }),
+                    };
+                },
             }),
+            auth_module_1.AuthModule,
+            users_module_1.UsersModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

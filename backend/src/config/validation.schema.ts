@@ -3,9 +3,6 @@
 // ===========================================
 // Validates environment variables at startup
 
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import Joi from 'joi';
 
 export const validationSchema = Joi.object({
@@ -44,11 +41,11 @@ export const validationSchema = Joi.object({
   AWS_REGION: Joi.string().default('us-east-1'),
   AWS_S3_BUCKET: Joi.string().optional(),
 
-  // SMTP (optional for dev)
+  // SMTP (optional for dev - MailHog doesn't require auth)
   SMTP_HOST: Joi.string().optional(),
   SMTP_PORT: Joi.number().optional(),
-  SMTP_USER: Joi.string().optional(),
-  SMTP_PASSWORD: Joi.string().optional(),
+  SMTP_USER: Joi.string().allow('').optional(),
+  SMTP_PASSWORD: Joi.string().allow('').optional(),
 
   // Throttling
   THROTTLE_TTL: Joi.number().default(60),
