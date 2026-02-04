@@ -54,10 +54,8 @@ exports.AppModule = AppModule = __decorate([
                     url: configService.get('database.uri'),
                     database: configService.get('database.database'),
                     entities: [(0, path_1.join)(__dirname, '**', '*.entity.{ts,js}')],
-                    synchronize: configService.get('app.nodeEnv') !== 'production',
+                    synchronize: false,
                     logging: configService.get('app.nodeEnv') === 'development',
-                    useNewUrlParser: true,
-                    useUnifiedTopology: true,
                 }),
             }),
             throttler_1.ThrottlerModule.forRootAsync({

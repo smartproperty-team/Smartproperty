@@ -11,7 +11,9 @@
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && npm run start:dev",
-    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install && cd .."
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install && cd ..",
+    "seed": "cd backend && npm run seed",
+    "seed:users": "cd backend && npm run seed:users"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",

@@ -19,12 +19,8 @@ export const databaseConfig = registerAs('database', () => ({
 
   // TypeORM specific settings for MongoDB
   type: 'mongodb' as const,
-  synchronize: process.env.NODE_ENV !== 'production', // Auto sync in dev only
+  synchronize: false, // Disabled to avoid index conflicts with existing MongoDB schema
   logging: process.env.NODE_ENV === 'development',
-
-  // Connection pool settings
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
 
   // Retry settings
   retryAttempts: 5,

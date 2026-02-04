@@ -68,10 +68,8 @@ import { UsersModule } from './modules/users/users.module';
         url: configService.get<string>('database.uri'),
         database: configService.get<string>('database.database'),
         entities: [join(__dirname, '**', '*.entity.{ts,js}')],
-        synchronize: configService.get<string>('app.nodeEnv') !== 'production',
+        synchronize: false, // Disabled to avoid index conflicts with existing MongoDB schema
         logging: configService.get<string>('app.nodeEnv') === 'development',
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
       }),
     }),
 
