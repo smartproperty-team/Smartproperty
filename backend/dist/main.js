@@ -23,8 +23,16 @@ async function bootstrap() {
         crossOriginEmbedderPolicy: false,
     }));
     app.use(compression());
+    const corsOrigin = configService.get('app.corsOrigin');
+    const allowedOrigins = corsOrigin
+        ? corsOrigin.split(',').map((origin) => origin.trim())
+        : [
+            'http://localhost:5173',
+            'http://localhost:5174',
+            'http://localhost:5175',
+        ];
     app.enableCors({
-        origin: configService.get('app.corsOrigin') || 'http://localhost:5173',
+        origin: allowedOrigins,
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],

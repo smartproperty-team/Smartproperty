@@ -20,7 +20,7 @@
   --color-popover-foreground: hsl(var(--popover-foreground));
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
-  
+
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -29,12 +29,20 @@
   --animate-accordion-up: accordion-up 0.2s ease-out;
 
   @keyframes accordion-down {
-    from { height: 0; }
-    to { height: var(--radix-accordion-content-height); }
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
   }
   @keyframes accordion-up {
-    from { height: var(--radix-accordion-content-height); }
-    to { height: 0; }
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
   }
 }
 
@@ -92,5 +100,66 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family:
+      "Inter",
+      "SF Pro Text",
+      system-ui,
+      -apple-system,
+      sans-serif;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    background: linear-gradient(
+      135deg,
+      rgba(15, 23, 42, 0.75),
+      rgba(2, 6, 23, 0.75)
+    );
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(18px);
+  }
+
+  .gradient-outline {
+    background: linear-gradient(
+      120deg,
+      rgba(59, 130, 246, 0.4),
+      rgba(168, 85, 247, 0.4)
+    );
+    padding: 1px;
+    border-radius: 24px;
+  }
+
+  .gradient-outline > div {
+    border-radius: 23px;
+    background: transparent;
+  }
+
+  .hero-mesh {
+    background-image:
+      radial-gradient(
+        circle at 15% 20%,
+        rgba(59, 130, 246, 0.35),
+        transparent 40%
+      ),
+      radial-gradient(
+        circle at 85% 10%,
+        rgba(168, 85, 247, 0.35),
+        transparent 40%
+      ),
+      radial-gradient(
+        circle at 50% 80%,
+        rgba(16, 185, 129, 0.25),
+        transparent 45%
+      );
+  }
+
+  .noise-layer {
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.2'/%3E%3C/svg%3E");
+    mix-blend-mode: soft-light;
+    pointer-events: none;
   }
 }

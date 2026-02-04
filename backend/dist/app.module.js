@@ -16,10 +16,13 @@ const schedule_1 = require("@nestjs/schedule");
 const throttler_1 = require("@nestjs/throttler");
 const typeorm_1 = require("@nestjs/typeorm");
 const path_1 = require("path");
+const entities_1 = require("./common/entities");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const config_2 = require("./config");
 const validation_schema_1 = require("./config/validation.schema");
+const auth_module_1 = require("./modules/auth/auth.module");
+const users_module_1 = require("./modules/users/users.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -36,6 +39,7 @@ exports.AppModule = AppModule = __decorate([
                     config_2.redisConfig,
                     config_2.mailConfig,
                     config_2.awsConfig,
+                    config_2.oauthConfig,
                     config_2.throttlerConfig,
                 ],
                 validationSchema: validation_schema_1.validationSchema,
@@ -51,7 +55,12 @@ exports.AppModule = AppModule = __decorate([
                     type: 'mongodb',
                     url: configService.get('database.uri'),
                     database: configService.get('database.database'),
-                    entities: [(0, path_1.join)(__dirname, '**', '*.entity.{ts,js}')],
+                    autoLoadEntities: true,
+                    entities: [
+                        entities_1.User,
+                        entities_1.UserProfile,
+                        (0, path_1.join)(__dirname, '**', '*.entity.{ts,js}'),
+                    ],
                     synchronize: configService.get('app.nodeEnv') !== 'production',
                     logging: configService.get('app.nodeEnv') === 'development',
                     useNewUrlParser: true,
@@ -108,6 +117,8 @@ exports.AppModule = AppModule = __decorate([
                     },
                 }),
             }),
+            auth_module_1.AuthModule,
+            users_module_1.UsersModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

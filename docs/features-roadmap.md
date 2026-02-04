@@ -31,19 +31,19 @@ This document outlines all features to be implemented in the SmartProperty platf
 
 ### User Registration
 
-- [ ]  Email/password registration
-- [ ]  Input validation (email format, password strength)
-- [ ]  Password hashing with bcrypt
-- [ ]  Email verification flow
-- [ ]  Welcome email sending
+- [X]  Email/password registration
+- [X]  Input validation (email format, password strength)
+- [X]  Password hashing with bcrypt
+- [X]  Email verification flow
+- [X]  Welcome email sending
 
 ### User Login
 
-- [ ]  Email/password login
-- [ ]  JWT access token generation
-- [ ]  JWT refresh token generation
-- [ ]  Login attempt tracking
-- [ ]  Account lockout after failed attempts
+- [X]  Email/password login
+- [X]  JWT access token generation
+- [X]  JWT refresh token generation
+- [X]  Login attempt tracking
+- [X]  Account lockout after failed attempts
 
 ### Token Management
 

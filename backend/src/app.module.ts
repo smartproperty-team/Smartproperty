@@ -11,6 +11,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
+import { User, UserProfile } from './common/entities';
 
 // Controllers & Services
 import { AppController } from './app.controller';
@@ -23,14 +24,15 @@ import {
   databaseConfig,
   jwtConfig,
   mailConfig,
+  oauthConfig,
   redisConfig,
   throttlerConfig,
 } from './config';
 import { validationSchema } from './config/validation.schema';
 
-// Feature Modules (will be added as we build them)
-// import { AuthModule } from './modules/auth/auth.module';
-// import { UsersModule } from './modules/users/users.module';
+// Feature Modules
+import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
 // import { PropertiesModule } from './modules/properties/properties.module';
 
 @Module({
@@ -48,6 +50,7 @@ import { validationSchema } from './config/validation.schema';
         redisConfig,
         mailConfig,
         awsConfig,
+        oauthConfig,
         throttlerConfig,
       ],
       validationSchema,
@@ -67,7 +70,12 @@ import { validationSchema } from './config/validation.schema';
         type: 'mongodb',
         url: configService.get<string>('database.uri'),
         database: configService.get<string>('database.database'),
-        entities: [join(__dirname, '**', '*.entity.{ts,js}')],
+        autoLoadEntities: true,
+        entities: [
+          User,
+          UserProfile,
+          join(__dirname, '**', '*.entity.{ts,js}'),
+        ],
         synchronize: configService.get<string>('app.nodeEnv') !== 'production',
         logging: configService.get<string>('app.nodeEnv') === 'development',
         useNewUrlParser: true,
@@ -144,9 +152,8 @@ import { validationSchema } from './config/validation.schema';
     // =====================
     // Feature Modules
     // =====================
-    // Uncomment as modules are implemented:
-    // AuthModule,
-    // UsersModule,
+    AuthModule,
+    UsersModule,
     // PropertiesModule,
   ],
   controllers: [AppController],
