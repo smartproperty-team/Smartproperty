@@ -14,15 +14,15 @@ db.createCollection("users", {
   validator: {
     $jsonSchema: {
       bsonType: "object",
-      required: ["email", "password", "role", "createdAt"],
+      required: ["email", "role", "createdAt"],
       properties: {
         email: {
           bsonType: "string",
           description: "Email address - required and must be unique",
         },
         password: {
-          bsonType: "string",
-          description: "Hashed password - required",
+          bsonType: ["string", "null"],
+          description: "Hashed password - optional for OAuth users",
         },
         firstName: {
           bsonType: "string",
@@ -35,6 +35,22 @@ db.createCollection("users", {
         role: {
           enum: ["admin", "owner", "manager", "tenant"],
           description: "User role - required",
+        },
+        status: {
+          enum: ["active", "inactive", "suspended", "pending"],
+          description: "User account status",
+        },
+        authProvider: {
+          enum: ["local", "google"],
+          description: "Authentication provider",
+        },
+        googleId: {
+          bsonType: "string",
+          description: "Google OAuth ID",
+        },
+        isEmailVerified: {
+          bsonType: "bool",
+          description: "Whether email is verified",
         },
         isActive: {
           bsonType: "bool",

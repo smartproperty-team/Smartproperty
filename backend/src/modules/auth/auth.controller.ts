@@ -13,6 +13,8 @@ import {
   Param,
   Post,
   Req,
+  Res,
+  ServiceUnavailableException,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -24,8 +26,9 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { User } from '../users/entities/user.entity';
@@ -41,9 +44,11 @@ import {
   VerifyEmailDto,
 } from './dto/auth.dto';
 import { Session } from './entities/session.entity';
+import { GoogleOAuthGuard } from './guards/google-oauth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { JwtRefreshAuthGuard } from './guards/jwt-refresh-auth.guard';
 import { SessionService } from './session.service';
+import { GoogleProfile } from './strategies/google.strategy';
 
 // ===========================================
 // Auth Controller
@@ -55,6 +60,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly sessionService: SessionService,
+    private readonly configService: ConfigService,
   ) {}
 
   // ===========================================
@@ -123,6 +129,75 @@ export class AuthController {
   ): Promise<AuthResponse> {
     const deviceInfo = this.getDeviceInfo(req);
     return this.authService.login(loginDto, deviceInfo);
+  }
+
+  // ===========================================
+  // Google OAuth
+  // ===========================================
+
+  private isGoogleOAuthConfigured(): boolean {
+    const clientId = this.configService.get<string>('google.clientId');
+    const clientSecret = this.configService.get<string>('google.clientSecret');
+    return !!(clientId && clientSecret);
+  }
+
+  @Public()
+  @Get('google')
+  @UseGuards(GoogleOAuthGuard)
+  @ApiOperation({ summary: 'Initiate Google OAuth login' })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to Google OAuth consent screen',
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'Google OAuth is not configured',
+  })
+  async googleAuth(): Promise<void> {
+    if (!this.isGoogleOAuthConfigured()) {
+      throw new ServiceUnavailableException(
+        'Google OAuth is not configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables.',
+      );
+    }
+    // Guard redirects to Google
+  }
+
+  @Public()
+  @Get('google/callback')
+  @UseGuards(GoogleOAuthGuard)
+  @ApiOperation({ summary: 'Google OAuth callback' })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to frontend with auth tokens',
+  })
+  async googleAuthCallback(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    if (!this.isGoogleOAuthConfigured()) {
+      throw new ServiceUnavailableException('Google OAuth is not configured.');
+    }
+
+    const googleProfile = req.user as GoogleProfile;
+    const deviceInfo = this.getDeviceInfo(req);
+
+    const authResponse = await this.authService.googleLogin(
+      googleProfile,
+      deviceInfo,
+    );
+
+    // Redirect to frontend with tokens in URL params
+    const frontendCallbackUrl = this.configService.get<string>(
+      'google.frontendCallbackUrl',
+    );
+
+    const params = new URLSearchParams({
+      accessToken: authResponse.tokens.accessToken,
+      refreshToken: authResponse.tokens.refreshToken,
+      expiresIn: authResponse.tokens.expiresIn.toString(),
+    });
+
+    res.redirect(`${frontendCallbackUrl}?${params.toString()}`);
   }
 
   // ===========================================

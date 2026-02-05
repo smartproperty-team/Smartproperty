@@ -33,6 +33,11 @@ export enum UserStatus {
   PENDING_VERIFICATION = 'pending_verification',
 }
 
+export enum AuthProvider {
+  LOCAL = 'local',
+  GOOGLE = 'google',
+}
+
 // ===========================================
 // User Entity
 // ===========================================
@@ -45,9 +50,9 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column()
+  @Column({ nullable: true })
   @Exclude()
-  password: string;
+  password?: string;
 
   @Column()
   firstName: string;
@@ -74,6 +79,18 @@ export class User {
     default: UserStatus.PENDING_VERIFICATION,
   })
   status: UserStatus;
+
+  // OAuth Provider fields
+  @Column({
+    type: 'enum',
+    enum: AuthProvider,
+    default: AuthProvider.LOCAL,
+  })
+  authProvider: AuthProvider;
+
+  @Column({ nullable: true })
+  @Exclude()
+  googleId?: string;
 
   @Column({ default: false })
   isEmailVerified: boolean;
@@ -170,6 +187,9 @@ export class User {
   // ===========================================
 
   async validatePassword(password: string): Promise<boolean> {
+    if (!this.password) {
+      return false;
+    }
     return bcrypt.compare(password, this.password);
   }
 
@@ -214,6 +234,7 @@ export class User {
       avatar: this.avatar,
       role: this.role,
       status: this.status,
+      authProvider: this.authProvider,
       isEmailVerified: this.isEmailVerified,
       lastLogin: this.lastLogin,
       createdAt: this.createdAt,

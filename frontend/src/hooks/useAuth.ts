@@ -24,7 +24,6 @@ export const useAuth = () => {
     error,
     sessions,
     setUser,
-    setError,
     clearError,
     login,
     register,

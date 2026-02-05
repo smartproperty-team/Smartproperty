@@ -20,7 +20,12 @@ import * as crypto from 'crypto';
 import { ObjectId } from 'mongodb';
 import { Repository } from 'typeorm';
 
-import { User, UserRole, UserStatus } from '../users/entities/user.entity';
+import {
+  AuthProvider,
+  User,
+  UserRole,
+  UserStatus,
+} from '../users/entities/user.entity';
 import {
   ChangePasswordDto,
   ForgotPasswordDto,
@@ -31,6 +36,7 @@ import {
 } from './dto/auth.dto';
 import { Session } from './entities/session.entity';
 import { DeviceInfo, SessionService } from './session.service';
+import { GoogleProfile } from './strategies/google.strategy';
 
 // ===========================================
 // Types
@@ -458,7 +464,9 @@ export class AuthService {
 
     // Store in password history
     const previousPasswords = targetUser.previousPasswords || [];
-    previousPasswords.unshift(targetUser.password);
+    if (targetUser.password) {
+      previousPasswords.unshift(targetUser.password);
+    }
     targetUser.previousPasswords = previousPasswords.slice(0, 5); // Keep last 5
 
     // Clear reset token
@@ -512,7 +520,9 @@ export class AuthService {
 
     // Store in password history
     const previousPasswords = user.previousPasswords || [];
-    previousPasswords.unshift(user.password);
+    if (user.password) {
+      previousPasswords.unshift(user.password);
+    }
     user.previousPasswords = previousPasswords.slice(0, 5);
 
     await this.userRepository.save(user);
@@ -612,6 +622,84 @@ export class AuthService {
     } catch (error) {
       console.error('Failed to send password reset email:', error);
     }
+  }
+
+  // ===========================================
+  // Google OAuth Login
+  // ===========================================
+
+  async googleLogin(
+    googleProfile: GoogleProfile,
+    deviceInfo?: DeviceInfo,
+  ): Promise<AuthResponse> {
+    const { email, firstName, lastName, avatar, googleId } = googleProfile;
+
+    // Check if user exists with this Google ID
+    let user = await this.userRepository.findOne({
+      where: { googleId },
+    });
+
+    if (!user) {
+      // Check if user exists with the same email
+      user = await this.userRepository.findOne({
+        where: { email: email.toLowerCase() },
+      });
+
+      if (user) {
+        // Link Google account to existing user
+        user.googleId = googleId;
+        user.authProvider = AuthProvider.GOOGLE;
+        if (!user.avatar && avatar) {
+          user.avatar = avatar;
+        }
+        // Google accounts are pre-verified
+        user.isEmailVerified = true;
+        if (user.status === UserStatus.PENDING_VERIFICATION) {
+          user.status = UserStatus.ACTIVE;
+        }
+        await this.userRepository.save(user);
+      } else {
+        // Create new user with Google account
+        user = this.userRepository.create({
+          email: email.toLowerCase(),
+          firstName,
+          lastName,
+          avatar,
+          googleId,
+          authProvider: AuthProvider.GOOGLE,
+          role: UserRole.TENANT,
+          status: UserStatus.ACTIVE,
+          isEmailVerified: true, // Google accounts are pre-verified
+        });
+
+        await this.userRepository.save(user);
+      }
+    }
+
+    // Check if account is suspended
+    if (user.status === UserStatus.SUSPENDED) {
+      throw new UnauthorizedException('Account is suspended');
+    }
+
+    // Update last login
+    user.resetLoginAttempts();
+    await this.userRepository.save(user);
+
+    // Generate tokens
+    const tokens = await this.generateTokens(user);
+
+    // Create session for this device
+    const session = await this.sessionService.createSession(
+      user._id.toHexString(),
+      tokens.refreshToken,
+      deviceInfo || { deviceName: 'Google OAuth Login' },
+    );
+
+    return {
+      user: user.toJSON(),
+      tokens,
+      sessionId: session.id,
+    };
   }
 
   // ===========================================

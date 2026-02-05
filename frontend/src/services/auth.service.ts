@@ -64,6 +64,29 @@ export const authService = {
     }
   },
 
+  // ===========================================
+  // Google OAuth
+  // ===========================================
+
+  /**
+   * Get Google OAuth login URL
+   * @returns URL to redirect user to Google OAuth
+   */
+  getGoogleLoginUrl(): string {
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+    return `${apiUrl}/auth/google`;
+  },
+
+  /**
+   * Handle Google OAuth callback tokens
+   * @param accessToken Access token from OAuth callback
+   * @param refreshToken Refresh token from OAuth callback
+   */
+  handleGoogleCallback(accessToken: string, refreshToken: string): void {
+    setAccessToken(accessToken);
+    setRefreshToken(refreshToken);
+  },
+
   /**
    * Logout from all devices/sessions
    */

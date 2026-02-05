@@ -17,6 +17,11 @@ export enum UserStatus {
   PENDING_VERIFICATION = "pending_verification",
 }
 
+export enum AuthProvider {
+  LOCAL = "local",
+  GOOGLE = "google",
+}
+
 export interface User {
   id: string;
   email: string;
@@ -27,6 +32,7 @@ export interface User {
   avatar?: string;
   role: UserRole;
   status: UserStatus;
+  authProvider?: AuthProvider;
   isEmailVerified: boolean;
   lastLogin?: string;
   createdAt: string;

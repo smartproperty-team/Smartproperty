@@ -8,6 +8,7 @@ import "./App.css";
 import { ProtectedRoute } from "./components/auth";
 import {
   ForgotPasswordPage,
+  GoogleCallbackPage,
   LoginPage,
   RegisterPage,
   ResetPasswordPage,
@@ -46,6 +47,7 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
 
       {/* Protected Routes */}
       <Route
