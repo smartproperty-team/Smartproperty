@@ -67,13 +67,13 @@ This document outlines all features to be implemented in the SmartProperty platf
 ### OAuth Integration (Optional)
 
 - [X]  Google OAuth2 login
-- [ ]  Facebook OAuth login
+- [X]  Facebook OAuth login
 - [ ]  Apple Sign-In
 
 ### Security Features
 
 - [X]  Rate limiting on auth endpoints
-- [ ]  CAPTCHA integration (optional)
+- [X]  CAPTCHA integration (optional)
 - [ ]  Two-factor authentication (2FA)
 - [X]  Session management (Session entity with device info, expiry, revocation)
 - [ ]  Audit logging for auth events

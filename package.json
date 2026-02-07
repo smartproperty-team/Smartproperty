@@ -8,12 +8,12 @@
     "backend"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
-    "dev:frontend": "cd frontend && npm run dev",
-    "dev:backend": "cd backend && npm run start:dev",
+    "dev": "concurrently -n \"FRONTEND,BACKEND\" -c \"cyan.bold,green.bold\" \"npm:dev:frontend\" \"npm:dev:backend\"",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "npm run start:dev --prefix backend",
     "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install && cd ..",
-    "seed": "cd backend && npm run seed",
-    "seed:users": "cd backend && npm run seed:users"
+    "seed": "npm run seed --prefix backend",
+    "seed:users": "npm run seed:users --prefix backend"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",

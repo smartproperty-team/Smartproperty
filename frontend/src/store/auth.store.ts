@@ -21,7 +21,11 @@ interface AuthState {
   clearError: () => void;
 
   // Authentication Methods
-  login: (email: string, password: string) => Promise<void>;
+  login: (
+    email: string,
+    password: string,
+    captchaToken?: string,
+  ) => Promise<void>;
   register: (data: {
     email: string;
     password: string;
@@ -29,6 +33,7 @@ interface AuthState {
     firstName: string;
     lastName: string;
     phone?: string;
+    captchaToken?: string;
   }) => Promise<void>;
   logout: (refreshToken?: string) => Promise<void>;
   logoutAll: (currentSessionId?: string) => Promise<void>;
@@ -84,10 +89,14 @@ export const useAuthStore = create<AuthState>()(
       // Authentication Methods
       // ===========================================
 
-      login: async (email, password) => {
+      login: async (email, password, captchaToken) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await authService.login({ email, password });
+          const response = await authService.login({
+            email,
+            password,
+            captchaToken,
+          });
           set({
             user: response.user,
             isAuthenticated: true,

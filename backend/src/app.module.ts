@@ -25,6 +25,7 @@ import {
   googleConfig,
   jwtConfig,
   mailConfig,
+  recaptchaConfig,
   redisConfig,
   throttlerConfig,
 } from './config';
@@ -48,6 +49,7 @@ import { UsersModule } from './modules/users/users.module';
         databaseConfig,
         facebookConfig,
         googleConfig,
+        recaptchaConfig,
         jwtConfig,
         redisConfig,
         mailConfig,

@@ -8,16 +8,17 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-indigo-600 text-white hover:bg-indigo-700 focus-visible:ring-indigo-500",
+          "bg-home-primary text-white hover:bg-home-primary-dark focus-visible:ring-home-primary",
         destructive:
           "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500",
         outline:
-          "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus-visible:ring-indigo-500",
+          "border border-home-primary-light bg-home-primary-light text-home-secondary hover:bg-home-primary-light/90 focus-visible:ring-home-primary",
+        soft: "border border-home-primary-light bg-home-primary-light text-home-secondary hover:bg-home-primary-light/90 focus-visible:ring-home-primary",
         secondary:
-          "bg-gray-100 text-gray-900 hover:bg-gray-200 focus-visible:ring-gray-500",
+          "bg-home-primary-light text-home-text hover:bg-home-background-alt focus-visible:ring-home-primary",
         ghost:
-          "text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus-visible:ring-gray-500",
-        link: "text-indigo-600 underline-offset-4 hover:underline focus-visible:ring-indigo-500",
+          "text-home-text hover:bg-home-background-alt focus-visible:ring-home-primary",
+        link: "text-home-primary underline-offset-4 hover:underline focus-visible:ring-home-primary",
       },
       size: {
         default: "h-10 px-4 py-2",

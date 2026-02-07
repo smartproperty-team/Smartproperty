@@ -15,6 +15,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
+import axios from 'axios';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { ObjectId } from 'mongodb';
@@ -76,6 +77,46 @@ export class AuthService {
     private readonly sessionService: SessionService,
   ) {}
 
+  private async verifyRecaptcha(
+    token?: string,
+    ipAddress?: string,
+  ): Promise<void> {
+    const secretKey = this.configService.get<string>('recaptcha.secretKey');
+
+    if (!secretKey) {
+      return;
+    }
+
+    if (!token) {
+      throw new BadRequestException('CAPTCHA token is required');
+    }
+
+    const verifyUrl =
+      this.configService.get<string>('recaptcha.verifyUrl') ||
+      'https://www.google.com/recaptcha/api/siteverify';
+
+    const params = new URLSearchParams();
+    params.append('secret', secretKey);
+    params.append('response', token);
+    if (ipAddress) {
+      params.append('remoteip', ipAddress);
+    }
+
+    const { data } = await axios.post<{
+      success: boolean;
+      challenge_ts?: string;
+      hostname?: string;
+      'error-codes'?: string[];
+    }>(verifyUrl, params.toString(), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      timeout: 5000,
+    });
+
+    if (!data?.success) {
+      throw new BadRequestException('CAPTCHA verification failed');
+    }
+  }
+
   // ===========================================
   // Registration
   // ===========================================
@@ -84,6 +125,7 @@ export class AuthService {
     registerDto: RegisterDto,
     deviceInfo?: DeviceInfo,
   ): Promise<AuthResponse> {
+    await this.verifyRecaptcha(registerDto.captchaToken, deviceInfo?.ipAddress);
     const {
       email,
       password,
@@ -156,6 +198,7 @@ export class AuthService {
     loginDto: LoginDto,
     deviceInfo?: DeviceInfo,
   ): Promise<AuthResponse> {
+    await this.verifyRecaptcha(loginDto.captchaToken, deviceInfo?.ipAddress);
     const { email, password } = loginDto;
 
     // Find user

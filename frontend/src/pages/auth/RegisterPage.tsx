@@ -5,9 +5,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Building2, Lock, Mail, Phone, User } from "lucide-react";
 import { useState } from "react";
+import ReCAPTCHA from "react-google-recaptcha";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
+import { HomeFooter, HomeNavbar } from "../../components/layout";
 import {
   Alert,
   Button,
@@ -82,6 +84,10 @@ export default function RegisterPage() {
     clearError,
   } = useAuthStore();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaError, setCaptchaError] = useState<string | null>(null);
+
+  const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string | undefined;
 
   const {
     register,
@@ -94,6 +100,11 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterFormData) => {
     try {
       clearError();
+      if (!captchaToken) {
+        setCaptchaError("Please complete the CAPTCHA.");
+        return;
+      }
+      setCaptchaError(null);
       await registerUser({
         email: data.email,
         password: data.password,
@@ -101,6 +112,7 @@ export default function RegisterPage() {
         firstName: data.firstName,
         lastName: data.lastName,
         phone: data.phone,
+        captchaToken,
       });
       setSuccessMessage(
         "Registration successful! Please check your email to verify your account.",
@@ -122,158 +134,197 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-100 via-white to-purple-100 px-4 py-12">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="mb-8 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600">
-            <Building2 className="h-8 w-8 text-white" />
+    <div className="home-page">
+      <HomeNavbar />
+      <main className="min-h-screen bg-gradient-to-br from-home-primary-light via-home-background to-home-background-alt px-4 py-12 pt-28 flex items-center justify-center">
+        <div className="w-full max-w-md">
+          <div className="mb-8 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-r from-home-secondary-dark to-home-primary shadow-lg shadow-blue-200/60">
+              <Building2 className="h-8 w-8 text-white" />
+            </div>
+            <h1 className="mt-4 text-3xl font-bold text-home-text">
+              SmartProperty
+            </h1>
+            <p className="mt-2 text-home-muted">
+              Create your account to get started
+            </p>
           </div>
-          <h1 className="mt-4 text-3xl font-bold text-gray-900">
-            SmartProperty
-          </h1>
-          <p className="mt-2 text-gray-600">
-            Create your account to get started
-          </p>
-        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Create Account</CardTitle>
-            <CardDescription>Fill in your details to register</CardDescription>
-          </CardHeader>
+          <Card className="border-home-border/80 shadow-xl shadow-blue-100/40">
+            <CardHeader>
+              <CardTitle>Create Account</CardTitle>
+              <CardDescription>
+                Fill in your details to register
+              </CardDescription>
+            </CardHeader>
 
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
-              {error && (
-                <Alert type="error" message={error} onClose={clearError} />
-              )}
+            <form onSubmit={handleSubmit(onSubmit)}>
+              <CardContent className="space-y-4">
+                {error && (
+                  <Alert type="error" message={error} onClose={clearError} />
+                )}
 
-              {successMessage && (
-                <Alert type="success" message={successMessage} />
-              )}
+                {successMessage && (
+                  <Alert type="success" message={successMessage} />
+                )}
 
-              <div className="grid grid-cols-2 gap-4">
+                {captchaError && <Alert type="error" message={captchaError} />}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <Input
+                    label="First Name"
+                    placeholder="John"
+                    icon={<User className="h-5 w-5" />}
+                    error={errors.firstName?.message}
+                    {...register("firstName")}
+                  />
+
+                  <Input
+                    label="Last Name"
+                    placeholder="Doe"
+                    error={errors.lastName?.message}
+                    {...register("lastName")}
+                  />
+                </div>
+
                 <Input
-                  label="First Name"
-                  placeholder="John"
-                  icon={<User className="h-5 w-5" />}
-                  error={errors.firstName?.message}
-                  {...register("firstName")}
+                  label="Email Address"
+                  type="email"
+                  placeholder="you@example.com"
+                  icon={<Mail className="h-5 w-5" />}
+                  error={errors.email?.message}
+                  {...register("email")}
                 />
 
                 <Input
-                  label="Last Name"
-                  placeholder="Doe"
-                  error={errors.lastName?.message}
-                  {...register("lastName")}
+                  label="Phone Number (Optional)"
+                  type="tel"
+                  placeholder="+1 (555) 123-4567"
+                  icon={<Phone className="h-5 w-5" />}
+                  error={errors.phone?.message}
+                  {...register("phone")}
                 />
-              </div>
 
-              <Input
-                label="Email Address"
-                type="email"
-                placeholder="you@example.com"
-                icon={<Mail className="h-5 w-5" />}
-                error={errors.email?.message}
-                {...register("email")}
-              />
+                <Input
+                  label="Password"
+                  type="password"
+                  placeholder="••••••••"
+                  icon={<Lock className="h-5 w-5" />}
+                  error={errors.password?.message}
+                  {...register("password")}
+                />
 
-              <Input
-                label="Phone Number (Optional)"
-                type="tel"
-                placeholder="+1 (555) 123-4567"
-                icon={<Phone className="h-5 w-5" />}
-                error={errors.phone?.message}
-                {...register("phone")}
-              />
+                <Input
+                  label="Confirm Password"
+                  type="password"
+                  placeholder="••••••••"
+                  icon={<Lock className="h-5 w-5" />}
+                  error={errors.confirmPassword?.message}
+                  {...register("confirmPassword")}
+                />
 
-              <Input
-                label="Password"
-                type="password"
-                placeholder="••••••••"
-                icon={<Lock className="h-5 w-5" />}
-                error={errors.password?.message}
-                {...register("password")}
-              />
-
-              <Input
-                label="Confirm Password"
-                type="password"
-                placeholder="••••••••"
-                icon={<Lock className="h-5 w-5" />}
-                error={errors.confirmPassword?.message}
-                {...register("confirmPassword")}
-              />
-
-              <div className="text-xs text-gray-500">
-                <p className="font-medium">Password requirements:</p>
-                <ul className="mt-1 list-inside list-disc">
-                  <li>At least 8 characters</li>
-                  <li>One uppercase letter</li>
-                  <li>One lowercase letter</li>
-                  <li>One number</li>
-                  <li>One special character (@$!%*?&)</li>
-                </ul>
-              </div>
-            </CardContent>
-
-            <CardFooter className="flex-col space-y-4">
-              <Button
-                type="submit"
-                className="w-full"
-                size="lg"
-                isLoading={isLoading}
-              >
-                Create Account
-              </Button>
-
-              <div className="relative w-full">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
+                <div className="text-xs text-home-muted">
+                  <p className="font-medium">Password requirements:</p>
+                  <ul className="mt-1 list-inside list-disc">
+                    <li>At least 8 characters</li>
+                    <li>One uppercase letter</li>
+                    <li>One lowercase letter</li>
+                    <li>One number</li>
+                    <li>One special character (@$!%*?&)</li>
+                  </ul>
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-2 text-gray-500">
-                    Or continue with
-                  </span>
+
+                <div className="flex justify-center">
+                  {siteKey ? (
+                    <ReCAPTCHA
+                      sitekey={siteKey}
+                      onChange={(token) => {
+                        setCaptchaToken(token);
+                        setCaptchaError(null);
+                      }}
+                      onExpired={() => setCaptchaToken(null)}
+                    />
+                  ) : (
+                    <p className="text-sm text-red-600">
+                      Missing CAPTCHA site key.
+                    </p>
+                  )}
                 </div>
-              </div>
+              </CardContent>
 
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                size="lg"
-                onClick={handleGoogleSignup}
-              >
-                <GoogleIcon />
-                <span className="ml-2">Sign up with Google</span>
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                size="lg"
-                onClick={handleFacebookSignup}
-              >
-                <FacebookIcon />
-                <span className="ml-2">Sign up with Facebook</span>
-              </Button>
-
-              <p className="text-center text-sm text-gray-600">
-                Already have an account?{" "}
-                <Link
-                  to="/login"
-                  className="font-medium text-indigo-600 hover:text-indigo-500"
+              <CardFooter className="flex-col space-y-4">
+                <Button
+                  type="submit"
+                  className="w-full bg-home-secondary hover:bg-home-secondary-dark focus-visible:ring-home-primary"
+                  size="lg"
+                  isLoading={isLoading}
                 >
-                  Sign in
-                </Link>
-              </p>
-            </CardFooter>
-          </form>
-        </Card>
-      </div>
+                  Create Account
+                </Button>
+
+                <div className="relative w-full">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-home-border" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white/90 px-2 text-home-muted">
+                      Or continue with
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  size="lg"
+                  onClick={handleGoogleSignup}
+                >
+                  <GoogleIcon />
+                  <span className="ml-2">Sign up with Google</span>
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  size="lg"
+                  onClick={handleFacebookSignup}
+                >
+                  <FacebookIcon />
+                  <span className="ml-2">Sign up with Facebook</span>
+                </Button>
+
+                <p className="text-center text-sm text-home-muted">
+                  Already have an account?{" "}
+                  <Link
+                    to="/login"
+                    className="font-medium text-home-primary hover:text-home-primary-dark"
+                  >
+                    Sign in
+                  </Link>
+                </p>
+              </CardFooter>
+            </form>
+          </Card>
+
+          <div className="mt-6 rounded-lg border border-home-border bg-white/70 p-4 backdrop-blur">
+            <p className="text-center text-sm text-home-muted">
+              <span className="font-medium">Testing?</span> Register a new
+              account or use the API docs at{" "}
+              <a
+                href="http://localhost:3000/api/docs"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-home-primary hover:underline"
+              >
+                localhost:3000/api/docs
+              </a>
+            </p>
+          </div>
+        </div>
+      </main>
+      <HomeFooter />
     </div>
   );
 }

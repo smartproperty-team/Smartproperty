@@ -1,0 +1,7 @@
+User-agent: Googlebot
+Disallow: /nogooglebot/
+
+User-agent: *
+Allow: /
+
+Sitemap: https://65-real-estate-website-templates-community-k4t7nc.teleporthq.app/sitemap.xml

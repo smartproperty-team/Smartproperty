@@ -32,24 +32,39 @@ db.createCollection("users", {
           bsonType: "string",
           description: "User last name",
         },
+        avatar: {
+          bsonType: ["string", "null", "undefined"],
+          description: "Profile image URL",
+        },
+        phone: {
+          bsonType: ["string", "null", "undefined"],
+          description: "Phone number",
+        },
         role: {
           enum: ["admin", "owner", "manager", "tenant"],
           description: "User role - required",
         },
         status: {
-          enum: ["active", "inactive", "suspended", "pending"],
+          enum: [
+            "active",
+            "inactive",
+            "suspended",
+            "pending",
+            "pending_verification",
+          ],
           description: "User account status",
         },
         authProvider: {
-          enum: ["local", "google", "facebook"],
+          bsonType: ["string", "null", "undefined"],
+          enum: ["local", "google", "facebook", null],
           description: "Authentication provider",
         },
         googleId: {
-          bsonType: "string",
+          bsonType: ["string", "null", "undefined"],
           description: "Google OAuth ID",
         },
         facebookId: {
-          bsonType: "string",
+          bsonType: ["string", "null", "undefined"],
           description: "Facebook OAuth ID",
         },
         isEmailVerified: {
@@ -57,7 +72,7 @@ db.createCollection("users", {
           description: "Whether email is verified",
         },
         isActive: {
-          bsonType: "bool",
+          bsonType: ["bool", "null", "undefined"],
           description: "Whether user account is active",
         },
         createdAt: {

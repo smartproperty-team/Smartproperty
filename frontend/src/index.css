@@ -20,7 +20,19 @@
   --color-popover-foreground: hsl(var(--popover-foreground));
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
-  
+  --color-home-primary: var(--color-primary);
+  --color-home-primary-dark: var(--color-primary-dark);
+  --color-home-primary-light: var(--color-primary-light);
+  --color-home-secondary: var(--color-secondary);
+  --color-home-secondary-dark: var(--color-secondary-dark);
+  --color-home-accent: var(--color-accent);
+  --color-home-success: var(--color-success);
+  --color-home-text: var(--color-text);
+  --color-home-muted: var(--color-text-muted);
+  --color-home-border: var(--color-border);
+  --color-home-background: var(--color-background);
+  --color-home-background-alt: var(--color-background-alt);
+
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -29,12 +41,20 @@
   --animate-accordion-up: accordion-up 0.2s ease-out;
 
   @keyframes accordion-down {
-    from { height: 0; }
-    to { height: var(--radix-accordion-content-height); }
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
   }
   @keyframes accordion-up {
-    from { height: var(--radix-accordion-content-height); }
-    to { height: 0; }
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
   }
 }
 
@@ -60,6 +80,18 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
+    --color-primary: #3b82f6;
+    --color-primary-dark: #2563eb;
+    --color-primary-light: #dbeafe;
+    --color-secondary: #1e293b;
+    --color-secondary-dark: #0f172a;
+    --color-accent: #f59e0b;
+    --color-success: #10b981;
+    --color-text: #1e293b;
+    --color-text-muted: #64748b;
+    --color-border: #e2e8f0;
+    --color-background: #ffffff;
+    --color-background-alt: #f8fafc;
   }
 
   .dark {
