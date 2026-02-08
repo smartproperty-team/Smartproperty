@@ -34,7 +34,9 @@ exports.AppModule = AppModule = __decorate([
                 load: [
                     config_2.appConfig,
                     config_2.databaseConfig,
+                    config_2.facebookConfig,
                     config_2.googleConfig,
+                    config_2.recaptchaConfig,
                     config_2.jwtConfig,
                     config_2.redisConfig,
                     config_2.mailConfig,

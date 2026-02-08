@@ -53,6 +53,10 @@ export const validationSchema = Joi.object({
   GOOGLE_CALLBACK_URL: Joi.string().optional(),
   GOOGLE_FRONTEND_CALLBACK_URL: Joi.string().optional(),
 
+  // reCAPTCHA
+  RECAPTCHA_SECRET_KEY: Joi.string().optional(),
+  RECAPTCHA_VERIFY_URL: Joi.string().optional(),
+
   // Throttling
   THROTTLE_TTL: Joi.number().default(60),
   THROTTLE_LIMIT: Joi.number().default(100),

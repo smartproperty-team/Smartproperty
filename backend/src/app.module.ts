@@ -21,9 +21,11 @@ import {
   appConfig,
   awsConfig,
   databaseConfig,
+  facebookConfig,
   googleConfig,
   jwtConfig,
   mailConfig,
+  recaptchaConfig,
   redisConfig,
   throttlerConfig,
 } from './config';
@@ -45,7 +47,9 @@ import { UsersModule } from './modules/users/users.module';
       load: [
         appConfig,
         databaseConfig,
+        facebookConfig,
         googleConfig,
+        recaptchaConfig,
         jwtConfig,
         redisConfig,
         mailConfig,

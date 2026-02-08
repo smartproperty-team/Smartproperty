@@ -53,6 +53,7 @@ export interface AuthResponse {
 export interface LoginCredentials {
   email: string;
   password: string;
+  captchaToken?: string;
 }
 
 export interface RegisterData {
@@ -63,6 +64,7 @@ export interface RegisterData {
   lastName: string;
   phone?: string;
   role?: UserRole;
+  captchaToken?: string;
 }
 
 export interface ForgotPasswordData {

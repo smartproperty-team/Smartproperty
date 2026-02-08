@@ -5,9 +5,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Building2, Lock, Mail } from "lucide-react";
 import { useState } from "react";
+import ReCAPTCHA from "react-google-recaptcha";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
+import { HomeFooter, HomeNavbar } from "../../components/layout";
 import {
   Alert,
   Button,
@@ -44,6 +46,13 @@ const GoogleIcon = () => (
   </svg>
 );
 
+// Facebook Icon SVG Component
+const FacebookIcon = () => (
+  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="#1877F2">
+    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+  </svg>
+);
+
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
@@ -55,6 +64,10 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { login, isLoading, error, clearError } = useAuthStore();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaError, setCaptchaError] = useState<string | null>(null);
+
+  const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string | undefined;
 
   const {
     register,
@@ -67,7 +80,12 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormData) => {
     try {
       clearError();
-      await login(data.email, data.password);
+      if (!captchaToken) {
+        setCaptchaError("Please complete the CAPTCHA.");
+        return;
+      }
+      setCaptchaError(null);
+      await login(data.email, data.password, captchaToken);
       setSuccessMessage("Login successful! Redirecting...");
       setTimeout(() => {
         navigate("/dashboard");
@@ -81,140 +99,178 @@ export default function LoginPage() {
     window.location.href = authService.getGoogleLoginUrl();
   };
 
+  const handleFacebookLogin = () => {
+    window.location.href = authService.getFacebookLoginUrl();
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-100 via-white to-purple-100 px-4 py-12">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="mb-8 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600">
-            <Building2 className="h-8 w-8 text-white" />
+    <div className="home-page">
+      <HomeNavbar />
+
+      <main className="min-h-screen bg-gradient-to-br from-home-primary-light via-home-background to-home-background-alt px-4 py-12 pt-28 flex items-center justify-center">
+        <div className="w-full max-w-md">
+          <div className="mb-8 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-r from-home-secondary-dark to-home-primary shadow-lg shadow-blue-200/60">
+              <Building2 className="h-8 w-8 text-white" />
+            </div>
+            <h1 className="mt-4 text-3xl font-bold text-home-text">
+              SmartProperty
+            </h1>
+            <p className="mt-2 text-home-muted">
+              Welcome back! Sign in to continue.
+            </p>
           </div>
-          <h1 className="mt-4 text-3xl font-bold text-gray-900">
-            SmartProperty
-          </h1>
-          <p className="mt-2 text-gray-600">
-            Welcome back! Sign in to continue.
-          </p>
-        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Sign In</CardTitle>
-            <CardDescription>
-              Enter your credentials to access your account
-            </CardDescription>
-          </CardHeader>
+          <Card className="border-home-border/80 shadow-xl shadow-blue-100/40">
+            <CardHeader>
+              <CardTitle>Sign In</CardTitle>
+              <CardDescription>
+                Enter your credentials to access your account
+              </CardDescription>
+            </CardHeader>
 
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
-              {error && (
-                <Alert type="error" message={error} onClose={clearError} />
-              )}
+            <form onSubmit={handleSubmit(onSubmit)}>
+              <CardContent className="space-y-4">
+                {error && (
+                  <Alert type="error" message={error} onClose={clearError} />
+                )}
 
-              {successMessage && (
-                <Alert type="success" message={successMessage} />
-              )}
+                {successMessage && (
+                  <Alert type="success" message={successMessage} />
+                )}
 
-              <Input
-                label="Email Address"
-                type="email"
-                placeholder="you@example.com"
-                icon={<Mail className="h-5 w-5" />}
-                error={errors.email?.message}
-                {...register("email")}
-              />
+                {captchaError && <Alert type="error" message={captchaError} />}
 
-              <Input
-                label="Password"
-                type="password"
-                placeholder="••••••••"
-                icon={<Lock className="h-5 w-5" />}
-                error={errors.password?.message}
-                {...register("password")}
-              />
+                <Input
+                  label="Email Address"
+                  type="email"
+                  placeholder="you@example.com"
+                  icon={<Mail className="h-5 w-5" />}
+                  error={errors.email?.message}
+                  className="focus-visible:ring-home-primary"
+                  {...register("email")}
+                />
 
-              <div className="flex items-center justify-between">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span className="ml-2 text-sm text-gray-600">
-                    Remember me
-                  </span>
-                </label>
-                <Link
-                  to="/forgot-password"
-                  className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-            </CardContent>
+                <Input
+                  label="Password"
+                  type="password"
+                  placeholder="••••••••"
+                  icon={<Lock className="h-5 w-5" />}
+                  error={errors.password?.message}
+                  className="focus-visible:ring-home-primary"
+                  {...register("password")}
+                />
 
-            <CardFooter className="flex-col space-y-4">
-              <Button
-                type="submit"
-                className="w-full"
-                size="lg"
-                isLoading={isLoading}
-              >
-                Sign In
-              </Button>
-
-              {/* Divider */}
-              <div className="relative w-full">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-home-border text-home-primary focus:ring-home-primary"
+                    />
+                    <span className="ml-2 text-sm text-home-muted">
+                      Remember me
+                    </span>
+                  </label>
+                  <Link
+                    to="/forgot-password"
+                    className="text-sm font-medium text-home-primary hover:text-home-primary-dark"
+                  >
+                    Forgot password?
+                  </Link>
                 </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="bg-white px-2 text-gray-500">
-                    Or continue with
-                  </span>
+
+                <div className="flex justify-center">
+                  {siteKey ? (
+                    <ReCAPTCHA
+                      sitekey={siteKey}
+                      onChange={(token) => {
+                        setCaptchaToken(token);
+                        setCaptchaError(null);
+                      }}
+                      onExpired={() => setCaptchaToken(null)}
+                    />
+                  ) : (
+                    <p className="text-sm text-red-600">
+                      Missing CAPTCHA site key.
+                    </p>
+                  )}
                 </div>
-              </div>
+              </CardContent>
 
-              {/* Google Login Button */}
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                size="lg"
-                onClick={handleGoogleLogin}
-              >
-                <GoogleIcon />
-                <span className="ml-2">Sign in with Google</span>
-              </Button>
-
-              <p className="text-center text-sm text-gray-600">
-                Don't have an account?{" "}
-                <Link
-                  to="/register"
-                  className="font-medium text-indigo-600 hover:text-indigo-500"
+              <CardFooter className="flex-col space-y-4">
+                <Button
+                  type="submit"
+                  className="w-full bg-home-secondary hover:bg-home-secondary-dark focus-visible:ring-home-primary"
+                  size="lg"
+                  isLoading={isLoading}
                 >
-                  Create one now
-                </Link>
-              </p>
-            </CardFooter>
-          </form>
-        </Card>
+                  Sign In
+                </Button>
 
-        {/* Demo credentials */}
-        <div className="mt-6 rounded-lg border border-gray-200 bg-white/50 p-4 backdrop-blur">
-          <p className="text-center text-sm text-gray-500">
-            <span className="font-medium">Testing?</span> Register a new account
-            or use the API docs at{" "}
-            <a
-              href="http://localhost:3000/api/docs"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-indigo-600 hover:underline"
-            >
-              localhost:3000/api/docs
-            </a>
-          </p>
+                <div className="relative w-full">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-home-border" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="bg-white/90 px-2 text-home-muted">
+                      Or continue with
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="soft"
+                  className="w-full"
+                  size="lg"
+                  onClick={handleGoogleLogin}
+                >
+                  <GoogleIcon />
+                  <span className="ml-2">Sign in with Google</span>
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="soft"
+                  className="w-full"
+                  size="lg"
+                  onClick={handleFacebookLogin}
+                >
+                  <FacebookIcon />
+                  <span className="ml-2">Sign in with Facebook</span>
+                </Button>
+
+                <p className="text-center text-sm text-home-muted">
+                  Don't have an account?{" "}
+                  <Link
+                    to="/register"
+                    className="font-medium text-home-primary hover:text-home-primary-dark"
+                  >
+                    Create one now
+                  </Link>
+                </p>
+              </CardFooter>
+            </form>
+          </Card>
+
+          <div className="mt-6 rounded-lg border border-home-border bg-white/70 p-4 backdrop-blur">
+            <p className="text-center text-sm text-home-muted">
+              <span className="font-medium">Testing?</span> Register a new
+              account or use the API docs at{" "}
+              <a
+                href="http://localhost:3000/api/docs"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-home-primary hover:underline"
+              >
+                localhost:3000/api/docs
+              </a>
+            </p>
+          </div>
         </div>
-      </div>
+      </main>
+
+      <HomeFooter />
     </div>
   );
 }

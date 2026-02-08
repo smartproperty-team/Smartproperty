@@ -1,3 +1,4 @@
+export { default as FacebookCallbackPage } from "./FacebookCallbackPage";
 export { default as ForgotPasswordPage } from "./ForgotPasswordPage";
 export { default as GoogleCallbackPage } from "./GoogleCallbackPage";
 export { default as LoginPage } from "./LoginPage";

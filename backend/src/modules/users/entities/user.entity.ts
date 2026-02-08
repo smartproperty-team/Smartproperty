@@ -36,6 +36,7 @@ export enum UserStatus {
 export enum AuthProvider {
   LOCAL = 'local',
   GOOGLE = 'google',
+  FACEBOOK = 'facebook',
 }
 
 // ===========================================
@@ -91,6 +92,10 @@ export class User {
   @Column({ nullable: true })
   @Exclude()
   googleId?: string;
+
+  @Column({ nullable: true })
+  @Exclude()
+  facebookId?: string;
 
   @Column({ default: false })
   isEmailVerified: boolean;

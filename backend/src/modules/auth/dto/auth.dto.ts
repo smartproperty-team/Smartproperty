@@ -90,6 +90,13 @@ export class RegisterDto {
   @IsOptional()
   @IsEnum(UserRole, { message: 'Invalid role' })
   role?: UserRole;
+
+  @ApiPropertyOptional({
+    description: 'reCAPTCHA token (v2 checkbox)',
+  })
+  @IsOptional()
+  @IsString()
+  captchaToken?: string;
 }
 
 // ===========================================
@@ -112,6 +119,13 @@ export class LoginDto {
   @IsString()
   @IsNotEmpty({ message: 'Password is required' })
   password: string;
+
+  @ApiPropertyOptional({
+    description: 'reCAPTCHA token (v2 checkbox)',
+  })
+  @IsNotEmpty({ message: 'Captcha token is required' })
+  @IsString()
+  captchaToken?: string;
 }
 
 // ===========================================

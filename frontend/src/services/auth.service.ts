@@ -88,6 +88,25 @@ export const authService = {
   },
 
   /**
+   * Get Facebook OAuth login URL
+   * @returns URL to redirect user to Facebook OAuth
+   */
+  getFacebookLoginUrl(): string {
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+    return `${apiUrl}/auth/facebook`;
+  },
+
+  /**
+   * Handle Facebook OAuth callback tokens
+   * @param accessToken Access token from OAuth callback
+   * @param refreshToken Refresh token from OAuth callback
+   */
+  handleFacebookCallback(accessToken: string, refreshToken: string): void {
+    setAccessToken(accessToken);
+    setRefreshToken(refreshToken);
+  },
+
+  /**
    * Logout from all devices/sessions
    */
   async logoutAll(

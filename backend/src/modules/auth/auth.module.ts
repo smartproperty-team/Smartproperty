@@ -9,10 +9,13 @@ import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { User } from '../users/entities/user.entity';
+import { AuthAuditService } from './auth-audit.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { AuthAuditLog } from './entities/auth-audit-log.entity';
 import { Session } from './entities/session.entity';
 import { SessionService } from './session.service';
+import { FacebookStrategy } from './strategies/facebook.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -33,10 +36,26 @@ const googleStrategyFactory: Provider = {
   inject: [ConfigService],
 };
 
+// Factory to conditionally provide FacebookStrategy only when credentials exist
+const facebookStrategyFactory: Provider = {
+  provide: FacebookStrategy,
+  useFactory: (configService: ConfigService) => {
+    const clientId = configService.get<string>('facebook.clientId');
+    const clientSecret = configService.get<string>('facebook.clientSecret');
+
+    if (clientId && clientSecret) {
+      return new FacebookStrategy(configService);
+    }
+    // Return null if Facebook OAuth is not configured
+    return null;
+  },
+  inject: [ConfigService],
+};
+
 @Module({
   imports: [
     // User and Session repositories
-    TypeOrmModule.forFeature([User, Session]),
+    TypeOrmModule.forFeature([User, Session, AuthAuditLog]),
 
     // Config for OAuth
     ConfigModule,
@@ -59,10 +78,12 @@ const googleStrategyFactory: Provider = {
   controllers: [AuthController],
   providers: [
     AuthService,
+    AuthAuditService,
     SessionService,
     JwtStrategy,
     JwtRefreshStrategy,
     googleStrategyFactory,
+    facebookStrategyFactory,
   ],
   exports: [AuthService, SessionService, JwtModule, PassportModule],
 })

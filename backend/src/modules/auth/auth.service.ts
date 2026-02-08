@@ -15,6 +15,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
+import axios from 'axios';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { ObjectId } from 'mongodb';
@@ -36,6 +37,7 @@ import {
 } from './dto/auth.dto';
 import { Session } from './entities/session.entity';
 import { DeviceInfo, SessionService } from './session.service';
+import { FacebookProfile } from './strategies/facebook.strategy';
 import { GoogleProfile } from './strategies/google.strategy';
 
 // ===========================================
@@ -75,6 +77,46 @@ export class AuthService {
     private readonly sessionService: SessionService,
   ) {}
 
+  private async verifyRecaptcha(
+    token?: string,
+    ipAddress?: string,
+  ): Promise<void> {
+    const secretKey = this.configService.get<string>('recaptcha.secretKey');
+
+    if (!secretKey) {
+      return;
+    }
+
+    if (!token) {
+      throw new BadRequestException('CAPTCHA token is required');
+    }
+
+    const verifyUrl =
+      this.configService.get<string>('recaptcha.verifyUrl') ||
+      'https://www.google.com/recaptcha/api/siteverify';
+
+    const params = new URLSearchParams();
+    params.append('secret', secretKey);
+    params.append('response', token);
+    if (ipAddress) {
+      params.append('remoteip', ipAddress);
+    }
+
+    const { data } = await axios.post<{
+      success: boolean;
+      challenge_ts?: string;
+      hostname?: string;
+      'error-codes'?: string[];
+    }>(verifyUrl, params.toString(), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      timeout: 5000,
+    });
+
+    if (!data?.success) {
+      throw new BadRequestException('CAPTCHA verification failed');
+    }
+  }
+
   // ===========================================
   // Registration
   // ===========================================
@@ -83,6 +125,7 @@ export class AuthService {
     registerDto: RegisterDto,
     deviceInfo?: DeviceInfo,
   ): Promise<AuthResponse> {
+    await this.verifyRecaptcha(registerDto.captchaToken, deviceInfo?.ipAddress);
     const {
       email,
       password,
@@ -155,6 +198,7 @@ export class AuthService {
     loginDto: LoginDto,
     deviceInfo?: DeviceInfo,
   ): Promise<AuthResponse> {
+    await this.verifyRecaptcha(loginDto.captchaToken, deviceInfo?.ipAddress);
     const { email, password } = loginDto;
 
     // Find user
@@ -693,6 +737,84 @@ export class AuthService {
       user._id.toHexString(),
       tokens.refreshToken,
       deviceInfo || { deviceName: 'Google OAuth Login' },
+    );
+
+    return {
+      user: user.toJSON(),
+      tokens,
+      sessionId: session.id,
+    };
+  }
+
+  // ===========================================
+  // Facebook OAuth Login
+  // ===========================================
+
+  async facebookLogin(
+    facebookProfile: FacebookProfile,
+    deviceInfo?: DeviceInfo,
+  ): Promise<AuthResponse> {
+    const { email, firstName, lastName, avatar, facebookId } = facebookProfile;
+
+    // Check if user exists with this Facebook ID
+    let user = await this.userRepository.findOne({
+      where: { facebookId },
+    });
+
+    if (!user) {
+      // Check if user exists with the same email
+      user = await this.userRepository.findOne({
+        where: { email: email.toLowerCase() },
+      });
+
+      if (user) {
+        // Link Facebook account to existing user
+        user.facebookId = facebookId;
+        user.authProvider = AuthProvider.FACEBOOK;
+        if (!user.avatar && avatar) {
+          user.avatar = avatar;
+        }
+        // Facebook accounts are pre-verified
+        user.isEmailVerified = true;
+        if (user.status === UserStatus.PENDING_VERIFICATION) {
+          user.status = UserStatus.ACTIVE;
+        }
+        await this.userRepository.save(user);
+      } else {
+        // Create new user with Facebook account
+        user = this.userRepository.create({
+          email: email.toLowerCase(),
+          firstName,
+          lastName,
+          avatar,
+          facebookId,
+          authProvider: AuthProvider.FACEBOOK,
+          role: UserRole.TENANT,
+          status: UserStatus.ACTIVE,
+          isEmailVerified: true, // Facebook accounts are pre-verified
+        });
+
+        await this.userRepository.save(user);
+      }
+    }
+
+    // Check if account is suspended
+    if (user.status === UserStatus.SUSPENDED) {
+      throw new UnauthorizedException('Account is suspended');
+    }
+
+    // Update last login
+    user.resetLoginAttempts();
+    await this.userRepository.save(user);
+
+    // Generate tokens
+    const tokens = await this.generateTokens(user);
+
+    // Create session for this device
+    const session = await this.sessionService.createSession(
+      user._id.toHexString(),
+      tokens.refreshToken,
+      deviceInfo || { deviceName: 'Facebook OAuth Login' },
     );
 
     return {

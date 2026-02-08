@@ -7,6 +7,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import "./App.css";
 import { ProtectedRoute } from "./components/auth";
 import {
+  FacebookCallbackPage,
   ForgotPasswordPage,
   GoogleCallbackPage,
   LoginPage,
@@ -15,6 +16,7 @@ import {
   VerifyEmailPage,
 } from "./pages/auth";
 import { DashboardPage, SessionsPage } from "./pages/dashboard";
+import { HomePage } from "./pages/home";
 import { useAuthStore } from "./store";
 
 function App() {
@@ -28,6 +30,7 @@ function App() {
   return (
     <Routes>
       {/* Public Routes */}
+      <Route path="/" element={<HomePage />} />
       <Route
         path="/login"
         element={
@@ -48,6 +51,10 @@ function App() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
+      <Route
+        path="/auth/facebook/callback"
+        element={<FacebookCallbackPage />}
+      />
 
       {/* Protected Routes */}
       <Route
@@ -64,14 +71,6 @@ function App() {
           <ProtectedRoute>
             <SessionsPage />
           </ProtectedRoute>
-        }
-      />
-
-      {/* Default Route */}
-      <Route
-        path="/"
-        element={
-          <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
         }
       />
 
