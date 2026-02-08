@@ -53,6 +53,12 @@ export const validationSchema = Joi.object({
   GOOGLE_CALLBACK_URL: Joi.string().optional(),
   GOOGLE_FRONTEND_CALLBACK_URL: Joi.string().optional(),
 
+  // Facebook OAuth
+  FACEBOOK_CLIENT_ID: Joi.string().optional(),
+  FACEBOOK_CLIENT_SECRET: Joi.string().optional(),
+  FACEBOOK_CALLBACK_URL: Joi.string().optional(),
+  FACEBOOK_FRONTEND_CALLBACK_URL: Joi.string().optional(),
+
   // reCAPTCHA
   RECAPTCHA_SECRET_KEY: Joi.string().optional(),
   RECAPTCHA_VERIFY_URL: Joi.string().optional(),
