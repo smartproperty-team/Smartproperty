@@ -56,6 +56,7 @@ const FacebookIcon = () => (
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
+  twoFactorCode: z.string().optional(),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -66,6 +67,7 @@ export default function LoginPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaError, setCaptchaError] = useState<string | null>(null);
+  const [show2FA, setShow2FA] = useState(false);
 
   const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string | undefined;
 
@@ -85,13 +87,17 @@ export default function LoginPage() {
         return;
       }
       setCaptchaError(null);
-      await login(data.email, data.password, captchaToken);
+      await login(data.email, data.password, captchaToken, data.twoFactorCode);
       setSuccessMessage("Login successful! Redirecting...");
       setTimeout(() => {
         navigate("/dashboard");
       }, 1000);
-    } catch {
-      // Error is handled by the store
+    } catch (err: any) {
+      // Check if 2FA is required
+      const errorMessage = err?.response?.data?.message || err?.message || "";
+      if (errorMessage.toLowerCase().includes("two-factor")) {
+        setShow2FA(true);
+      }
     }
   };
 
@@ -160,6 +166,23 @@ export default function LoginPage() {
                   className="focus-visible:ring-home-primary"
                   {...register("password")}
                 />
+
+                {show2FA && (
+                  <div className="space-y-2">
+                    <Input
+                      label="Two-Factor Code"
+                      type="text"
+                      placeholder="123456"
+                      maxLength={6}
+                      error={errors.twoFactorCode?.message}
+                      className="focus-visible:ring-home-primary"
+                      {...register("twoFactorCode")}
+                    />
+                    <p className="text-sm text-home-muted">
+                      Enter the 6-digit code from your authenticator app
+                    </p>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between">
                   <label className="flex items-center">

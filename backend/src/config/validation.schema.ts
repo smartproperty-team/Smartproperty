@@ -60,8 +60,8 @@ export const validationSchema = Joi.object({
   FACEBOOK_FRONTEND_CALLBACK_URL: Joi.string().optional(),
 
   // reCAPTCHA
-  RECAPTCHA_SECRET_KEY: Joi.string().optional(),
-  RECAPTCHA_VERIFY_URL: Joi.string().optional(),
+  RECAPTCHA_SECRET_KEY: Joi.string().allow('').optional(),
+  RECAPTCHA_VERIFY_URL: Joi.string().allow('').optional(),
 
   // Throttling
   THROTTLE_TTL: Joi.number().default(60),

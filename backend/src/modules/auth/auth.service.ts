@@ -200,6 +200,8 @@ export class AuthService {
   ): Promise<AuthResponse> {
     await this.verifyRecaptcha(loginDto.captchaToken, deviceInfo?.ipAddress);
     const { email, password } = loginDto;
+    const twoFactorCode = (loginDto as LoginDto & { twoFactorCode?: string })
+      .twoFactorCode;
 
     // Find user
     const user = await this.userRepository.findOne({
@@ -234,6 +236,28 @@ export class AuthService {
     // Check if account is suspended
     if (user.status === UserStatus.SUSPENDED) {
       throw new UnauthorizedException('Account is suspended');
+    }
+
+    // Check if 2FA is enabled
+    if (user.twoFactorEnabled && user.twoFactorSecret) {
+      if (!twoFactorCode) {
+        // Return a special response indicating 2FA is required
+        throw new UnauthorizedException(
+          'Two-factor authentication code required',
+        );
+      }
+
+      // Verify 2FA code
+      const isValid = this.verifyTwoFactorCode(
+        user.twoFactorSecret,
+        twoFactorCode,
+      );
+
+      if (!isValid) {
+        throw new UnauthorizedException(
+          'Invalid two-factor authentication code',
+        );
+      }
     }
 
     // Reset login attempts on successful login
@@ -844,5 +868,145 @@ export class AuthService {
     return this.userRepository.findOne({
       where: { email: email.toLowerCase() },
     });
+  }
+
+  // ===========================================
+  // Two-Factor Authentication
+  // ===========================================
+
+  generateTwoFactorSecret(email: string): {
+    secret: string;
+    otpauthUrl: string;
+    qrCode: string;
+  } {
+    const speakeasy = require('speakeasy');
+    const QRCode = require('qrcode');
+
+    const secret = speakeasy.generateSecret({
+      name: `SmartProperty (${email})`,
+      issuer: 'SmartProperty',
+      length: 32,
+    });
+
+    return {
+      secret: secret.base32,
+      otpauthUrl: secret.otpauth_url!,
+      qrCode: '', // Will be generated separately
+    };
+  }
+
+  async generateTwoFactorQRCode(otpauthUrl: string): Promise<string> {
+    const QRCode = require('qrcode');
+    return QRCode.toDataURL(otpauthUrl);
+  }
+
+  verifyTwoFactorCode(secret: string, code: string): boolean {
+    const speakeasy = require('speakeasy');
+
+    return speakeasy.totp.verify({
+      secret,
+      encoding: 'base32',
+      token: code,
+      window: 2, // Allow 2 time steps before/after for clock drift
+    });
+  }
+
+  async enableTwoFactor(userId: string, code: string): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { _id: new ObjectId(userId) as any },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.twoFactorEnabled) {
+      throw new BadRequestException(
+        'Two-factor authentication is already enabled',
+      );
+    }
+
+    if (!user.twoFactorSecret) {
+      throw new BadRequestException(
+        'Two-factor secret not found. Please setup 2FA first',
+      );
+    }
+
+    // Verify the code
+    const isValid = this.verifyTwoFactorCode(user.twoFactorSecret, code);
+
+    if (!isValid) {
+      throw new BadRequestException('Invalid verification code');
+    }
+
+    // Enable 2FA
+    user.twoFactorEnabled = true;
+    await this.userRepository.save(user);
+
+    return user;
+  }
+
+  async disableTwoFactor(userId: string, password: string): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { _id: new ObjectId(userId) as any },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!user.twoFactorEnabled) {
+      throw new BadRequestException('Two-factor authentication is not enabled');
+    }
+
+    // Verify password
+    const isPasswordValid = await user.validatePassword(password);
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid password');
+    }
+
+    // Disable 2FA
+    user.twoFactorEnabled = false;
+    user.twoFactorSecret = undefined;
+    await this.userRepository.save(user);
+
+    return user;
+  }
+
+  async setupTwoFactor(userId: string): Promise<{
+    secret: string;
+    qrCode: string;
+    otpauthUrl: string;
+  }> {
+    const user = await this.userRepository.findOne({
+      where: { _id: new ObjectId(userId) as any },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.twoFactorEnabled) {
+      throw new BadRequestException(
+        'Two-factor authentication is already enabled. Disable it first to set up again.',
+      );
+    }
+
+    // Generate secret
+    const { secret, otpauthUrl } = this.generateTwoFactorSecret(user.email);
+
+    // Generate QR code
+    const qrCode = await this.generateTwoFactorQRCode(otpauthUrl);
+
+    // Save secret (but don't enable yet)
+    user.twoFactorSecret = secret;
+    await this.userRepository.save(user);
+
+    return {
+      secret,
+      qrCode,
+      otpauthUrl,
+    };
   }
 }

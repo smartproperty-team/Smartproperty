@@ -36,6 +36,8 @@ import { AuthAuditService } from './auth-audit.service';
 import { AuthResponse, AuthService, AuthTokens } from './auth.service';
 import {
   ChangePasswordDto,
+  Disable2FADto,
+  Enable2FADto,
   ForgotPasswordDto,
   LoginDto,
   RefreshTokenDto,
@@ -912,6 +914,190 @@ export class AuthController {
           sessionId,
           failureReason:
             error instanceof Error ? error.message : 'Unknown error',
+        },
+        deviceInfo,
+      );
+      throw error;
+    }
+  }
+
+  // ===========================================
+  // Two-Factor Authentication
+  // ===========================================
+
+  @Post('2fa/setup')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Setup two-factor authentication' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns QR code and secret for 2FA setup',
+    schema: {
+      type: 'object',
+      properties: {
+        secret: { type: 'string', description: 'Base32 encoded secret' },
+        qrCode: { type: 'string', description: 'QR code data URL' },
+        otpauthUrl: { type: 'string', description: 'OTPAuth URL' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '2FA already enabled',
+  })
+  async setup2FA(
+    @CurrentUser('id') userId: string,
+    @Req() req: Request,
+  ): Promise<{ secret: string; qrCode: string; otpauthUrl: string }> {
+    const deviceInfo = this.getDeviceInfo(req);
+
+    try {
+      const result = await this.authService.setupTwoFactor(userId);
+      await this.logAuthEvent(
+        req,
+        {
+          eventType: AuthAuditEventType.ACCOUNT_UPDATE,
+          success: true,
+          userId,
+          metadata: { action: '2FA setup initiated' },
+        },
+        deviceInfo,
+      );
+      return result;
+    } catch (error) {
+      await this.logAuthEvent(
+        req,
+        {
+          eventType: AuthAuditEventType.ACCOUNT_UPDATE,
+          success: false,
+          userId,
+          failureReason:
+            error instanceof Error ? error.message : 'Unknown error',
+          metadata: { action: '2FA setup failed' },
+        },
+        deviceInfo,
+      );
+      throw error;
+    }
+  }
+
+  @Post('2fa/enable')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Enable two-factor authentication' })
+  @ApiBody({ type: Enable2FADto })
+  @ApiResponse({
+    status: 200,
+    description: '2FA enabled successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+        twoFactorEnabled: { type: 'boolean' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid code or 2FA already enabled',
+  })
+  async enable2FA(
+    @CurrentUser('id') userId: string,
+    @Body() enable2FADto: Enable2FADto,
+    @Req() req: Request,
+  ): Promise<{ message: string; twoFactorEnabled: boolean }> {
+    const deviceInfo = this.getDeviceInfo(req);
+
+    try {
+      await this.authService.enableTwoFactor(userId, enable2FADto.code);
+      await this.logAuthEvent(
+        req,
+        {
+          eventType: AuthAuditEventType.ACCOUNT_UPDATE,
+          success: true,
+          userId,
+          metadata: { action: '2FA enabled' },
+        },
+        deviceInfo,
+      );
+      return {
+        message: 'Two-factor authentication enabled successfully',
+        twoFactorEnabled: true,
+      };
+    } catch (error) {
+      await this.logAuthEvent(
+        req,
+        {
+          eventType: AuthAuditEventType.ACCOUNT_UPDATE,
+          success: false,
+          userId,
+          failureReason:
+            error instanceof Error ? error.message : 'Unknown error',
+          metadata: { action: '2FA enable failed' },
+        },
+        deviceInfo,
+      );
+      throw error;
+    }
+  }
+
+  @Post('2fa/disable')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Disable two-factor authentication' })
+  @ApiBody({ type: Disable2FADto })
+  @ApiResponse({
+    status: 200,
+    description: '2FA disabled successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+        twoFactorEnabled: { type: 'boolean' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '2FA not enabled',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid password',
+  })
+  async disable2FA(
+    @CurrentUser('id') userId: string,
+    @Body() disable2FADto: Disable2FADto,
+    @Req() req: Request,
+  ): Promise<{ message: string; twoFactorEnabled: boolean }> {
+    const deviceInfo = this.getDeviceInfo(req);
+
+    try {
+      await this.authService.disableTwoFactor(userId, disable2FADto.password);
+      await this.logAuthEvent(
+        req,
+        {
+          eventType: AuthAuditEventType.ACCOUNT_UPDATE,
+          success: true,
+          userId,
+          metadata: { action: '2FA disabled' },
+        },
+        deviceInfo,
+      );
+      return {
+        message: 'Two-factor authentication disabled successfully',
+        twoFactorEnabled: false,
+      };
+    } catch (error) {
+      await this.logAuthEvent(
+        req,
+        {
+          eventType: AuthAuditEventType.ACCOUNT_UPDATE,
+          success: false,
+          userId,
+          failureReason:
+            error instanceof Error ? error.message : 'Unknown error',
+          metadata: { action: '2FA disable failed' },
         },
         deviceInfo,
       );

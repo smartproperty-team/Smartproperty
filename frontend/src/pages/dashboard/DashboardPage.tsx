@@ -289,6 +289,35 @@ export default function DashboardPage() {
                   </p>
                 </div>
               </div>
+
+              {/* 2FA Setup Button - Only show if not enabled */}
+              {!user?.twoFactorEnabled && (
+                <div className="col-span-full mt-4 rounded-lg border-2 border-dashed border-yellow-300 bg-yellow-50 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-100">
+                        <Shield className="h-5 w-5 text-yellow-600" />
+                      </div>
+                      <div className="ml-3">
+                        <h3 className="font-medium text-gray-900">
+                          Secure Your Account
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          Enable two-factor authentication for extra security
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => navigate("/security/2fa")}
+                      className="whitespace-nowrap"
+                    >
+                      Setup 2FA
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

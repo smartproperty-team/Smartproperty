@@ -11,8 +11,8 @@ export const minioConfig = registerAs('minio', () => ({
   useSSL: process.env.MINIO_USE_SSL === 'true',
 
   // Credentials
-  accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
-  secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
+  accessKey: process.env.MINIO_ACCESS_KEY || 'smartproperty_minio',
+  secretKey: process.env.MINIO_SECRET_KEY || 'smartproperty_minio_secret_2024',
 
   // Bucket settings
   bucketName: process.env.MINIO_BUCKET_NAME || 'smartproperty',
@@ -35,4 +35,3 @@ export const minioConfig = registerAs('minio', () => ({
     temp: 'temp',
   },
 }));
-

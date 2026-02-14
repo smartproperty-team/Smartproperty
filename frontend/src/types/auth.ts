@@ -34,6 +34,7 @@ export interface User {
   status: UserStatus;
   authProvider?: AuthProvider;
   isEmailVerified: boolean;
+  twoFactorEnabled: boolean;
   lastLogin?: string;
   createdAt: string;
   updatedAt: string;
@@ -53,6 +54,7 @@ export interface AuthResponse {
 export interface LoginCredentials {
   email: string;
   password: string;
+  twoFactorCode?: string;
   captchaToken?: string;
 }
 

@@ -240,6 +240,52 @@ export const authService = {
     );
     return response.data;
   },
+
+  // ===========================================
+  // Two-Factor Authentication
+  // ===========================================
+
+  /**
+   * Setup two-factor authentication (generates QR code)
+   */
+  async setup2FA(): Promise<{
+    secret: string;
+    qrCode: string;
+    otpauthUrl: string;
+  }> {
+    const response = await api.post<{
+      secret: string;
+      qrCode: string;
+      otpauthUrl: string;
+    }>("/auth/2fa/setup");
+    return response.data;
+  },
+
+  /**
+   * Enable two-factor authentication with verification code
+   */
+  async enable2FA(
+    code: string,
+  ): Promise<{ message: string; twoFactorEnabled: boolean }> {
+    const response = await api.post<{
+      message: string;
+      twoFactorEnabled: boolean;
+    }>("/auth/2fa/enable", { code });
+    return response.data;
+  },
+
+  /**
+   * Disable two-factor authentication
+   */
+  async disable2FA(
+    password: string,
+  ): Promise<{ message: string; twoFactorEnabled: boolean }> {
+    const response = await api.post<{
+      message: string;
+      twoFactorEnabled: boolean;
+    }>("/auth/2fa/disable", { password });
+    return response.data;
+  },
 };
 
 export default authService;

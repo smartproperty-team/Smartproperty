@@ -16,6 +16,7 @@ export enum AuthAuditEventType {
   PASSWORD_RESET_REQUEST = 'password_reset_request',
   PASSWORD_RESET = 'password_reset',
   PASSWORD_CHANGE = 'password_change',
+  ACCOUNT_UPDATE = 'account_update',
   OAUTH_GOOGLE = 'oauth_google',
   OAUTH_FACEBOOK = 'oauth_facebook',
   SESSION_REVOKE = 'session_revoke',

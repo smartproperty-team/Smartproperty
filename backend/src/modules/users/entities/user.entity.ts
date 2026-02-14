@@ -131,6 +131,14 @@ export class User {
   @Exclude()
   previousPasswords?: string[];
 
+  // Two-Factor Authentication
+  @Column({ nullable: true })
+  @Exclude()
+  twoFactorSecret?: string;
+
+  @Column({ default: false })
+  twoFactorEnabled: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 
@@ -241,6 +249,7 @@ export class User {
       status: this.status,
       authProvider: this.authProvider,
       isEmailVerified: this.isEmailVerified,
+      twoFactorEnabled: this.twoFactorEnabled,
       lastLogin: this.lastLogin,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
