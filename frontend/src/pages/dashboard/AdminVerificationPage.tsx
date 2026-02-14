@@ -1,0 +1,538 @@
+// ===========================================
+// SmartProperty - Admin Verification Review Page
+// ===========================================
+
+import {
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle2,
+  Clock,
+  Eye,
+  FileImage,
+  FileText,
+  Filter,
+  RefreshCw,
+  Shield,
+  ShieldCheck,
+  ShieldX,
+  XCircle,
+} from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Alert, Button, Card, CardContent } from '../../components/ui';
+import { verificationService } from '../../services/verification.service';
+import {
+  AdminVerificationItem,
+  VerificationDocument,
+  VerificationStatus,
+} from '../../types/verification';
+
+// ─── Status helpers ──────────────────────────────────────
+function statusConfig(status: VerificationStatus) {
+  const map: Record<
+    VerificationStatus,
+    { label: string; color: string; bg: string; icon: React.ReactNode }
+  > = {
+    [VerificationStatus.NOT_SUBMITTED]: {
+      label: 'Not Submitted',
+      color: 'text-gray-600',
+      bg: 'bg-gray-100',
+      icon: <AlertCircle className="h-4 w-4 text-gray-500" />,
+    },
+    [VerificationStatus.PENDING]: {
+      label: 'Pending',
+      color: 'text-yellow-700',
+      bg: 'bg-yellow-50',
+      icon: <Clock className="h-4 w-4 text-yellow-500" />,
+    },
+    [VerificationStatus.UNDER_REVIEW]: {
+      label: 'Under Review',
+      color: 'text-blue-700',
+      bg: 'bg-blue-50',
+      icon: <RefreshCw className="h-4 w-4 text-blue-500" />,
+    },
+    [VerificationStatus.VERIFIED]: {
+      label: 'Verified',
+      color: 'text-green-700',
+      bg: 'bg-green-50',
+      icon: <CheckCircle2 className="h-4 w-4 text-green-500" />,
+    },
+    [VerificationStatus.REJECTED]: {
+      label: 'Rejected',
+      color: 'text-red-700',
+      bg: 'bg-red-50',
+      icon: <XCircle className="h-4 w-4 text-red-500" />,
+    },
+  };
+  return map[status];
+}
+
+function formatBytes(bytes: number) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+}
+
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+// ─── Document preview card ──────────────────────────────
+function DocumentCard({ doc }: { doc: VerificationDocument }) {
+  const st = statusConfig(doc.status);
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50">
+        {doc.mimeType.startsWith('image/') ? (
+          <FileImage className="h-5 w-5 text-indigo-500" />
+        ) : (
+          <FileText className="h-5 w-5 text-indigo-500" />
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-gray-900">
+          {doc.fileName}
+        </p>
+        <p className="text-xs text-gray-500">
+          {formatBytes(doc.fileSize)} •{' '}
+          {doc.type === 'identity' ? 'Identity' : 'Proof of Income'}
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
+        <span
+          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${st.bg} ${st.color}`}
+        >
+          {st.icon}
+          {st.label}
+        </span>
+        <a
+          href={doc.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
+          title="View document"
+        >
+          <Eye className="h-4 w-4" />
+        </a>
+      </div>
+    </div>
+  );
+}
+
+// ─── Filter tabs ────────────────────────────────────────
+const FILTER_TABS: { label: string; value: VerificationStatus | 'all' }[] = [
+  { label: 'All', value: 'all' },
+  { label: 'Pending', value: VerificationStatus.PENDING },
+  { label: 'Under Review', value: VerificationStatus.UNDER_REVIEW },
+  { label: 'Verified', value: VerificationStatus.VERIFIED },
+  { label: 'Rejected', value: VerificationStatus.REJECTED },
+];
+
+// ─── Main page ───────────────────────────────────────────
+export default function AdminVerificationPage() {
+  const navigate = useNavigate();
+  const [verifications, setVerifications] = useState<AdminVerificationItem[]>(
+    [],
+  );
+  const [loading, setLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState<VerificationStatus | 'all'>(
+    'all',
+  );
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [message, setMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const fetchVerifications = useCallback(async () => {
+    setLoading(true);
+    try {
+      const status = activeFilter === 'all' ? undefined : activeFilter;
+      const data = await verificationService.getAllVerifications(status);
+      setVerifications(data);
+    } catch {
+      setMessage({
+        type: 'error',
+        text: 'Failed to load verifications.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [activeFilter]);
+
+  useEffect(() => {
+    fetchVerifications();
+  }, [fetchVerifications]);
+
+  const handleApprove = async (id: string) => {
+    setActionLoading(id);
+    setMessage(null);
+    try {
+      await verificationService.approveVerification(id);
+      setMessage({ type: 'success', text: 'Verification approved!' });
+      await fetchVerifications();
+    } catch {
+      setMessage({
+        type: 'error',
+        text: 'Failed to approve verification.',
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    if (!rejectReason.trim()) return;
+    setActionLoading(id);
+    setMessage(null);
+    try {
+      await verificationService.rejectVerification(id, rejectReason.trim());
+      setMessage({ type: 'success', text: 'Verification rejected.' });
+      setRejectingId(null);
+      setRejectReason('');
+      await fetchVerifications();
+    } catch {
+      setMessage({
+        type: 'error',
+        text: 'Failed to reject verification.',
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const pendingCount = verifications.filter(
+    (v) =>
+      v.overallStatus === VerificationStatus.PENDING ||
+      v.overallStatus === VerificationStatus.UNDER_REVIEW,
+  ).length;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6 lg:px-8">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Dashboard
+          </button>
+          <div className="h-6 w-px bg-gray-200" />
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-indigo-600" />
+            <span className="text-lg font-semibold text-gray-900">
+              Verification Review
+            </span>
+          </div>
+          {pendingCount > 0 && (
+            <span className="ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+              {pendingCount}
+            </span>
+          )}
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Message */}
+        {message && (
+          <div className="mb-6">
+            <Alert
+              type={message.type}
+              message={message.text}
+              onClose={() => setMessage(null)}
+            />
+          </div>
+        )}
+
+        {/* Stats row */}
+        <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {[
+            {
+              label: 'Total',
+              count: verifications.length,
+              color: 'bg-gray-100 text-gray-700',
+            },
+            {
+              label: 'Pending',
+              count: verifications.filter(
+                (v) =>
+                  v.overallStatus === VerificationStatus.PENDING ||
+                  v.overallStatus === VerificationStatus.UNDER_REVIEW,
+              ).length,
+              color: 'bg-yellow-100 text-yellow-700',
+            },
+            {
+              label: 'Approved',
+              count: verifications.filter(
+                (v) => v.overallStatus === VerificationStatus.VERIFIED,
+              ).length,
+              color: 'bg-green-100 text-green-700',
+            },
+            {
+              label: 'Rejected',
+              count: verifications.filter(
+                (v) => v.overallStatus === VerificationStatus.REJECTED,
+              ).length,
+              color: 'bg-red-100 text-red-700',
+            },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="rounded-xl border border-gray-200 bg-white p-4 text-center"
+            >
+              <p className="text-2xl font-bold text-gray-900">{stat.count}</p>
+              <p
+                className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${stat.color}`}
+              >
+                {stat.label}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Filter tabs */}
+        <div className="mb-6 flex items-center gap-2 overflow-x-auto">
+          <Filter className="h-4 w-4 shrink-0 text-gray-500" />
+          {FILTER_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setActiveFilter(tab.value)}
+              className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                activeFilter === tab.value
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <RefreshCw className="h-8 w-8 animate-spin text-indigo-500" />
+            <p className="mt-4 text-gray-500">Loading verifications...</p>
+          </div>
+        ) : verifications.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <Shield className="h-12 w-12 text-gray-300" />
+              <p className="mt-4 text-lg font-medium text-gray-500">
+                No verification requests
+              </p>
+              <p className="mt-1 text-sm text-gray-400">
+                {activeFilter === 'all'
+                  ? 'No tenants have submitted verification requests yet.'
+                  : `No ${activeFilter.replace('_', ' ')} verifications found.`}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {verifications.map((v) => {
+              const st = statusConfig(v.overallStatus);
+              const isExpanded = expandedId === v.id;
+              const isActionable =
+                v.overallStatus === VerificationStatus.PENDING ||
+                v.overallStatus === VerificationStatus.UNDER_REVIEW;
+
+              return (
+                <Card key={v.id} className="overflow-hidden">
+                  {/* Summary row */}
+                  <div
+                    className="flex cursor-pointer items-center justify-between gap-4 p-5 transition-colors hover:bg-gray-50"
+                    onClick={() => setExpandedId(isExpanded ? null : v.id)}
+                  >
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-100">
+                        <Shield className="h-5 w-5 text-indigo-600" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-900">
+                          Tenant: {v.userId.slice(0, 8)}...
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {v.documents.length} document
+                          {v.documents.length !== 1 ? 's' : ''} •{' '}
+                          {v.submittedAt
+                            ? `Submitted ${timeAgo(v.submittedAt)}`
+                            : 'Not submitted'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${st.bg} ${st.color}`}
+                      >
+                        {st.icon}
+                        {st.label}
+                      </span>
+                      <svg
+                        className={`h-5 w-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Expanded details */}
+                  {isExpanded && (
+                    <div className="border-t border-gray-100 bg-gray-50/50 p-5">
+                      {/* Documents */}
+                      <div className="mb-5">
+                        <h4 className="mb-3 text-sm font-semibold text-gray-700">
+                          Uploaded Documents
+                        </h4>
+                        {v.documents.length > 0 ? (
+                          <div className="space-y-2">
+                            {v.documents.map((doc) => (
+                              <DocumentCard key={doc.id} doc={doc} />
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-400">
+                            No documents uploaded.
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Timeline info */}
+                      <div className="mb-5 grid gap-3 text-sm sm:grid-cols-3">
+                        <div>
+                          <span className="text-gray-500">Created:</span>{' '}
+                          <span className="font-medium text-gray-900">
+                            {new Date(v.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        {v.submittedAt && (
+                          <div>
+                            <span className="text-gray-500">Submitted:</span>{' '}
+                            <span className="font-medium text-gray-900">
+                              {new Date(v.submittedAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        )}
+                        {v.verifiedAt && (
+                          <div>
+                            <span className="text-gray-500">Verified:</span>{' '}
+                            <span className="font-medium text-gray-900">
+                              {new Date(v.verifiedAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Rejection reason input */}
+                      {rejectingId === v.id && (
+                        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
+                          <label className="mb-2 block text-sm font-medium text-red-700">
+                            Rejection Reason
+                          </label>
+                          <textarea
+                            value={rejectReason}
+                            onChange={(e) => setRejectReason(e.target.value)}
+                            placeholder="Explain why the verification was rejected..."
+                            className="w-full rounded-lg border border-red-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                            rows={3}
+                          />
+                          <div className="mt-3 flex gap-2">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleReject(v.id)}
+                              isLoading={actionLoading === v.id}
+                              disabled={!rejectReason.trim()}
+                            >
+                              Confirm Rejection
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setRejectingId(null);
+                                setRejectReason('');
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action buttons */}
+                      {isActionable && rejectingId !== v.id && (
+                        <div className="flex gap-3">
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleApprove(v.id);
+                            }}
+                            isLoading={actionLoading === v.id}
+                            className="gap-1.5"
+                          >
+                            <ShieldCheck className="h-4 w-4" />
+                            Approve
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRejectingId(v.id);
+                              setRejectReason('');
+                            }}
+                            className="gap-1.5"
+                          >
+                            <ShieldX className="h-4 w-4" />
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* Already decided */}
+                      {v.overallStatus === VerificationStatus.VERIFIED && (
+                        <div className="flex items-center gap-2 text-sm text-green-600">
+                          <CheckCircle2 className="h-4 w-4" />
+                          This tenant has been verified.
+                        </div>
+                      )}
+                      {v.overallStatus === VerificationStatus.REJECTED && (
+                        <div className="flex items-center gap-2 text-sm text-red-600">
+                          <XCircle className="h-4 w-4" />
+                          This verification was rejected.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}

@@ -37,6 +37,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { PropertiesModule } from './modules/properties/properties.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { UsersModule } from './modules/users/users.module';
+import { VerificationModule } from './modules/verification/verification.module';
 
 @Module({
   imports: [
@@ -164,6 +165,7 @@ import { UsersModule } from './modules/users/users.module';
     UsersModule,
     PropertiesModule,
     UploadModule,
+    VerificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

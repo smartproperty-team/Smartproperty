@@ -25,6 +25,7 @@ const auth_module_1 = require("./modules/auth/auth.module");
 const properties_module_1 = require("./modules/properties/properties.module");
 const upload_module_1 = require("./modules/upload/upload.module");
 const users_module_1 = require("./modules/users/users.module");
+const verification_module_1 = require("./modules/verification/verification.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -123,6 +124,7 @@ exports.AppModule = AppModule = __decorate([
             users_module_1.UsersModule,
             properties_module_1.PropertiesModule,
             upload_module_1.UploadModule,
+            verification_module_1.VerificationModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],
