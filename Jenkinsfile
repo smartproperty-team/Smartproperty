@@ -1,5 +1,5 @@
 pipeline {
-  agent { label 'linux && docker' }
+  agent { label 'docker' }
   environment {
     NODE_VERSION = '18'
     REGISTRY = credentials('DOCKER_REGISTRY_URL') // e.g. myregistry.example.com stored as secret text
@@ -14,7 +14,7 @@ pipeline {
     }
 
     stage('Install & Test') {
-      agent { label 'linux && docker' }
+      agent { label 'docker' }
       steps {
         dir('backend') {
           // Start a temporary Mongo container for tests
@@ -50,7 +50,7 @@ pipeline {
     }
 
     stage('SonarQube Analysis') {
-      agent { label 'linux && docker' }
+      agent { label 'docker' }
       steps {
         dir('backend') {
           // Use Jenkins SonarQube plugin environment and run sonar-scanner inside a short-lived container
@@ -64,7 +64,7 @@ pipeline {
     }
 
     stage('Build & Push Docker image') {
-      agent { label 'linux && docker' }
+      agent { label 'docker' }
       steps {
         script {
           docker.withRegistry("https://${env.REGISTRY}", env.DOCKER_CREDENTIALS) {
