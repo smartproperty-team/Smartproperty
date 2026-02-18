@@ -1,0 +1,52 @@
+pipeline {
+  agent { label 'linux && docker' }
+  environment {
+    NODE_VERSION = '18'
+  }
+  options { ansiColor('xterm') timestamps() }
+  stages {
+    stage('Checkout') { steps { checkout scm } }
+
+    stage('Start test services') {
+      steps {
+        sh '''
+          echo "Starting temporary MongoDB for tests..."
+          docker run -d --name test-mongo -e MONGO_INITDB_DATABASE=smartproperty mongo:6 || true
+          for i in $(seq 1 30); do
+            if docker exec test-mongo mongo --eval "db.adminCommand('ping')" >/dev/null 2>&1; then
+              echo "Mongo ready"; break
+            fi
+            sleep 1
+          done
+        '''
+      }
+    }
+
+    stage('Install & Run Tests') {
+      steps {
+        dir('backend') {
+          sh "docker run --rm --network container:test-mongo -v ${WORKSPACE}/backend:/usr/src -w /usr/src node:${NODE_VERSION} bash -lc \"npm ci && MONGODB_URI='mongodb://localhost:27017/smartproperty' npm test --silent\""
+        }
+      }
+    }
+
+    stage('SonarQube Analysis') {
+      steps {
+        dir('backend') {
+          withCredentials([string(credentialsId: 'sonar-token-id', variable: 'SONAR_TOKEN')]) {
+            withSonarQubeEnv('SonarQube') {
+              sh "docker run --rm -v ${WORKSPACE}/backend:/usr/src -w /usr/src sonarsource/sonar-scanner-cli:latest -Dsonar.projectKey=smartproperty-backend -Dsonar.sources=src -Dsonar.login=${SONAR_TOKEN}"
+            }
+          }
+        }
+      }
+    }
+
+    stage('Cleanup') {
+      steps {
+        sh 'docker rm -f test-mongo || true'
+      }
+    }
+  }
+  post { always { cleanWs() } }
+}
