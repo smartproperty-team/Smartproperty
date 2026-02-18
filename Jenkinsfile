@@ -61,17 +61,17 @@ pipeline {
       }
     }
 
-    stage('Build & Push Docker image') {
-      agent { label 'docker' }
-      steps {
-        script {
-          docker.withRegistry("https://${env.REGISTRY}", env.DOCKER_CREDENTIALS) {
-            def img = docker.build("${env.IMAGE_NAMESPACE}:${env.BUILD_NUMBER}", "backend")
-            img.push()
-          }
-        }
-      }
-    }
+    // stage('Build & Push Docker image') {
+    //   agent { label 'docker' }
+    //   steps {
+    //     script {
+    //       docker.withRegistry("https://${env.REGISTRY}", env.DOCKER_CREDENTIALS) {
+    //         def img = docker.build("${env.IMAGE_NAMESPACE}:${env.BUILD_NUMBER}", "backend")
+    //         img.push()
+    //       }
+    //     }
+    //   }
+    // }
   }
   post {
     success { echo 'Backend pipeline succeeded' }
