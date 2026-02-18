@@ -7,7 +7,7 @@ pipeline {
     DOCKER_CREDENTIALS = 'docker-creds-id' // configure in Jenkins Credentials
     SONAR_HOST = credentials('SONAR_HOST_URL') // e.g. https://sonarqube.example.com
   }
-  options { ansiColor('xterm') timestamps() }
+  options { timestamps() }
   stages {
     stage('Checkout') {
       steps { checkout scm }
@@ -40,10 +40,11 @@ pipeline {
     }
 
     stage('Build (backend)') {
-      agent { docker { image "node:${env.NODE_VERSION}" args '--user root:root' } }
+      agent { label 'linux && docker' }
       steps {
         dir('backend') {
-          sh 'npm run build'
+          // Build inside node container to keep environment consistent
+          sh "docker run --rm -v ${WORKSPACE}/backend:/usr/src -w /usr/src node:${NODE_VERSION} bash -lc 'npm ci && npm run build'"
         }
       }
     }
