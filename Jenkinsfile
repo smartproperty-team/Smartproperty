@@ -65,10 +65,16 @@ pipeline {
     //   agent { label 'docker' }
     //   steps {
     //     script {
-    //       docker.withRegistry("https://${env.REGISTRY}", env.DOCKER_CREDENTIALS) {
-    //         def img = docker.build("${env.IMAGE_NAMESPACE}:${env.BUILD_NUMBER}", "backend")
-    //         img.push()
-    //       }
+          // If REGISTRY is not set, just build the image locally. If set, push to registry using credentials.
+          if (!env.REGISTRY) {
+            echo "No DOCKER_REGISTRY_URL set — building image locally only"
+            sh "docker build -t ${env.IMAGE_NAMESPACE}:local-${env.BUILD_NUMBER} backend"
+          } else {
+            docker.withRegistry("https://${env.REGISTRY}", env.DOCKER_CREDENTIALS) {
+              def img = docker.build("${env.IMAGE_NAMESPACE}:${env.BUILD_NUMBER}", "backend")
+              img.push()
+            }
+          }
     //     }
     //   }
     // }
