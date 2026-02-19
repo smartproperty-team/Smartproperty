@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        nodejs 'node-20'
-    }
-
     environment {
         SONAR_SCANNER_OPTS = "-Xmx512m"
     }
@@ -14,6 +10,13 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+
+        stage('Verify Node & NPM') {
+            steps {
+                sh 'node -v'
+                sh 'npm -v'
             }
         }
 
