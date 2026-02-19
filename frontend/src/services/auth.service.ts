@@ -10,6 +10,7 @@ import type {
   RegisterData,
   ResetPasswordData,
   Session,
+  UpdateProfileData,
   User,
   VerifyEmailData,
 } from "../types/auth";
@@ -136,6 +137,14 @@ export const authService = {
    */
   async getCurrentUser(): Promise<User> {
     const response = await api.get<User>("/auth/me");
+    return response.data;
+  },
+
+  /**
+   * Update current authenticated user profile
+   */
+  async updateProfile(data: UpdateProfileData): Promise<User> {
+    const response = await api.put<User>("/users/profile", data);
     return response.data;
   },
 

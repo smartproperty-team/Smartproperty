@@ -85,6 +85,12 @@ export interface ChangePasswordData {
   confirmPassword: string;
 }
 
+export interface UpdateProfileData {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+}
+
 export interface VerifyEmailData {
   token: string;
 }

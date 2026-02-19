@@ -8,6 +8,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ObjectId } from 'mongodb';
 import { Repository } from 'typeorm';
 import { User, UserRole, UserStatus } from './entities/user.entity';
 
@@ -125,8 +126,15 @@ export class UsersService {
   }
 
   async findById(id: string): Promise<User> {
+    let objectId: ObjectId;
+    try {
+      objectId = new ObjectId(id);
+    } catch {
+      throw new NotFoundException('User not found');
+    }
+
     const user = await this.userRepository.findOne({
-      where: { _id: id as any },
+      where: { _id: objectId as any },
     });
 
     if (!user) {

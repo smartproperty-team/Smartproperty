@@ -17,7 +17,7 @@ import {
   User,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HomeFooter, HomeNavbar } from "../../components/layout";
 import {
@@ -27,16 +27,29 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  Input,
 } from "../../components/ui";
 import { authService } from "../../services";
 import { useAuthStore } from "../../store";
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { user, logout, isLoading } = useAuthStore();
+  const { user, logout, isLoading, setUser } = useAuthStore();
   const [showDropdown, setShowDropdown] = useState(false);
+  const accountInfoRef = useRef<HTMLDivElement>(null);
   const [resendingEmail, setResendingEmail] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    firstName: user?.firstName || "",
+    lastName: user?.lastName || "",
+    phone: user?.phone || "",
+  });
   const [emailMessage, setEmailMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [profileMessage, setProfileMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
@@ -62,6 +75,75 @@ export default function DashboardPage() {
       });
     } finally {
       setResendingEmail(false);
+    }
+  };
+
+  const handleOpenProfileEditor = () => {
+    setShowDropdown(false);
+    setProfileMessage(null);
+    setProfileForm({
+      firstName: user?.firstName || "",
+      lastName: user?.lastName || "",
+      phone: user?.phone || "",
+    });
+    setIsEditingProfile(true);
+    accountInfoRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
+  const handleCancelProfileEdit = () => {
+    setIsEditingProfile(false);
+    setProfileForm({
+      firstName: user?.firstName || "",
+      lastName: user?.lastName || "",
+      phone: user?.phone || "",
+    });
+  };
+
+  const handleSaveProfile = async () => {
+    const firstName = profileForm.firstName.trim();
+    const lastName = profileForm.lastName.trim();
+    const phone = profileForm.phone.trim();
+
+    if (firstName.length < 2 || lastName.length < 2) {
+      setProfileMessage({
+        type: "error",
+        text: "First name and last name must be at least 2 characters.",
+      });
+      return;
+    }
+
+    setIsSavingProfile(true);
+    setProfileMessage(null);
+
+    try {
+      const updatedUser = await authService.updateProfile({
+        firstName,
+        lastName,
+        phone: phone || undefined,
+      });
+
+      setUser({
+        ...updatedUser,
+        fullName:
+          updatedUser.fullName ||
+          `${updatedUser.firstName} ${updatedUser.lastName}`.trim(),
+      });
+
+      setIsEditingProfile(false);
+      setProfileMessage({
+        type: "success",
+        text: "Profile updated successfully.",
+      });
+    } catch (error: unknown) {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message || "Failed to update profile. Please try again.";
+      setProfileMessage({ type: "error", text: message });
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -129,7 +211,10 @@ export default function DashboardPage() {
                     </p>
                     <p className="text-xs text-gray-500">{user?.email}</p>
                   </div>
-                  <button className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                  <button
+                    onClick={handleOpenProfileEditor}
+                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
                     <User className="mr-3 h-4 w-4" />
                     Profile
                   </button>
@@ -214,21 +299,75 @@ export default function DashboardPage() {
           </div>
 
           {/* User Info Card */}
-          <div className="mb-8">
+          <div ref={accountInfoRef} className="mb-8">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center">
                   <Shield className="mr-2 h-5 w-5 text-indigo-600" />
                   Your Account Information
                 </CardTitle>
+                {isEditingProfile && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancelProfileEdit}
+                      disabled={isSavingProfile}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleSaveProfile}
+                      isLoading={isSavingProfile}
+                    >
+                      Save Changes
+                    </Button>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
+                {profileMessage && (
+                  <div className="mb-4">
+                    <Alert
+                      type={profileMessage.type}
+                      message={profileMessage.text}
+                      onClose={() => setProfileMessage(null)}
+                    />
+                  </div>
+                )}
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
                     <label className="text-sm font-medium text-gray-500">
                       Full Name
                     </label>
-                    <p className="mt-1 text-gray-900">{user?.fullName}</p>
+                    {isEditingProfile ? (
+                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                        <Input
+                          placeholder="First name"
+                          value={profileForm.firstName}
+                          onChange={(e) =>
+                            setProfileForm((prev) => ({
+                              ...prev,
+                              firstName: e.target.value,
+                            }))
+                          }
+                        />
+                        <Input
+                          placeholder="Last name"
+                          value={profileForm.lastName}
+                          onChange={(e) =>
+                            setProfileForm((prev) => ({
+                              ...prev,
+                              lastName: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-gray-900">{user?.fullName}</p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">
@@ -252,9 +391,25 @@ export default function DashboardPage() {
                     <label className="text-sm font-medium text-gray-500">
                       Phone
                     </label>
-                    <p className="mt-1 text-gray-900">
-                      {user?.phone || "Not provided"}
-                    </p>
+                    {isEditingProfile ? (
+                      <div className="mt-2">
+                        <Input
+                          type="tel"
+                          placeholder="+1 (555) 123-4567"
+                          value={profileForm.phone}
+                          onChange={(e) =>
+                            setProfileForm((prev) => ({
+                              ...prev,
+                              phone: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-gray-900">
+                        {user?.phone || "Not provided"}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">
@@ -311,7 +466,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <Button
-                        variant="primary"
+                        variant="default"
                         size="sm"
                         onClick={() => navigate("/security/2fa")}
                         className="whitespace-nowrap"
