@@ -38,10 +38,11 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('SonarQube') {
-                    sh 'sonar-scanner'
-                }
-            }
+        withSonarQubeEnv('SonarQube') {
+            // Use the scanner from the Jenkins plugin
+            sh "${tool 'sonar-scanner'}/bin/sonar-scanner"
+        }
+    }
         }
 
         stage('Quality Gate') {
