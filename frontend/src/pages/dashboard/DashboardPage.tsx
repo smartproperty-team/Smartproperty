@@ -43,6 +43,8 @@ export default function DashboardPage() {
   const [isRequestingEmailChange, setIsRequestingEmailChange] = useState(false);
   const [isDeactivatingAccount, setIsDeactivatingAccount] = useState(false);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [profileForm, setProfileForm] = useState({
     firstName: user?.firstName || "",
     lastName: user?.lastName || "",
@@ -224,6 +226,26 @@ export default function DashboardPage() {
     } finally {
       setIsDeactivatingAccount(false);
       setShowDeactivateModal(false);
+    }
+  };
+
+  const handleDeleteAccountPermanently = async () => {
+    setIsDeletingAccount(true);
+    setProfileMessage(null);
+
+    try {
+      await authService.deleteAccountPermanently();
+      await logout();
+      navigate("/login");
+    } catch (error: unknown) {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message ||
+        "Failed to delete account permanently. Please try again.";
+      setProfileMessage({ type: "error", text: message });
+    } finally {
+      setIsDeletingAccount(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -622,6 +644,31 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 )}
+
+                {isEditingProfile && (
+                  <div className="col-span-full mt-4 rounded-lg border border-red-200 bg-red-50 p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-medium text-red-900">
+                          Delete Account Permanently (GDPR)
+                        </h3>
+                        <p className="text-sm text-red-700">
+                          This will permanently delete your account and all
+                          personal data will be removed. This action cannot be
+                          undone.
+                        </p>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setShowDeleteModal(true)}
+                        isLoading={isDeletingAccount}
+                      >
+                        Delete Permanently
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -762,6 +809,42 @@ export default function DashboardPage() {
                 isLoading={isDeactivatingAccount}
               >
                 Yes, Deactivate
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+            <h3 className="text-lg font-semibold text-red-900">
+              Permanently delete your account?
+            </h3>
+            <p className="mt-2 text-sm text-gray-600">
+              This action cannot be undone. Your account and all associated
+              personal data will be permanently deleted in compliance with GDPR
+              regulations. You will be signed out immediately.
+            </p>
+            <div className="mt-4 rounded-lg bg-red-50 p-3">
+              <p className="text-sm font-medium text-red-800">
+                ⚠️ Warning: This is permanent and irreversible.
+              </p>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeletingAccount}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteAccountPermanently}
+                isLoading={isDeletingAccount}
+              >
+                Yes, Delete Permanently
               </Button>
             </div>
           </div>

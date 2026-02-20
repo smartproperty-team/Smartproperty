@@ -183,6 +183,50 @@ export class UsersService {
     await this.userRepository.save(user);
   }
 
+  /**
+   * Permanently delete user account with GDPR compliance (anonymize PII)
+   * This keeps a record for audit purposes but removes all personal identifiable information
+   */
+  async permanentDelete(id: string): Promise<void> {
+    const user = await this.findById(id);
+
+    // Anonymize personal information (GDPR compliance)
+    user.firstName = `[Deleted User]`;
+    user.lastName = `${new Date().getTime()}`;
+    user.email = `deleted-${user._id.toHexString()}@smartproperty.local`;
+    user.phone = null;
+    user.avatar = null;
+    user.address = null;
+
+    // Clear all sensitive data
+    user.password = null;
+    user.refreshToken = null;
+    user.emailVerificationToken = null;
+    user.passwordResetToken = null;
+    user.twoFactorSecret = null;
+    user.previousPasswords = [];
+    user.pendingEmail = null;
+
+    // Mark as permanently deleted (cannot be restored or logged into)
+    user.permanentlyDeleted = true;
+    user.status = UserStatus.INACTIVE;
+    user.deletedAt = new Date();
+    user.isEmailVerified = false;
+    user.twoFactorEnabled = false;
+    user.loginAttempts = 0;
+    user.lockUntil = null;
+
+    // Clear preferences
+    if (user.preferences) {
+      user.preferences = {
+        language: 'en',
+        timezone: 'UTC',
+      };
+    }
+
+    await this.userRepository.save(user);
+  }
+
   // ===========================================
   // Statistics
   // ===========================================

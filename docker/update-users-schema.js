@@ -1,16 +1,14 @@
 // ===========================================
-// MongoDB Initialization Script
+// MongoDB Users Collection Schema Update
 // ===========================================
-// This script runs on first container startup
+// Run this script to update the users collection validator
+// mongosh smartproperty < update-users-schema.js
 
-// Switch to admin database to authenticate
-db = db.getSiblingDB("admin");
-
-// Create the application database
 db = db.getSiblingDB("smartproperty");
 
-// Create collections with schema validation
-db.createCollection("users", {
+// Drop old validator and recreate with new schema
+db.runCommand({
+  collMod: "users",
   validator: {
     $jsonSchema: {
       bsonType: "object",
@@ -151,123 +149,4 @@ db.createCollection("users", {
   },
 });
 
-db.createCollection("properties", {
-  validator: {
-    $jsonSchema: {
-      bsonType: "object",
-      required: ["title", "type", "status", "ownerId", "createdAt"],
-      properties: {
-        title: {
-          bsonType: "string",
-          description: "Property title - required",
-        },
-        description: {
-          bsonType: ["string", "null", "undefined"],
-          description: "Property description - optional",
-        },
-        type: {
-          enum: ["apartment", "house", "condo", "studio", "villa", "land"],
-          description: "Property type - required",
-        },
-        status: {
-          enum: ["available", "rented", "maintenance", "unlisted"],
-          description: "Property status - required",
-        },
-        price: {
-          bsonType: ["number", "double", "int"],
-          description: "Property price",
-        },
-        currency: {
-          bsonType: "string",
-          description: "Currency code",
-        },
-        address: {
-          bsonType: ["object", "null", "undefined"],
-          description: "Property address",
-        },
-        features: {
-          bsonType: ["object", "null", "undefined"],
-          description: "Property features - optional",
-        },
-        images: {
-          bsonType: ["array", "null", "undefined"],
-          description: "Property images - optional",
-        },
-        virtualTour: {
-          bsonType: ["string", "null", "undefined"],
-          description: "Virtual tour URL - optional",
-        },
-        ownerId: {
-          bsonType: ["objectId", "string"],
-          description: "Reference to owner user - required",
-        },
-        managerId: {
-          bsonType: ["objectId", "string", "null", "undefined"],
-          description: "Reference to manager user - optional",
-        },
-        createdAt: {
-          bsonType: "date",
-          description: "Creation timestamp",
-        },
-        updatedAt: {
-          bsonType: ["date", "null", "undefined"],
-          description: "Last update timestamp",
-        },
-        deletedAt: {
-          bsonType: ["date", "null", "undefined"],
-          description: "Deletion timestamp - for soft deletes",
-        },
-      },
-    },
-  },
-});
-
-db.createCollection("applications");
-db.createCollection("leases");
-db.createCollection("payments");
-db.createCollection("notifications");
-db.createCollection("messages");
-
-// Create indexes for better query performance
-db.users.createIndex({ email: 1 }, { unique: true });
-db.users.createIndex({ role: 1 });
-db.users.createIndex({ createdAt: -1 });
-
-db.properties.createIndex({ ownerId: 1 });
-db.properties.createIndex({ status: 1 });
-db.properties.createIndex({ type: 1 });
-db.properties.createIndex({ "location.coordinates": "2dsphere" });
-db.properties.createIndex({ createdAt: -1 });
-db.properties.createIndex({
-  title: "text",
-  description: "text",
-  "address.city": "text",
-  "address.country": "text",
-});
-
-db.applications.createIndex({ propertyId: 1 });
-db.applications.createIndex({ tenantId: 1 });
-db.applications.createIndex({ status: 1 });
-
-db.leases.createIndex({ propertyId: 1 });
-db.leases.createIndex({ tenantId: 1 });
-db.leases.createIndex({ status: 1 });
-
-db.payments.createIndex({ leaseId: 1 });
-db.payments.createIndex({ tenantId: 1 });
-db.payments.createIndex({ status: 1 });
-db.payments.createIndex({ dueDate: 1 });
-
-db.notifications.createIndex({ userId: 1 });
-db.notifications.createIndex({ isRead: 1 });
-db.notifications.createIndex({ createdAt: -1 });
-
-db.messages.createIndex({ senderId: 1 });
-db.messages.createIndex({ receiverId: 1 });
-db.messages.createIndex({ createdAt: -1 });
-
-print("✅ SmartProperty database initialized successfully!");
-print(
-  "📊 Collections created: users, properties, applications, leases, payments, notifications, messages",
-);
-print("🔍 Indexes created for optimal query performance");
+print("✅ Users collection schema updated successfully!");

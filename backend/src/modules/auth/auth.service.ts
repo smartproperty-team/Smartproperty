@@ -219,6 +219,25 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    // Additional safety: reject if email follows the deleted account pattern
+    if (
+      user.email.includes('deleted-') &&
+      user.email.includes('@smartproperty.local')
+    ) {
+      throw new UnauthorizedException(
+        'This account has been permanently deleted and cannot be recovered',
+      );
+    }
+
+    // Check if account is permanently deleted BEFORE password validation
+    // This prevents timing attacks and improves security
+    // Check both the flag and defensive markers (deletedAt + no password)
+    if (user.permanentlyDeleted || (user.deletedAt && !user.password)) {
+      throw new UnauthorizedException(
+        'This account has been permanently deleted and cannot be recovered',
+      );
+    }
+
     // Check if account is locked
     if (user.isLocked) {
       const lockTime = Math.ceil(
@@ -240,19 +259,20 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    // Check if account is suspended/inactive
+    // Check if account is suspended
     if (user.status === UserStatus.SUSPENDED) {
       throw new UnauthorizedException('Account is suspended');
     }
 
-    const shouldReactivate =
-      user.status === UserStatus.INACTIVE && reactivateAccount;
-
+    // Check if account is inactive and user is not trying to reactivate
     if (user.status === UserStatus.INACTIVE && !reactivateAccount) {
       throw new UnauthorizedException(
-        'Account is inactive. Confirm reactivation to continue',
+        'Account is inactive. Please reactivate your account to proceed.',
       );
     }
+
+    const shouldReactivate =
+      user.status === UserStatus.INACTIVE && reactivateAccount;
 
     // Check if 2FA is enabled
     if (user.twoFactorEnabled && user.twoFactorSecret) {

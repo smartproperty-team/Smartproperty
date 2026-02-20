@@ -158,6 +158,16 @@ export const authService = {
   },
 
   /**
+   * Permanently delete account with GDPR compliance (anonymizes all PII)
+   */
+  async deleteAccountPermanently(): Promise<{ message: string }> {
+    const response = await api.delete<{ message: string }>(
+      "/users/permanent-delete",
+    );
+    return response.data;
+  },
+
+  /**
    * Request email change verification link to new email address
    */
   async requestEmailChange(

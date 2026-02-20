@@ -97,7 +97,7 @@ This document outlines all features to be implemented in the SmartProperty platf
 - [X]  Update user profile
 - [X]  Change email (with verification)
 - [X]  Deactivate account
-- [ ]  Delete account (GDPR compliance)
+- [X]  Delete account (GDPR compliance)
 
 ### User Preferences
 

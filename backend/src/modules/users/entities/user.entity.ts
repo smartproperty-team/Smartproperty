@@ -152,6 +152,9 @@ export class User {
   @Column({ nullable: true })
   deletedAt?: Date;
 
+  @Column({ default: false })
+  permanentlyDeleted: boolean;
+
   // Address information
   @Column('simple-json', { nullable: true })
   address?: {
