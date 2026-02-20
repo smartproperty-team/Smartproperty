@@ -275,6 +275,9 @@ export class AuthController {
 
     const googleProfile = req.user as GoogleProfile;
     const deviceInfo = this.getDeviceInfo(req);
+    const frontendCallbackUrl =
+      this.configService.get<string>('google.frontendCallbackUrl') ||
+      'http://localhost:5173/auth/google/callback';
 
     try {
       const authResponse = await this.authService.googleLogin(
@@ -296,10 +299,6 @@ export class AuthController {
       );
 
       // Redirect to frontend with tokens in URL params
-      const frontendCallbackUrl = this.configService.get<string>(
-        'google.frontendCallbackUrl',
-      );
-
       const params = new URLSearchParams({
         accessToken: authResponse.tokens.accessToken,
         refreshToken: authResponse.tokens.refreshToken,
@@ -308,6 +307,10 @@ export class AuthController {
 
       res.redirect(`${frontendCallbackUrl}?${params.toString()}`);
     } catch (error) {
+      this.logger.error(
+        `Google OAuth callback error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+
       await this.logAuthEvent(
         req,
         {
@@ -319,7 +322,15 @@ export class AuthController {
         },
         deviceInfo,
       );
-      throw error;
+
+      // Redirect to frontend with error message instead of throwing
+      const errorMessage =
+        error instanceof Error ? error.message : 'Google authentication failed';
+      const params = new URLSearchParams({
+        error: encodeURIComponent(errorMessage),
+      });
+
+      res.redirect(`${frontendCallbackUrl}?${params.toString()}`);
     }
   }
 

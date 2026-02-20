@@ -678,6 +678,13 @@ export class AuthService {
   ): Promise<AuthResponse> {
     const { email, firstName, lastName, avatar, googleId } = googleProfile;
 
+    // Validate required fields
+    if (!email || !googleId) {
+      throw new BadRequestException(
+        'Email and Google ID are required for Google login',
+      );
+    }
+
     // Check if user exists with this Google ID
     let user = await this.userRepository.findOne({
       where: { googleId },
