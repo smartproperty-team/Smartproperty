@@ -292,8 +292,8 @@ services:
       MINIO_ROOT_USER: smartproperty_minio
       MINIO_ROOT_PASSWORD: smartproperty_minio_secret_2024
     ports:
-      - "9000:9000"   # API endpoint
-      - "9001:9001"   # Web Console
+      - "9000:9000" # API endpoint
+      - "9001:9001" # Web Console
     volumes:
       - minio_data:/data
     networks:

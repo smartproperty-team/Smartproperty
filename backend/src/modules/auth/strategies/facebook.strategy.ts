@@ -2,10 +2,10 @@
 // SmartProperty - Facebook OAuth Strategy
 // ===========================================
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { Strategy } from 'passport-facebook';
+import { Profile, Strategy } from 'passport-facebook';
 
 export interface FacebookProfile {
   email: string;
@@ -13,16 +13,6 @@ export interface FacebookProfile {
   lastName: string;
   avatar?: string;
   facebookId: string;
-}
-
-interface FacebookProfileData {
-  id: string;
-  name?: {
-    givenName?: string;
-    familyName?: string;
-  };
-  emails?: Array<{ value: string }>;
-  photos?: Array<{ value: string }>;
 }
 
 @Injectable()
@@ -36,29 +26,70 @@ export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
       callbackURL:
         configService.get<string>('facebook.callbackUrl') ||
         'http://localhost:3000/api/auth/facebook/callback',
-      scope: ['public_profile', 'email'],
-      profileFields: ['id', 'emails', 'name', 'picture.type(large)'],
+      scope: ['email', 'public_profile'],
+      profileFields: ['id', 'emails', 'name', 'displayName', 'photos'],
+      enableProof: true,
     });
   }
 
   validate(
     accessToken: string,
     refreshToken: string,
-    profile: FacebookProfileData,
+    profile: Profile,
     done: (error: Error | null, user?: FacebookProfile) => void,
   ): void {
-    this.logger.debug(`Facebook OAuth validation for user: ${profile.id}`);
+    try {
+      this.logger.debug(
+        `Facebook OAuth validation for user: ${profile.id} (${profile.displayName})`,
+      );
 
-    const { id, name, emails, photos } = profile;
+      const { id, name, emails, photos, displayName } = profile;
 
-    const facebookProfile: FacebookProfile = {
-      email: emails?.[0]?.value || '',
-      firstName: name?.givenName || '',
-      lastName: name?.familyName || '',
-      avatar: photos?.[0]?.value,
-      facebookId: id,
-    };
+      // Validate email existence
+      const email = emails?.[0]?.value;
+      if (!email) {
+        this.logger.warn(`Facebook user ${id} did not grant email permission`);
+        return done(
+          new UnauthorizedException(
+            'Email permission is required to sign in with Facebook',
+          ),
+        );
+      }
 
-    done(null, facebookProfile);
+      // Extract first and last name
+      let firstName = name?.givenName || '';
+      let lastName = name?.familyName || '';
+
+      // Fallback: Parse displayName if name parts are not available
+      if (!firstName && displayName) {
+        const nameParts = displayName.trim().split(' ');
+        firstName = nameParts[0] || '';
+        lastName = nameParts.slice(1).join(' ') || '';
+      }
+
+      // Ensure at least firstName exists
+      if (!firstName) {
+        firstName = 'Facebook User';
+      }
+
+      const facebookProfile: FacebookProfile = {
+        email,
+        firstName,
+        lastName,
+        avatar: photos?.[0]?.value,
+        facebookId: id,
+      };
+
+      this.logger.debug(
+        `Facebook profile extracted: ${email} (${firstName} ${lastName})`,
+      );
+
+      done(null, facebookProfile);
+    } catch (error) {
+      this.logger.error(
+        `Facebook OAuth validation error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      done(error instanceof Error ? error : new Error('Facebook OAuth failed'));
+    }
   }
 }

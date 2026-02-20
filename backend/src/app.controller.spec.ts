@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { ApiInfo, AppService } from './app.service';
 
 describe('AppController', () => {
   let appController: AppController;
@@ -23,3 +23,7 @@ describe('AppController', () => {
     });
   });
 });
+function expect(result: ApiInfo) {
+  throw new Error('Function not implemented.');
+}
+
