@@ -25,4 +25,3 @@ import { UploadController } from './upload.controller';
   exports: [MinioService],
 })
 export class UploadModule {}
-

@@ -33,7 +33,10 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../users/entities/user.entity';
-import { MinioService, UploadedFile as UploadedFileResult } from './minio.service';
+import {
+  MinioService,
+  UploadedFile as UploadedFileResult,
+} from './minio.service';
 
 // ===========================================
 // DTOs
@@ -308,7 +311,11 @@ export class UploadController {
   @ApiOperation({ summary: 'Get a presigned URL for direct upload' })
   @ApiQuery({ name: 'folder', description: 'Target folder', required: false })
   @ApiQuery({ name: 'filename', description: 'File name', required: true })
-  @ApiQuery({ name: 'expiry', description: 'URL expiry in seconds', required: false })
+  @ApiQuery({
+    name: 'expiry',
+    description: 'URL expiry in seconds',
+    required: false,
+  })
   @ApiResponse({
     status: 200,
     description: 'Presigned URL generated',
@@ -334,4 +341,3 @@ export class UploadController {
     };
   }
 }
-

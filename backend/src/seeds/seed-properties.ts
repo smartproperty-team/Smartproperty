@@ -149,4 +149,4 @@ async function seedProperties() {
   }
 }
 
-seedProperties();
+void seedProperties();

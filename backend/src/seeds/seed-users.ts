@@ -5,7 +5,11 @@
 import * as bcrypt from 'bcrypt';
 import { ObjectId } from 'mongodb';
 import { DataSource } from 'typeorm';
-import { User, UserRole, UserStatus } from '../modules/users/entities/user.entity';
+import {
+  User,
+  UserRole,
+  UserStatus,
+} from '../modules/users/entities/user.entity';
 
 async function seedUsers() {
   console.log('🌱 Starting user seeding...');
@@ -13,7 +17,9 @@ async function seedUsers() {
   // Create MongoDB connection
   const dataSource = new DataSource({
     type: 'mongodb',
-    url: process.env.MONGODB_URI || 'mongodb://smartproperty_user:smartproperty_pass_2024@localhost:27017/smartproperty?authSource=admin',
+    url:
+      process.env.MONGODB_URI ||
+      'mongodb://smartproperty_user:smartproperty_pass_2024@localhost:27017/smartproperty?authSource=admin',
     database: process.env.MONGODB_DATABASE || 'smartproperty',
     entities: [User],
     synchronize: false, // Don't sync schema, just insert data
@@ -28,7 +34,9 @@ async function seedUsers() {
     // Check if users already exist
     const existingCount = await userRepository.count();
     if (existingCount > 0) {
-      console.log(`⚠️  Database already has ${existingCount} users. Skipping seed.`);
+      console.log(
+        `⚠️  Database already has ${existingCount} users. Skipping seed.`,
+      );
       console.log('   To re-seed, clear the users collection first.');
       await dataSource.destroy();
       return;
@@ -119,4 +127,4 @@ async function seedUsers() {
   }
 }
 
-seedUsers();
+void seedUsers();

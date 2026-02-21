@@ -18,6 +18,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import axios from 'axios';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import * as speakeasy from 'speakeasy';
+import * as QRCode from 'qrcode';
 import { ObjectId } from 'mongodb';
 import { Repository } from 'typeorm';
 
@@ -1017,9 +1019,6 @@ export class AuthService {
     otpauthUrl: string;
     qrCode: string;
   } {
-    const speakeasy = require('speakeasy');
-    const QRCode = require('qrcode');
-
     const secret = speakeasy.generateSecret({
       name: `SmartProperty (${email})`,
       issuer: 'SmartProperty',
@@ -1034,13 +1033,10 @@ export class AuthService {
   }
 
   async generateTwoFactorQRCode(otpauthUrl: string): Promise<string> {
-    const QRCode = require('qrcode');
     return QRCode.toDataURL(otpauthUrl);
   }
 
   verifyTwoFactorCode(secret: string, code: string): boolean {
-    const speakeasy = require('speakeasy');
-
     return speakeasy.totp.verify({
       secret,
       encoding: 'base32',

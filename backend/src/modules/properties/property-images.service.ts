@@ -195,9 +195,7 @@ export class PropertyImagesService {
       throw new BadRequestException('Property has no images');
     }
 
-    const imageIndex = property.images.findIndex(
-      (img) => img.key === imageKey,
-    );
+    const imageIndex = property.images.findIndex((img) => img.key === imageKey);
     if (imageIndex === -1) {
       throw new NotFoundException('Image not found in property');
     }
@@ -370,4 +368,3 @@ export class PropertyImagesService {
     );
   }
 }
-

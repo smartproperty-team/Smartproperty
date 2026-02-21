@@ -4,6 +4,7 @@
 
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ObjectId } from 'mongodb';
 import * as bcrypt from 'bcrypt';
 import { LessThan, Repository } from 'typeorm';
 import { Session } from './entities/session.entity';
@@ -166,7 +167,6 @@ export class SessionService {
 
   async revokeSession(userId: string, sessionId: string): Promise<void> {
     // Always convert sessionId to ObjectId for MongoDB queries
-    const { ObjectId } = require('mongodb');
     let objectId: any;
     try {
       objectId = new ObjectId(sessionId);

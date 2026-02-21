@@ -164,8 +164,9 @@ export class UsersController {
   })
   async findOne(@Param('id') id: string, @CurrentUser() currentUser: any) {
     // Users can only view their own profile unless they're admin
-    if (currentUser.role !== UserRole.ADMIN && currentUser.id !== id) {
-      const user = await this.usersService.findById(currentUser.id);
+    const currentUserId = currentUser.id as string;
+    if (currentUser.role !== UserRole.ADMIN && currentUserId !== id) {
+      const user = await this.usersService.findById(currentUserId);
       return user.toJSON();
     }
 
