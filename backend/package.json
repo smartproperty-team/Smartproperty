@@ -20,7 +20,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed": "ts-node -r tsconfig-paths/register src/seeds/seed-users.ts",
     "seed:users": "ts-node -r tsconfig-paths/register src/seeds/seed-users.ts",
-    "seed:properties": "ts-node -r tsconfig-paths/register src/seeds/seed-properties.ts"
+    "seed:properties": "ts-node -r tsconfig-paths/register src/seeds/seed-properties.ts",
+    "postinstall": "node ./scripts/create-resolve-uri-shim.js"
   },
   "dependencies": {
     "@apollo/server": "^5.3.0",
