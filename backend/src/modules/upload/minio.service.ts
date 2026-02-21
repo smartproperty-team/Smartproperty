@@ -8,8 +8,8 @@
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Client } from 'minio';
 import { randomUUID } from 'crypto';
+import { Client } from 'minio';
 
 export interface UploadedFile {
   originalName: string;
