@@ -104,3 +104,4 @@ FRONTEND_AUTH_COMPLETE
 backend/dist/app.module.d.ts
 backend/dist/main.d.ts
 backend/dist/tsconfig.build.tsbuildinfo
+/backend/dist

@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'Node20'
+    }
+
     environment {
         SONAR_SCANNER_OPTS = "-Xmx512m"
     }
@@ -13,14 +17,7 @@ pipeline {
             }
         }
 
-        stage('Verify Node & NPM') {
-            steps {
-                sh 'node -v'
-                sh 'npm -v'
-            }
-        }
-
-        stage('Install Backend Dependencies') {
+        stage('Install Dependencies') {
             steps {
                 dir('backend') {
                     sh 'npm install'
@@ -28,21 +25,20 @@ pipeline {
             }
         }
 
-        stage('Install Frontend Dependencies') {
+        stage('Run Backend Tests with Coverage') {
             steps {
-                dir('frontend') {
-                    sh 'npm install'
+                dir('backend') {
+                    sh 'npm run test -- --coverage'
                 }
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-        withSonarQubeEnv('SonarQube') {
-            // Use the scanner from the Jenkins plugin
-            sh "${tool 'sonar-scanner'}/bin/sonar-scanner"
-        }
-    }
+                withSonarQubeEnv('SonarQube') {
+                    sh "${tool 'sonar-scanner'}/bin/sonar-scanner"
+                }
+            }
         }
 
         stage('Quality Gate') {
@@ -56,7 +52,7 @@ pipeline {
 
     post {
         success {
-            echo '✅ SonarQube analysis succeeded (coverage ignored)'
+            echo '✅ Backend tests + Sonar analysis succeeded'
         }
         failure {
             echo '❌ Pipeline failed – check logs'
