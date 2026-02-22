@@ -18,5 +18,9 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
     "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "@jridgewell/resolve-uri": "^3.1.2",
+    "promise": "^8.3.0"
   }
 }
