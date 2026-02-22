@@ -17,10 +17,10 @@ import {
   ShieldCheck,
   User,
   Users,
-} from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { HomeFooter, HomeNavbar } from '../../components/layout';
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { HomeFooter, HomeNavbar } from "../../components/layout";
 import {
   Alert,
   Button,
@@ -29,10 +29,10 @@ import {
   CardHeader,
   CardTitle,
   Input,
-} from '../../components/ui';
-import { authService, verificationService } from '../../services';
-import { useAuthStore } from '../../store';
-import { VerificationStatus } from '../../types/verification';
+} from "../../components/ui";
+import { authService, verificationService } from "../../services";
+import { useAuthStore } from "../../store";
+import { VerificationStatus } from "../../types/verification";
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -54,23 +54,23 @@ export default function DashboardPage() {
   });
   const [newEmail, setNewEmail] = useState(user?.email || "");
   const [emailMessage, setEmailMessage] = useState<{
-    type: 'success' | 'error';
+    type: "success" | "error";
     text: string;
   } | null>(null);
   const [verificationStatus, setVerificationStatus] =
     useState<VerificationStatus | null>(null);
   const [emailChangeMessage, setEmailChangeMessage] = useState<{
-    type: 'success' | 'error';
+    type: "success" | "error";
     text: string;
   } | null>(null);
   const [profileMessage, setProfileMessage] = useState<{
-    type: 'success' | 'error';
+    type: "success" | "error";
     text: string;
   } | null>(null);
 
   // Fetch verification status for tenants
   useEffect(() => {
-    if (user?.role === 'tenant') {
+    if (user?.role === "tenant") {
       verificationService
         .getVerificationStatus()
         .then((data) => setVerificationStatus(data.overallStatus))
@@ -84,13 +84,13 @@ export default function DashboardPage() {
     try {
       await authService.resendVerification(user.email);
       setEmailMessage({
-        type: 'success',
-        text: 'Verification email sent! Check your inbox or MailHog at localhost:8025',
+        type: "success",
+        text: "Verification email sent! Check your inbox or MailHog at localhost:8025",
       });
     } catch {
       setEmailMessage({
-        type: 'error',
-        text: 'Failed to send verification email. Please try again.',
+        type: "error",
+        text: "Failed to send verification email. Please try again.",
       });
     } finally {
       setResendingEmail(false);
@@ -260,23 +260,23 @@ export default function DashboardPage() {
 
   const getRoleBadgeColor = (role: string) => {
     const colors: Record<string, string> = {
-      admin: 'bg-red-100 text-red-800',
-      owner: 'bg-blue-100 text-blue-800',
-      tenant: 'bg-green-100 text-green-800',
-      manager: 'bg-purple-100 text-purple-800',
-      agent: 'bg-yellow-100 text-yellow-800',
+      admin: "bg-red-100 text-red-800",
+      owner: "bg-blue-100 text-blue-800",
+      tenant: "bg-green-100 text-green-800",
+      manager: "bg-purple-100 text-purple-800",
+      agent: "bg-yellow-100 text-yellow-800",
     };
-    return colors[role] || 'bg-gray-100 text-gray-800';
+    return colors[role] || "bg-gray-100 text-gray-800";
   };
 
   const getStatusBadgeColor = (status: string) => {
     const colors: Record<string, string> = {
-      active: 'bg-green-100 text-green-800',
-      inactive: 'bg-gray-100 text-gray-800',
-      suspended: 'bg-red-100 text-red-800',
-      pending_verification: 'bg-yellow-100 text-yellow-800',
+      active: "bg-green-100 text-green-800",
+      inactive: "bg-gray-100 text-gray-800",
+      suspended: "bg-red-100 text-red-800",
+      pending_verification: "bg-yellow-100 text-yellow-800",
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return colors[status] || "bg-gray-100 text-gray-800";
   };
 
   return (
@@ -345,7 +345,10 @@ export default function DashboardPage() {
                   </button>
                   <div className="border-t border-gray-100">
                     <button
-                      onClick={() => { logout(); navigate('/login'); }}
+                      onClick={() => {
+                        logout();
+                        navigate("/login");
+                      }}
                       disabled={isLoading}
                       className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                     >
@@ -683,7 +686,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Verify Me CTA - Show for tenants (hide if verified or rejected) */}
-          {user?.role === 'tenant' &&
+          {user?.role === "tenant" &&
             verificationStatus !== VerificationStatus.VERIFIED &&
             verificationStatus !== VerificationStatus.REJECTED && (
               <div className="mb-8">
@@ -700,13 +703,13 @@ export default function DashboardPage() {
                           Get Verified
                         </h3>
                         <p className="text-sm text-indigo-100">
-                          Upload your documents to build trust with landlords and
-                          speed up your applications.
+                          Upload your documents to build trust with landlords
+                          and speed up your applications.
                         </p>
                       </div>
                     </div>
                     <Button
-                      onClick={() => navigate('/verification')}
+                      onClick={() => navigate("/verification")}
                       className="shrink-0 bg-white text-indigo-600 shadow-md hover:bg-indigo-50 focus-visible:ring-white"
                       size="lg"
                     >
@@ -719,7 +722,7 @@ export default function DashboardPage() {
             )}
 
           {/* Admin: Review Verifications CTA */}
-          {user?.role === 'admin' && (
+          {user?.role === "admin" && (
             <div className="mb-8">
               <div className="relative overflow-hidden rounded-xl border border-amber-200 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 p-6 shadow-lg">
                 <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white/10" />
@@ -739,7 +742,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <Button
-                    onClick={() => navigate('/admin/verifications')}
+                    onClick={() => navigate("/admin/verifications")}
                     className="shrink-0 bg-white text-amber-600 shadow-md hover:bg-amber-50 focus-visible:ring-white"
                     size="lg"
                   >
@@ -878,17 +881,6 @@ export default function DashboardPage() {
                 variant="outline"
                 onClick={() => setShowDeactivateModal(false)}
                 disabled={isDeactivatingAccount}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDeactivateAccount}
-                isLoading={isDeactivatingAccount}
-              >
-                Yes, Deactivate
-              </Button>
-            </div>
               >
                 Cancel
               </Button>
