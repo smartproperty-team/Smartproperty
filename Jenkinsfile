@@ -20,6 +20,8 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 dir('backend') {
+                    // Verify Node/npm versions, then install dependencies
+                    sh 'node -v && npm -v'
                     // Use legacy peer deps to avoid ERESOLVE failures in CI
                     sh 'npm install --legacy-peer-deps'
                 }
