@@ -2,7 +2,8 @@ pipeline {
     agent any
 
     tools {
-        nodejs 'Node22'
+        // Use the currently installed NodeJS tool. Change to 'Node22' once configured in Jenkins.
+        nodejs 'Node20'
     }
 
     environment {
