@@ -14,8 +14,8 @@ import type {
   UpdateProfileData,
   User,
   VerifyEmailData,
-} from "../types/auth";
-import api, { clearTokens, setAccessToken, setRefreshToken } from "./api";
+} from '../types/auth';
+import api, { clearTokens, setAccessToken, setRefreshToken } from './api';
 
 // ===========================================
 // Auth Service Object
@@ -32,7 +32,7 @@ export const authService = {
    * @returns User data with tokens
    */
   async register(data: RegisterData): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>("/auth/register", data);
+    const response = await api.post<AuthResponse>('/auth/register', data);
     const { tokens } = response.data;
     setAccessToken(tokens.accessToken);
     setRefreshToken(tokens.refreshToken);
@@ -45,7 +45,7 @@ export const authService = {
    * @returns User data with tokens
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>("/auth/login", credentials);
+    const response = await api.post<AuthResponse>('/auth/login', credentials);
     const { tokens } = response.data;
     setAccessToken(tokens.accessToken);
     setRefreshToken(tokens.refreshToken);
@@ -58,7 +58,7 @@ export const authService = {
    */
   async logout(refreshToken?: string): Promise<void> {
     try {
-      await api.post("/auth/logout", {
+      await api.post('/auth/logout', {
         ...(refreshToken && { refreshToken }),
       });
     } finally {
@@ -75,7 +75,7 @@ export const authService = {
    * @returns URL to redirect user to Google OAuth
    */
   getGoogleLoginUrl(): string {
-    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
     return `${apiUrl}/auth/google`;
   },
 
@@ -94,7 +94,7 @@ export const authService = {
    * @returns URL to redirect user to Facebook OAuth
    */
   getFacebookLoginUrl(): string {
-    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
     return `${apiUrl}/auth/facebook`;
   },
 
@@ -118,7 +118,7 @@ export const authService = {
       const response = await api.post<{
         message: string;
         revokedCount: number;
-      }>("/auth/logout-all", {
+      }>('/auth/logout-all', {
         ...(currentSessionId && { currentSessionId }),
       });
       clearTokens();
@@ -137,7 +137,7 @@ export const authService = {
    * Get current authenticated user information
    */
   async getCurrentUser(): Promise<User> {
-    const response = await api.get<User>("/auth/me");
+    const response = await api.get<User>('/auth/me');
     return response.data;
   },
 
@@ -145,7 +145,7 @@ export const authService = {
    * Update current authenticated user profile
    */
   async updateProfile(data: UpdateProfileData): Promise<User> {
-    const response = await api.put<User>("/users/profile", data);
+    const response = await api.put<User>('/users/profile', data);
     return response.data;
   },
 
@@ -153,7 +153,7 @@ export const authService = {
    * Deactivate current authenticated account
    */
   async deactivateAccount(): Promise<{ message: string }> {
-    const response = await api.delete<{ message: string }>("/users/deactivate");
+    const response = await api.delete<{ message: string }>('/users/deactivate');
     return response.data;
   },
 
@@ -162,7 +162,7 @@ export const authService = {
    */
   async deleteAccountPermanently(): Promise<{ message: string }> {
     const response = await api.delete<{ message: string }>(
-      "/users/permanent-delete",
+      '/users/permanent-delete',
     );
     return response.data;
   },
@@ -174,7 +174,7 @@ export const authService = {
     data: RequestEmailChangeData,
   ): Promise<{ message: string }> {
     const response = await api.post<{ message: string }>(
-      "/auth/change-email-request",
+      '/auth/change-email-request',
       data,
     );
     return response.data;
@@ -190,7 +190,7 @@ export const authService = {
   async refreshTokens(
     refreshToken: string,
   ): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
-    const response = await api.post("/auth/refresh", { refreshToken });
+    const response = await api.post('/auth/refresh', { refreshToken });
     const { accessToken, refreshToken: newRefreshToken } = response.data;
     setAccessToken(accessToken);
     setRefreshToken(newRefreshToken);
@@ -206,7 +206,7 @@ export const authService = {
    */
   async verifyEmail(data: VerifyEmailData): Promise<{ message: string }> {
     const response = await api.post<{ message: string }>(
-      "/auth/verify-email",
+      '/auth/verify-email',
       data,
     );
     return response.data;
@@ -217,7 +217,7 @@ export const authService = {
    */
   async resendVerification(email: string): Promise<{ message: string }> {
     const response = await api.post<{ message: string }>(
-      "/auth/resend-verification",
+      '/auth/resend-verification',
       { email },
     );
     return response.data;
@@ -232,7 +232,7 @@ export const authService = {
    */
   async forgotPassword(data: ForgotPasswordData): Promise<{ message: string }> {
     const response = await api.post<{ message: string }>(
-      "/auth/forgot-password",
+      '/auth/forgot-password',
       data,
     );
     return response.data;
@@ -243,7 +243,7 @@ export const authService = {
    */
   async resetPassword(data: ResetPasswordData): Promise<{ message: string }> {
     const response = await api.post<{ message: string }>(
-      "/auth/reset-password",
+      '/auth/reset-password',
       data,
     );
     return response.data;
@@ -254,7 +254,7 @@ export const authService = {
    */
   async changePassword(data: ChangePasswordData): Promise<{ message: string }> {
     const response = await api.post<{ message: string }>(
-      "/auth/change-password",
+      '/auth/change-password',
       data,
     );
     return response.data;
@@ -268,7 +268,7 @@ export const authService = {
    * Get all active sessions for current user
    */
   async getSessions(): Promise<Session[]> {
-    const response = await api.get<Session[]>("/auth/sessions");
+    const response = await api.get<Session[]>('/auth/sessions');
     return response.data;
   },
 
@@ -298,7 +298,7 @@ export const authService = {
       secret: string;
       qrCode: string;
       otpauthUrl: string;
-    }>("/auth/2fa/setup");
+    }>('/auth/2fa/setup');
     return response.data;
   },
 
@@ -311,7 +311,7 @@ export const authService = {
     const response = await api.post<{
       message: string;
       twoFactorEnabled: boolean;
-    }>("/auth/2fa/enable", { code });
+    }>('/auth/2fa/enable', { code });
     return response.data;
   },
 
@@ -324,7 +324,7 @@ export const authService = {
     const response = await api.post<{
       message: string;
       twoFactorEnabled: boolean;
-    }>("/auth/2fa/disable", { password });
+    }>('/auth/2fa/disable', { password });
     return response.data;
   },
 };

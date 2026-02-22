@@ -17,10 +17,10 @@ import {
   ShieldCheck,
   User,
   Users,
-} from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { HomeFooter, HomeNavbar } from "../../components/layout";
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { HomeFooter, HomeNavbar } from '../../components/layout';
 import {
   Alert,
   Button,
@@ -29,10 +29,10 @@ import {
   CardHeader,
   CardTitle,
   Input,
-} from "../../components/ui";
-import { authService, verificationService } from "../../services";
-import { useAuthStore } from "../../store";
-import { VerificationStatus } from "../../types/verification";
+} from '../../components/ui';
+import { authService, verificationService } from '../../services';
+import { useAuthStore } from '../../store';
+import { VerificationStatus } from '../../types/verification';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -48,29 +48,29 @@ export default function DashboardPage() {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [profileForm, setProfileForm] = useState({
-    firstName: user?.firstName || "",
-    lastName: user?.lastName || "",
-    phone: user?.phone || "",
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
+    phone: user?.phone || '',
   });
-  const [newEmail, setNewEmail] = useState(user?.email || "");
+  const [newEmail, setNewEmail] = useState(user?.email || '');
   const [emailMessage, setEmailMessage] = useState<{
-    type: "success" | "error";
+    type: 'success' | 'error';
     text: string;
   } | null>(null);
   const [verificationStatus, setVerificationStatus] =
     useState<VerificationStatus | null>(null);
   const [emailChangeMessage, setEmailChangeMessage] = useState<{
-    type: "success" | "error";
+    type: 'success' | 'error';
     text: string;
   } | null>(null);
   const [profileMessage, setProfileMessage] = useState<{
-    type: "success" | "error";
+    type: 'success' | 'error';
     text: string;
   } | null>(null);
 
   // Fetch verification status for tenants
   useEffect(() => {
-    if (user?.role === "tenant") {
+    if (user?.role === 'tenant') {
       verificationService
         .getVerificationStatus()
         .then((data) => setVerificationStatus(data.overallStatus))
@@ -84,13 +84,13 @@ export default function DashboardPage() {
     try {
       await authService.resendVerification(user.email);
       setEmailMessage({
-        type: "success",
-        text: "Verification email sent! Check your inbox or MailHog at localhost:8025",
+        type: 'success',
+        text: 'Verification email sent! Check your inbox or MailHog at localhost:8025',
       });
     } catch {
       setEmailMessage({
-        type: "error",
-        text: "Failed to send verification email. Please try again.",
+        type: 'error',
+        text: 'Failed to send verification email. Please try again.',
       });
     } finally {
       setResendingEmail(false);
@@ -101,27 +101,27 @@ export default function DashboardPage() {
     setShowDropdown(false);
     setProfileMessage(null);
     setProfileForm({
-      firstName: user?.firstName || "",
-      lastName: user?.lastName || "",
-      phone: user?.phone || "",
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
+      phone: user?.phone || '',
     });
-    setNewEmail(user?.email || "");
+    setNewEmail(user?.email || '');
     setEmailChangeMessage(null);
     setIsEditingProfile(true);
     accountInfoRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
+      behavior: 'smooth',
+      block: 'start',
     });
   };
 
   const handleCancelProfileEdit = () => {
     setIsEditingProfile(false);
     setProfileForm({
-      firstName: user?.firstName || "",
-      lastName: user?.lastName || "",
-      phone: user?.phone || "",
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
+      phone: user?.phone || '',
     });
-    setNewEmail(user?.email || "");
+    setNewEmail(user?.email || '');
     setEmailChangeMessage(null);
   };
 
@@ -133,16 +133,16 @@ export default function DashboardPage() {
 
     if (!emailRegex.test(normalizedEmail)) {
       setEmailChangeMessage({
-        type: "error",
-        text: "Please enter a valid email address.",
+        type: 'error',
+        text: 'Please enter a valid email address.',
       });
       return;
     }
 
     if (normalizedEmail === user.email.toLowerCase()) {
       setEmailChangeMessage({
-        type: "error",
-        text: "New email must be different from current email.",
+        type: 'error',
+        text: 'New email must be different from current email.',
       });
       return;
     }
@@ -155,18 +155,18 @@ export default function DashboardPage() {
         newEmail: normalizedEmail,
       });
       setEmailChangeMessage({
-        type: "success",
+        type: 'success',
         text:
           response.message ||
-          "Verification link sent to your new email. Please confirm it to complete the change.",
+          'Verification link sent to your new email. Please confirm it to complete the change.',
       });
     } catch (error: unknown) {
       const message =
         (error as { response?: { data?: { message?: string } } })?.response
           ?.data?.message ||
-        "Failed to request email change. Please try again.";
+        'Failed to request email change. Please try again.';
       setEmailChangeMessage({
-        type: "error",
+        type: 'error',
         text: message,
       });
     } finally {
@@ -181,8 +181,8 @@ export default function DashboardPage() {
 
     if (firstName.length < 2 || lastName.length < 2) {
       setProfileMessage({
-        type: "error",
-        text: "First name and last name must be at least 2 characters.",
+        type: 'error',
+        text: 'First name and last name must be at least 2 characters.',
       });
       return;
     }
@@ -206,14 +206,14 @@ export default function DashboardPage() {
 
       setIsEditingProfile(false);
       setProfileMessage({
-        type: "success",
-        text: "Profile updated successfully.",
+        type: 'success',
+        text: 'Profile updated successfully.',
       });
     } catch (error: unknown) {
       const message =
         (error as { response?: { data?: { message?: string } } })?.response
-          ?.data?.message || "Failed to update profile. Please try again.";
-      setProfileMessage({ type: "error", text: message });
+          ?.data?.message || 'Failed to update profile. Please try again.';
+      setProfileMessage({ type: 'error', text: message });
     } finally {
       setIsSavingProfile(false);
     }
@@ -226,12 +226,12 @@ export default function DashboardPage() {
     try {
       await authService.deactivateAccount();
       await logout();
-      navigate("/login");
+      navigate('/login');
     } catch (error: unknown) {
       const message =
         (error as { response?: { data?: { message?: string } } })?.response
-          ?.data?.message || "Failed to deactivate account. Please try again.";
-      setProfileMessage({ type: "error", text: message });
+          ?.data?.message || 'Failed to deactivate account. Please try again.';
+      setProfileMessage({ type: 'error', text: message });
     } finally {
       setIsDeactivatingAccount(false);
       setShowDeactivateModal(false);
@@ -245,13 +245,13 @@ export default function DashboardPage() {
     try {
       await authService.deleteAccountPermanently();
       await logout();
-      navigate("/login");
+      navigate('/login');
     } catch (error: unknown) {
       const message =
         (error as { response?: { data?: { message?: string } } })?.response
           ?.data?.message ||
-        "Failed to delete account permanently. Please try again.";
-      setProfileMessage({ type: "error", text: message });
+        'Failed to delete account permanently. Please try again.';
+      setProfileMessage({ type: 'error', text: message });
     } finally {
       setIsDeletingAccount(false);
       setShowDeleteModal(false);
@@ -260,23 +260,23 @@ export default function DashboardPage() {
 
   const getRoleBadgeColor = (role: string) => {
     const colors: Record<string, string> = {
-      admin: "bg-red-100 text-red-800",
-      owner: "bg-blue-100 text-blue-800",
-      tenant: "bg-green-100 text-green-800",
-      manager: "bg-purple-100 text-purple-800",
-      agent: "bg-yellow-100 text-yellow-800",
+      admin: 'bg-red-100 text-red-800',
+      owner: 'bg-blue-100 text-blue-800',
+      tenant: 'bg-green-100 text-green-800',
+      manager: 'bg-purple-100 text-purple-800',
+      agent: 'bg-yellow-100 text-yellow-800',
     };
-    return colors[role] || "bg-gray-100 text-gray-800";
+    return colors[role] || 'bg-gray-100 text-gray-800';
   };
 
   const getStatusBadgeColor = (status: string) => {
     const colors: Record<string, string> = {
-      active: "bg-green-100 text-green-800",
-      inactive: "bg-gray-100 text-gray-800",
-      suspended: "bg-red-100 text-red-800",
-      pending_verification: "bg-yellow-100 text-yellow-800",
+      active: 'bg-green-100 text-green-800',
+      inactive: 'bg-gray-100 text-gray-800',
+      suspended: 'bg-red-100 text-red-800',
+      pending_verification: 'bg-yellow-100 text-yellow-800',
     };
-    return colors[status] || "bg-gray-100 text-gray-800";
+    return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
   return (
@@ -332,7 +332,7 @@ export default function DashboardPage() {
                   <button
                     onClick={() => {
                       setShowDropdown(false);
-                      navigate("/sessions");
+                      navigate('/sessions');
                     }}
                     className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                   >
@@ -347,13 +347,13 @@ export default function DashboardPage() {
                     <button
                       onClick={() => {
                         logout();
-                        navigate("/login");
+                        navigate('/login');
                       }}
                       disabled={isLoading}
                       className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                     >
                       <LogOut className="mr-3 h-4 w-4" />
-                      {isLoading ? "Signing out..." : "Sign Out"}
+                      {isLoading ? 'Signing out...' : 'Sign Out'}
                     </button>
                   </div>
                 </div>
@@ -564,7 +564,7 @@ export default function DashboardPage() {
                       </div>
                     ) : (
                       <p className="mt-1 text-gray-900">
-                        {user?.phone || "Not provided"}
+                        {user?.phone || 'Not provided'}
                       </p>
                     )}
                   </div>
@@ -574,7 +574,7 @@ export default function DashboardPage() {
                     </label>
                     <p className="mt-1">
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${getRoleBadgeColor(user?.role || "")}`}
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${getRoleBadgeColor(user?.role || '')}`}
                       >
                         {user?.role}
                       </span>
@@ -586,9 +586,9 @@ export default function DashboardPage() {
                     </label>
                     <p className="mt-1">
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${getStatusBadgeColor(user?.status || "")}`}
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${getStatusBadgeColor(user?.status || '')}`}
                       >
-                        {user?.status?.replace("_", " ")}
+                        {user?.status?.replace('_', ' ')}
                       </span>
                     </p>
                   </div>
@@ -600,7 +600,7 @@ export default function DashboardPage() {
                       <Calendar className="mr-2 h-4 w-4 text-gray-400" />
                       {user?.createdAt
                         ? new Date(user.createdAt).toLocaleDateString()
-                        : "N/A"}
+                        : 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -625,7 +625,7 @@ export default function DashboardPage() {
                       <Button
                         variant="default"
                         size="sm"
-                        onClick={() => navigate("/security/2fa")}
+                        onClick={() => navigate('/security/2fa')}
                         className="whitespace-nowrap"
                       >
                         Setup 2FA
@@ -686,7 +686,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Verify Me CTA - Show for tenants (hide if verified or rejected) */}
-          {user?.role === "tenant" &&
+          {user?.role === 'tenant' &&
             verificationStatus !== VerificationStatus.VERIFIED &&
             verificationStatus !== VerificationStatus.REJECTED && (
               <div className="mb-8">
@@ -709,7 +709,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <Button
-                      onClick={() => navigate("/verification")}
+                      onClick={() => navigate('/verification')}
                       className="shrink-0 bg-white text-indigo-600 shadow-md hover:bg-indigo-50 focus-visible:ring-white"
                       size="lg"
                     >
@@ -722,7 +722,7 @@ export default function DashboardPage() {
             )}
 
           {/* Admin: Review Verifications CTA */}
-          {user?.role === "admin" && (
+          {user?.role === 'admin' && (
             <div className="mb-8">
               <div className="relative overflow-hidden rounded-xl border border-amber-200 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 p-6 shadow-lg">
                 <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white/10" />
@@ -742,7 +742,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <Button
-                    onClick={() => navigate("/admin/verifications")}
+                    onClick={() => navigate('/admin/verifications')}
                     className="shrink-0 bg-white text-amber-600 shadow-md hover:bg-amber-50 focus-visible:ring-white"
                     size="lg"
                   >

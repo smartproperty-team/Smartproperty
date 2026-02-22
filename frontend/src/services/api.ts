@@ -2,17 +2,17 @@
 // SmartProperty - API Client
 // ===========================================
 
-import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 // In development, use relative path to leverage Vite proxy
 // In production, use the full API URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Create axios instance
 export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   },
   timeout: 10000,
 });
@@ -23,35 +23,35 @@ let accessToken: string | null = null;
 export const setAccessToken = (token: string | null) => {
   accessToken = token;
   if (token) {
-    localStorage.setItem("accessToken", token);
+    localStorage.setItem('accessToken', token);
   } else {
-    localStorage.removeItem("accessToken");
+    localStorage.removeItem('accessToken');
   }
 };
 
 export const getAccessToken = (): string | null => {
   if (!accessToken) {
-    accessToken = localStorage.getItem("accessToken");
+    accessToken = localStorage.getItem('accessToken');
   }
   return accessToken;
 };
 
 export const setRefreshToken = (token: string | null) => {
   if (token) {
-    localStorage.setItem("refreshToken", token);
+    localStorage.setItem('refreshToken', token);
   } else {
-    localStorage.removeItem("refreshToken");
+    localStorage.removeItem('refreshToken');
   }
 };
 
 export const getRefreshToken = (): string | null => {
-  return localStorage.getItem("refreshToken");
+  return localStorage.getItem('refreshToken');
 };
 
 export const clearTokens = () => {
   accessToken = null;
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("refreshToken");
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
 };
 
 // Request interceptor
@@ -76,8 +76,19 @@ api.interceptors.response.use(
       _retry?: boolean;
     };
 
-    // If 401 and not already retrying
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Skip token refresh for auth endpoints (login, register, etc.)
+    const url = originalRequest?.url || '';
+    const isAuthEndpoint =
+      url.includes('/auth/register') ||
+      url.includes('/auth/login') ||
+      url.includes('/auth/refresh');
+
+    // If 401 and not already retrying and not an auth endpoint
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !isAuthEndpoint
+    ) {
       originalRequest._retry = true;
 
       const refreshToken = getRefreshToken();
@@ -101,7 +112,7 @@ api.interceptors.response.use(
         } catch (refreshError) {
           // Refresh failed, clear tokens and redirect to login
           clearTokens();
-          window.location.href = "/login";
+          window.location.href = '/login';
           return Promise.reject(refreshError);
         }
       }

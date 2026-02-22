@@ -32,7 +32,10 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     // Allow active and pending_verification users
     // Suspended/inactive users should not be allowed
-    if (user.status !== UserStatus.ACTIVE) {
+    if (
+      user.status !== UserStatus.ACTIVE &&
+      user.status !== UserStatus.PENDING_VERIFICATION
+    ) {
       throw new UnauthorizedException('Account is suspended or inactive');
     }
 

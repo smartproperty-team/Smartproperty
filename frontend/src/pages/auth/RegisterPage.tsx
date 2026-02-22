@@ -59,7 +59,7 @@ const registerSchema = z
     lastName: z.string().min(2, 'Last name must be at least 2 characters'),
     email: z.string().email('Please enter a valid email address'),
     phone: z.string().optional(),
-    role: z.enum(["tenant", "owner", "manager", "agent"]).default("tenant"),
+    role: z.enum(['tenant', 'owner', 'manager', 'agent']).default('tenant'),
     password: z
       .string()
       .min(8, 'Password must be at least 8 characters')
@@ -84,7 +84,6 @@ export default function RegisterPage() {
     error,
     clearError,
   } = useAuthStore();
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaError, setCaptchaError] = useState<string | null>(null);
 
@@ -116,12 +115,9 @@ export default function RegisterPage() {
         role: data.role,
         captchaToken,
       });
-      setSuccessMessage(
-        'Registration successful! Please check your email to verify your account.',
-      );
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 2000);
+      // Registration successful - store sets isAuthenticated=true
+      // The route guard in App.tsx will auto-redirect to /dashboard
+      navigate('/dashboard');
     } catch {
       // Error is handled by the store
     }
@@ -166,10 +162,6 @@ export default function RegisterPage() {
                   <Alert type="error" message={error} onClose={clearError} />
                 )}
 
-                {successMessage && (
-                  <Alert type="success" message={successMessage} />
-                )}
-
                 {captchaError && <Alert type="error" message={captchaError} />}
 
                 <div className="grid grid-cols-2 gap-4">
@@ -212,7 +204,7 @@ export default function RegisterPage() {
                     Account Type
                   </label>
                   <select
-                    {...register("role")}
+                    {...register('role')}
                     className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                   >
                     <option value="tenant">Tenant - Looking to rent</option>
