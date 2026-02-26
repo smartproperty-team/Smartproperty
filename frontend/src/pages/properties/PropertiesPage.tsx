@@ -4,14 +4,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { HomeFooter, Navbar } from "../../components/layout";
-import { propertyService } from "../../services/property.service";
+import { HomeFooter, Navbar } from "@/components/layout";
+import { propertyService } from "@/services/property.service";
+import { useAuthStore } from "@/store";
 import type {
   Property,
   PropertyFilters,
   PropertyStatus,
   PropertyType,
-} from "../../types/property";
+} from "@/types/property";
+import { canManageProperties } from "@/utils";
 import "./properties.css";
 
 // ===========================================
@@ -123,9 +125,10 @@ const HomeIcon = () => (
 interface PropertyCardProps {
   property: Property;
   onDelete?: (id: string) => void;
+  canManage?: boolean;
 }
 
-function PropertyCard({ property, onDelete }: PropertyCardProps) {
+function PropertyCard({ property, onDelete, canManage = true }: PropertyCardProps) {
   const propertyId = property.id || property._id || "";
   const primaryImage =
     property.images?.find((img) => img.isPrimary) || property.images?.[0];
@@ -214,12 +217,16 @@ function PropertyCard({ property, onDelete }: PropertyCardProps) {
           <Link to={`/properties/${propertyId}`} className="btn-view">
             Voir
           </Link>
-          <Link to={`/properties/${propertyId}/edit`} className="btn-edit">
-            Modifier
-          </Link>
-          <button className="btn-delete" onClick={handleDelete}>
-            Supprimer
-          </button>
+          {canManage && (
+            <>
+              <Link to={`/properties/${propertyId}/edit`} className="btn-edit">
+                Modifier
+              </Link>
+              <button className="btn-delete" onClick={handleDelete}>
+                Supprimer
+              </button>
+            </>
+          )}
         </div>
       </div>
     </article>
@@ -231,6 +238,8 @@ function PropertyCard({ property, onDelete }: PropertyCardProps) {
 // ===========================================
 
 export default function PropertiesPage() {
+  const { user } = useAuthStore();
+  const canManage = canManageProperties(user);
   const [searchParams, setSearchParams] = useSearchParams();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
@@ -328,10 +337,12 @@ export default function PropertiesPage() {
                 {total > 1 ? "s" : ""}
               </p>
             </div>
-            <Link to="/properties/new" className="btn-add-property">
-              <PlusIcon />
-              Ajouter une propriété
-            </Link>
+            {canManage && (
+              <Link to="/properties/new" className="btn-add-property">
+                <PlusIcon />
+                Ajouter une propriété
+              </Link>
+            )}
           </div>
         </div>
 
@@ -428,12 +439,16 @@ export default function PropertiesPage() {
             <p>
               {filters.search || filters.type || filters.status || filters.city
                 ? "Essayez de modifier vos filtres de recherche."
-                : "Commencez par ajouter votre première propriété."}
+                : canManage
+                  ? "Commencez par ajouter votre première propriété."
+                  : "Aucune propriété disponible pour le moment."}
             </p>
-            <Link to="/properties/new" className="btn-add-property">
-              <PlusIcon />
-              Ajouter une propriété
-            </Link>
+            {canManage && (
+              <Link to="/properties/new" className="btn-add-property">
+                <PlusIcon />
+                Ajouter une propriété
+              </Link>
+            )}
           </div>
         ) : (
           <>
@@ -443,7 +458,8 @@ export default function PropertiesPage() {
                 <PropertyCard
                   key={property.id || property._id}
                   property={property}
-                  onDelete={handleDelete}
+                  onDelete={canManage ? handleDelete : undefined}
+                  canManage={canManage}
                 />
               ))}
             </div>

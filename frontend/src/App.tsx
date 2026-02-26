@@ -2,7 +2,7 @@
 // SmartProperty - Main App Component
 // ===========================================
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import './App.css';
 import { ProtectedRoute } from './components/auth';
@@ -22,13 +22,17 @@ import {
   VerificationPage,
 } from './pages/dashboard';
 import { HomePage } from './pages/home';
+import { PreferencesOnboardingModal } from './pages/onboarding';
+import { ProfilePage } from './pages/profile';
 import {
   PropertiesPage,
   PropertyDetailPage,
   PropertyFormPage,
 } from './pages/properties';
+import { SettingsPage } from './pages/settings';
 import TwoFactorPage from './pages/security/TwoFactorPage';
-import { useAuthStore } from './store';
+import { useAuthStore, usePreferencesStore } from './store';
+import { canManageProperties } from './utils';
 
 function App() {
   const { checkAuth, isAuthenticated, user } = useAuthStore();
@@ -41,97 +45,24 @@ function App() {
     checkAuth();
   }, [checkAuth]);
 
-  return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/" element={<HomePage />} />
-      <Route
-        path="/login"
-        element={
-          isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
-        }
-      />
-      <Route
-        path="/register"
-        element={
-          isAuthenticated ? (
-            <Navigate to="/dashboard" replace />
-          ) : (
-            <RegisterPage />
-          )
-        }
-      />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/verify-email" element={<VerifyEmailPage />} />
-      <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
-      <Route
-        path="/auth/facebook/callback"
-        element={<FacebookCallbackPage />}
-      />
+  // Bootstrap preferences after login
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+    if (promptedUserRef.current === user.id) return;
 
-      {/* Protected Routes */}
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <DashboardPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/sessions"
-        element={
-          <ProtectedRoute>
-            <SessionsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/verification"
-        element={
-          <ProtectedRoute>
-            <VerificationPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/verifications"
-        element={
-          <ProtectedRoute>
-            <AdminVerificationPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/security/2fa"
-        element={
-          <ProtectedRoute>
-            <TwoFactorPage />
-          </ProtectedRoute>
-        }
-      />
+    let isCancelled = false;
 
-      {/* Properties Routes */}
-      <Route path="/properties" element={<PropertiesPage />} />
-      <Route path="/properties/:id" element={<PropertyDetailPage />} />
-      <Route
-        path="/properties/new"
-        element={
-          <ProtectedRoute>
-            <PropertyFormPage />
-          </ProtectedRoute>
+    const bootstrapPreferences = async () => {
+      let resolvedPreferences = getUserPreferences(user.id);
+
+      try {
+        const serverPreferences = await import('./services').then((m) =>
+          m.authService.getPreferences(),
+        );
+        if (!isCancelled) {
+          setUserPreferences(user.id, serverPreferences);
+          resolvedPreferences = serverPreferences;
         }
-      />
-      <Route
-        path="/properties/:id/edit"
-        element={
-          <ProtectedRoute>
-            <PropertyFormPage />
-          </ProtectedRoute>
-        }
-        setUserPreferences(user.id, serverPreferences);
-        resolvedPreferences = serverPreferences;
       } catch {
         // Keep local persisted fallback if backend is temporarily unavailable
       }
@@ -200,6 +131,30 @@ function App() {
           }
         />
         <Route
+          path="/sessions"
+          element={
+            <ProtectedRoute>
+              <SessionsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/verification"
+          element={
+            <ProtectedRoute>
+              <VerificationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/verifications"
+          element={
+            <ProtectedRoute>
+              <AdminVerificationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/profile"
           element={
             <ProtectedRoute>
@@ -212,14 +167,6 @@ function App() {
           element={
             <ProtectedRoute>
               <SettingsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/sessions"
-          element={
-            <ProtectedRoute>
-              <SessionsPage />
             </ProtectedRoute>
           }
         />
@@ -239,7 +186,11 @@ function App() {
           path="/properties/new"
           element={
             <ProtectedRoute>
-              <PropertyFormPage />
+              {canManageProperties(user) ? (
+                <PropertyFormPage />
+              ) : (
+                <Navigate to="/properties" replace />
+              )}
             </ProtectedRoute>
           }
         />
@@ -247,7 +198,11 @@ function App() {
           path="/properties/:id/edit"
           element={
             <ProtectedRoute>
-              <PropertyFormPage />
+              {canManageProperties(user) ? (
+                <PropertyFormPage />
+              ) : (
+                <Navigate to="/properties" replace />
+              )}
             </ProtectedRoute>
           }
         />

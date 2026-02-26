@@ -2,12 +2,21 @@
 // SmartProperty - Home Navbar Component
 // ===========================================
 
+import {
+  BellRing,
+  ChevronDown,
+  LogOut,
+  Monitor,
+  Settings,
+  User,
+} from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import '../../pages/home/home3.css';
-import { notificationService } from '../../services';
-import type { Notification } from '../../services/notification.service';
-import { useAuthStore } from '../../store';
+import { notificationService } from '@/services';
+import type { Notification } from '@/services/notification.service';
+import { useAuthStore, usePreferencesStore } from '@/store';
+import { canManageProperties } from '@/utils';
 
 const navLinks = [
   { to: '/', label: 'Home' },
@@ -21,13 +30,16 @@ const navLinks = [
 export default function HomeNavbar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user, logout, isAuthenticated } = useAuthStore();
+  const { getUserPreferences, openOnboarding } = usePreferencesStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const notifPanelRef = useRef<HTMLDivElement>(null);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch notifications
   const fetchNotifications = useCallback(async () => {
@@ -65,9 +77,23 @@ export default function HomeNavbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Close user dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        userDropdownRef.current &&
+        !userDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowUserDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const userPreferences = user ? getUserPreferences(user.id) : null;
   const showPreferencesReminder =
-    !!isAuthenticated &&
+    isAuthenticated &&
     !!user &&
     !!userPreferences &&
     !userPreferences.completed &&
@@ -101,7 +127,7 @@ export default function HomeNavbar() {
         <button
           type="button"
           onClick={openOnboarding}
-          className="fixed right-6 top-20 z-[90] flex animate-bounce items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-red-200 hover:bg-red-700"
+          className="fixed right-6 top-20 z-90 flex animate-bounce items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-red-200 hover:bg-red-700"
         >
           <BellRing className="h-4 w-4" />
           Complete your questions
@@ -180,33 +206,108 @@ export default function HomeNavbar() {
               </svg>
               <span>+68 685 88666</span>
             </a>
-            <Link
-              to={user ? '/dashboard' : '/login'}
-              className="navbar-user-btn"
-              aria-label={
-                user
-                  ? `Account: ${user.fullName || user.firstName}`
-                  : 'User account'
-              }
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                aria-hidden="true"
+            {/* User menu */}
+            {user ? (
+              <div className="relative" ref={userDropdownRef}>
+                <button
+                  onClick={() => setShowUserDropdown(!showUserDropdown)}
+                  className="navbar-user-btn flex items-center space-x-2"
+                  aria-label={`Account: ${user.fullName || user.firstName}`}
+                  aria-expanded={showUserDropdown}
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
+                    <User className="h-4 w-4" />
+                  </div>
+                  <span className="user-name hidden sm:inline">
+                    {user.fullName || user.firstName}
+                  </span>
+                  <ChevronDown className="h-4 w-4 text-gray-500" />
+                </button>
+
+                {showUserDropdown && (
+                  <div className="absolute right-0 z-50 mt-2 w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+                    <div className="border-b border-gray-100 px-4 py-3">
+                      <p className="text-sm font-medium text-gray-900">
+                        {user.fullName || user.firstName}
+                      </p>
+                      <p className="text-xs text-gray-500">{user.email}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        navigate('/profile');
+                      }}
+                      className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      <User className="mr-3 h-4 w-4" />
+                      Profile
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        navigate('/dashboard');
+                      }}
+                      className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      <Monitor className="mr-3 h-4 w-4" />
+                      Dashboard
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        navigate('/sessions');
+                      }}
+                      className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      <Monitor className="mr-3 h-4 w-4" />
+                      Active Sessions
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        navigate('/settings');
+                      }}
+                      className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      <Settings className="mr-3 h-4 w-4" />
+                      Settings
+                    </button>
+                    <div className="border-t border-gray-100">
+                      <button
+                        onClick={async () => {
+                          setShowUserDropdown(false);
+                          await logout();
+                          navigate('/login');
+                        }}
+                        className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                      >
+                        <LogOut className="mr-3 h-4 w-4" />
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="navbar-user-btn"
+                aria-label="User account"
               >
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-              {user && (
-                <span className="user-name">
-                  {user.fullName || user.firstName}
-                </span>
-              )}
-            </Link>
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  aria-hidden="true"
+                >
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </Link>
+            )}
             {user && (
               <div className="navbar-notif-wrapper" ref={notifPanelRef}>
                 <button
@@ -315,48 +416,23 @@ export default function HomeNavbar() {
                 )}
               </div>
             )}
-            {user && (
-              <button
-                className="navbar-logout-btn"
-                aria-label="Sign out"
-                title="Sign out"
-                onClick={async () => {
-                  await logout();
-                  navigate('/login');
-                }}
-              >
+            {canManageProperties(user) && (
+              <Link to="/properties/new" className="btn-add-property">
+                <span className="btn-text">Add Property</span>
                 <svg
-                  width="20"
-                  height="20"
+                  className="btn-icon"
+                  width="16"
+                  height="16"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
                   aria-hidden="true"
                 >
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" y1="12" x2="9" y2="12" />
+                  <path d="M12 5v14M5 12h14" />
                 </svg>
-              </button>
+              </Link>
             )}
-            <Link to="/properties/new" className="btn-add-property">
-              <span className="btn-text">Add Property</span>
-              <svg
-                className="btn-icon"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                aria-hidden="true"
-              >
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-            </Link>
           </div>
         </div>
 

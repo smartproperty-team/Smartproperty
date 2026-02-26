@@ -4,9 +4,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { HomeFooter, Navbar } from "../../components/layout";
-import { propertyService } from "../../services/property.service";
-import type { Property, PropertyImage } from "../../types/property";
+import { HomeFooter, Navbar } from "@/components/layout";
+import { propertyService } from "@/services/property.service";
+import { useAuthStore } from "@/store";
+import type { Property, PropertyImage } from "@/types/property";
+import { canManageProperties } from "@/utils";
 import "./properties.css";
 
 // ===========================================
@@ -233,6 +235,8 @@ function ImageGallery({ images }: ImageGalleryProps) {
 export default function PropertyDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const canManage = canManageProperties(user);
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -491,41 +495,43 @@ export default function PropertyDetailPage() {
 
           {/* Sidebar */}
           <div className="property-sidebar">
-            {/* Actions Card */}
-            <div className="sidebar-card">
-              <h3>Actions</h3>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.75rem",
-                }}
-              >
-                <Link
-                  to={`/properties/${property.id || property._id}/edit`}
-                  className="btn-view"
-                  style={{ textAlign: "center" }}
+            {/* Actions Card — hidden for tenants */}
+            {canManage && (
+              <div className="sidebar-card">
+                <h3>Actions</h3>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.75rem",
+                  }}
                 >
-                  <EditIcon />
-                  Modifier la propriété
-                </Link>
-                <Link
-                  to={`/properties/${property.id || property._id}/images`}
-                  className="btn-edit"
-                  style={{ textAlign: "center" }}
-                >
-                  Gérer les images
-                </Link>
-                <button
-                  className="btn-delete"
-                  onClick={handleDelete}
-                  style={{ width: "100%" }}
-                >
-                  <DeleteIcon />
-                  Supprimer
-                </button>
+                  <Link
+                    to={`/properties/${property.id || property._id}/edit`}
+                    className="btn-view"
+                    style={{ textAlign: "center" }}
+                  >
+                    <EditIcon />
+                    Modifier la propriété
+                  </Link>
+                  <Link
+                    to={`/properties/${property.id || property._id}/images`}
+                    className="btn-edit"
+                    style={{ textAlign: "center" }}
+                  >
+                    Gérer les images
+                  </Link>
+                  <button
+                    className="btn-delete"
+                    onClick={handleDelete}
+                    style={{ width: "100%" }}
+                  >
+                    <DeleteIcon />
+                    Supprimer
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Owner Card */}
             {property.owner && (
@@ -544,28 +550,30 @@ export default function PropertyDetailPage() {
               </div>
             )}
 
-            {/* Info Card */}
-            <div className="sidebar-card">
-              <h3>Informations</h3>
-              <div
-                style={{
-                  fontSize: "0.875rem",
-                  color: "var(--color-text-muted)",
-                }}
-              >
-                <p>
-                  <strong>ID:</strong> {property.id || property._id}
-                </p>
-                <p>
-                  <strong>Créé le:</strong>{" "}
-                  {new Date(property.createdAt).toLocaleDateString("fr-FR")}
-                </p>
-                <p>
-                  <strong>Mis à jour le:</strong>{" "}
-                  {new Date(property.updatedAt).toLocaleDateString("fr-FR")}
-                </p>
+            {/* Informations Card — internal data, hidden for tenants */}
+            {canManage && (
+              <div className="sidebar-card">
+                <h3>Informations</h3>
+                <div
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "var(--color-text-muted)",
+                  }}
+                >
+                  <p>
+                    <strong>ID:</strong> {property.id || property._id}
+                  </p>
+                  <p>
+                    <strong>Créé le:</strong>{" "}
+                    {new Date(property.createdAt).toLocaleDateString("fr-FR")}
+                  </p>
+                  <p>
+                    <strong>Mis à jour le:</strong>{" "}
+                    {new Date(property.updatedAt).toLocaleDateString("fr-FR")}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </main>
