@@ -13,6 +13,7 @@ import type {
   Session,
   UpdateProfileData,
   User,
+  UserPreferences,
   VerifyEmailData,
 } from "../types/auth";
 import api, { clearTokens, setAccessToken, setRefreshToken } from "./api";
@@ -146,6 +147,18 @@ export const authService = {
    */
   async updateProfile(data: UpdateProfileData): Promise<User> {
     const response = await api.put<User>("/users/profile", data);
+    return response.data;
+  },
+
+  async getPreferences(): Promise<UserPreferences> {
+    const response = await api.get<UserPreferences>("/users/preferences");
+    return response.data;
+  },
+
+  async updatePreferences(
+    data: Partial<UserPreferences>,
+  ): Promise<UserPreferences> {
+    const response = await api.put<UserPreferences>("/users/preferences", data);
     return response.data;
   },
 

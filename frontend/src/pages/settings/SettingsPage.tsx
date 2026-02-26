@@ -3,20 +3,147 @@
 // ===========================================
 
 import { Shield } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HomeFooter, HomeNavbar } from "../../components/layout";
 import {
+  Alert,
   Button,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
+  Input,
 } from "../../components/ui";
-import { useAuthStore } from "../../store";
+import { authService } from "../../services";
+import { useAuthStore, usePreferencesStore } from "../../store";
+import type { UserNotificationPreferences } from "../../types/auth";
+
+const PROPERTY_TYPE_OPTIONS = [
+  "Apartment",
+  "House",
+  "Studio",
+  "Villa",
+  "Office",
+];
 
 export default function SettingsPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { getUserPreferences, setUserPreferences } = usePreferencesStore();
+
+  const [propertyTypes, setPropertyTypes] = useState<string[]>([]);
+  const [minBudget, setMinBudget] = useState(500);
+  const [maxBudget, setMaxBudget] = useState(3000);
+  const [locations, setLocations] = useState("");
+  const [notifications, setNotifications] =
+    useState<UserNotificationPreferences>({
+      email: true,
+      sms: false,
+      push: true,
+    });
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
+  const [isSavingPreferences, setIsSavingPreferences] = useState(false);
+  const [preferencesMessage, setPreferencesMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const localPreferences = getUserPreferences(user.id);
+    setPropertyTypes(localPreferences.propertyTypes);
+    setMinBudget(localPreferences.budgetRange[0]);
+    setMaxBudget(localPreferences.budgetRange[1]);
+    setLocations(localPreferences.locations);
+    setNotifications(localPreferences.notifications);
+
+    let isCancelled = false;
+    const loadPreferences = async () => {
+      setIsLoadingPreferences(true);
+      try {
+        const serverPreferences = await authService.getPreferences();
+        if (isCancelled) {
+          return;
+        }
+        setUserPreferences(user.id, serverPreferences);
+        setPropertyTypes(serverPreferences.propertyTypes);
+        setMinBudget(serverPreferences.budgetRange[0]);
+        setMaxBudget(serverPreferences.budgetRange[1]);
+        setLocations(serverPreferences.locations);
+        setNotifications(serverPreferences.notifications);
+      } catch {
+        if (!isCancelled) {
+          setPreferencesMessage({
+            type: "error",
+            text: "Could not load latest preferences from server.",
+          });
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsLoadingPreferences(false);
+        }
+      }
+    };
+
+    void loadPreferences();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [getUserPreferences, setUserPreferences, user]);
+
+  const togglePropertyType = (propertyType: string) => {
+    setPropertyTypes((currentPropertyTypes) => {
+      if (currentPropertyTypes.includes(propertyType)) {
+        return currentPropertyTypes.filter((type) => type !== propertyType);
+      }
+      return [...currentPropertyTypes, propertyType];
+    });
+  };
+
+  const handleNotificationToggle = (
+    notificationType: keyof UserNotificationPreferences,
+  ) => {
+    setNotifications((currentNotifications) => ({
+      ...currentNotifications,
+      [notificationType]: !currentNotifications[notificationType],
+    }));
+  };
+
+  const handleSavePreferences = async () => {
+    if (!user) {
+      return;
+    }
+
+    setIsSavingPreferences(true);
+    setPreferencesMessage(null);
+    try {
+      const serverPreferences = await authService.updatePreferences({
+        propertyTypes,
+        budgetRange: [minBudget, maxBudget],
+        locations: locations.trim(),
+        notifications,
+        completed: true,
+        skipped: false,
+      });
+      setUserPreferences(user.id, serverPreferences);
+      setPreferencesMessage({
+        type: "success",
+        text: "Preferences saved successfully.",
+      });
+    } catch {
+      setPreferencesMessage({
+        type: "error",
+        text: "Failed to save preferences. Please try again.",
+      });
+    } finally {
+      setIsSavingPreferences(false);
+    }
+  };
 
   return (
     <>
@@ -80,6 +207,146 @@ export default function SettingsPage() {
                       {user?.twoFactorEnabled ? "Manage 2FA" : "Setup 2FA"}
                     </Button>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Property Preferences</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {preferencesMessage && (
+                  <Alert
+                    type={preferencesMessage.type}
+                    message={preferencesMessage.text}
+                    onClose={() => setPreferencesMessage(null)}
+                  />
+                )}
+
+                <section className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Property type preferences
+                  </h3>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {PROPERTY_TYPE_OPTIONS.map((option) => (
+                      <label
+                        key={option}
+                        className="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={propertyTypes.includes(option)}
+                          onChange={() => togglePropertyType(option)}
+                          className="h-4 w-4 rounded border-gray-300 text-home-primary focus:ring-home-primary"
+                        />
+                        {option}
+                      </label>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-semibold text-gray-900">
+                      Budget range preferences
+                    </h3>
+                    <span className="text-sm text-gray-600">
+                      ${minBudget.toLocaleString()} - $
+                      {maxBudget.toLocaleString()}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3 rounded-lg border border-gray-200 p-4">
+                    <div>
+                      <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-500">
+                        Minimum budget
+                      </label>
+                      <input
+                        type="range"
+                        min={500}
+                        max={10000}
+                        step={100}
+                        value={minBudget}
+                        onChange={(event) =>
+                          setMinBudget(
+                            Math.min(Number(event.target.value), maxBudget),
+                          )
+                        }
+                        className="w-full accent-home-primary"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-500">
+                        Maximum budget
+                      </label>
+                      <input
+                        type="range"
+                        min={500}
+                        max={10000}
+                        step={100}
+                        value={maxBudget}
+                        onChange={(event) =>
+                          setMaxBudget(
+                            Math.max(Number(event.target.value), minBudget),
+                          )
+                        }
+                        className="w-full accent-home-primary"
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                <section className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Location preferences
+                  </h3>
+                  <Input
+                    label="Preferred locations"
+                    placeholder="Example: Casablanca, Rabat, Marrakech"
+                    value={locations}
+                    onChange={(event) => setLocations(event.target.value)}
+                  />
+                </section>
+
+                <section className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Notification preferences
+                  </h3>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {(
+                      [
+                        { key: "email", label: "Email" },
+                        { key: "sms", label: "SMS" },
+                        { key: "push", label: "Push" },
+                      ] as const
+                    ).map((item) => (
+                      <label
+                        key={item.key}
+                        className="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={notifications[item.key]}
+                          onChange={() => handleNotificationToggle(item.key)}
+                          className="h-4 w-4 rounded border-gray-300 text-home-primary focus:ring-home-primary"
+                        />
+                        {item.label}
+                      </label>
+                    ))}
+                  </div>
+                </section>
+
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleSavePreferences}
+                    isLoading={isSavingPreferences || isLoadingPreferences}
+                  >
+                    Save Preferences
+                  </Button>
                 </div>
               </CardContent>
             </Card>

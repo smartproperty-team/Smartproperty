@@ -3,14 +3,19 @@
 // ===========================================
 
 import {
-    ConflictException,
-    Injectable,
-    NotFoundException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ObjectId } from 'mongodb';
 import { Repository } from 'typeorm';
-import { User, UserRole, UserStatus } from './entities/user.entity';
+import {
+  User,
+  UserPreferences,
+  UserRole,
+  UserStatus,
+} from './entities/user.entity';
 
 // ===========================================
 // DTOs
@@ -37,13 +42,7 @@ export interface UpdateUserDto {
     zipCode?: string;
     country?: string;
   };
-  preferences?: {
-    emailNotifications?: boolean;
-    pushNotifications?: boolean;
-    smsNotifications?: boolean;
-    language?: string;
-    timezone?: string;
-  };
+  preferences?: UserPreferences;
 }
 
 export interface FindUsersOptions {
@@ -53,6 +52,21 @@ export interface FindUsersOptions {
   status?: UserStatus;
   search?: string;
 }
+
+const DEFAULT_USER_PREFERENCES: UserPreferences = {
+  propertyTypes: [],
+  budgetRange: [500, 3000],
+  locations: '',
+  notifications: {
+    email: true,
+    sms: false,
+    push: true,
+  },
+  completed: false,
+  skipped: false,
+  language: 'en',
+  timezone: 'UTC',
+};
 
 // ===========================================
 // Users Service
@@ -157,6 +171,44 @@ export class UsersService {
     Object.assign(user, updateUserDto);
 
     return this.userRepository.save(user);
+  }
+
+  async getPreferences(id: string): Promise<UserPreferences> {
+    const user = await this.findById(id);
+    return {
+      ...DEFAULT_USER_PREFERENCES,
+      ...(user.preferences || {}),
+    };
+  }
+
+  async updatePreferences(
+    id: string,
+    preferences: Partial<UserPreferences>,
+  ): Promise<UserPreferences> {
+    const user = await this.findById(id);
+    const currentPreferences = {
+      ...DEFAULT_USER_PREFERENCES,
+      ...(user.preferences || {}),
+    };
+
+    const mergedNotifications = {
+      email: currentPreferences.notifications?.email ?? true,
+      sms: currentPreferences.notifications?.sms ?? false,
+      push: currentPreferences.notifications?.push ?? true,
+      ...(preferences.notifications || {}),
+    };
+
+    user.preferences = {
+      ...currentPreferences,
+      ...preferences,
+      notifications: mergedNotifications,
+    };
+
+    const updatedUser = await this.userRepository.save(user);
+    return {
+      ...DEFAULT_USER_PREFERENCES,
+      ...(updatedUser.preferences || {}),
+    };
   }
 
   async updateStatus(id: string, status: UserStatus): Promise<User> {

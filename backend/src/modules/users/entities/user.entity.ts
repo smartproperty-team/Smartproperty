@@ -39,6 +39,26 @@ export enum AuthProvider {
   FACEBOOK = 'facebook',
 }
 
+export interface UserNotificationPreferences {
+  email: boolean;
+  sms: boolean;
+  push: boolean;
+}
+
+export interface UserPreferences {
+  propertyTypes?: string[];
+  budgetRange?: [number, number];
+  locations?: string;
+  notifications?: UserNotificationPreferences;
+  completed?: boolean;
+  skipped?: boolean;
+  emailNotifications?: boolean;
+  pushNotifications?: boolean;
+  smsNotifications?: boolean;
+  language?: string;
+  timezone?: string;
+}
+
 // ===========================================
 // User Entity
 // ===========================================
@@ -167,13 +187,7 @@ export class User {
 
   // User preferences
   @Column('simple-json', { nullable: true })
-  preferences?: {
-    emailNotifications?: boolean;
-    pushNotifications?: boolean;
-    smsNotifications?: boolean;
-    language?: string;
-    timezone?: string;
-  };
+  preferences?: UserPreferences;
 
   // ===========================================
   // Virtual Properties
@@ -258,6 +272,7 @@ export class User {
       isEmailVerified: this.isEmailVerified,
       twoFactorEnabled: this.twoFactorEnabled,
       lastLogin: this.lastLogin,
+      preferences: this.preferences,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };

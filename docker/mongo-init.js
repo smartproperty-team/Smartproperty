@@ -162,7 +162,7 @@ db.createCollection("properties", {
           description: "Property title - required",
         },
         description: {
-          bsonType: ["string", "null", "undefined"],
+          bsonType: ["string", "null"],
           description: "Property description - optional",
         },
         type: {
@@ -182,19 +182,19 @@ db.createCollection("properties", {
           description: "Currency code",
         },
         address: {
-          bsonType: ["object", "null", "undefined"],
+          bsonType: ["object", "null"],
           description: "Property address",
         },
         features: {
-          bsonType: ["object", "null", "undefined"],
+          bsonType: ["object", "null"],
           description: "Property features - optional",
         },
         images: {
-          bsonType: ["array", "null", "undefined"],
+          bsonType: ["array", "null"],
           description: "Property images - optional",
         },
         virtualTour: {
-          bsonType: ["string", "null", "undefined"],
+          bsonType: ["string", "null"],
           description: "Virtual tour URL - optional",
         },
         ownerId: {
@@ -202,7 +202,7 @@ db.createCollection("properties", {
           description: "Reference to owner user - required",
         },
         managerId: {
-          bsonType: ["objectId", "string", "null", "undefined"],
+          bsonType: ["objectId", "string", "null"],
           description: "Reference to manager user - optional",
         },
         createdAt: {
@@ -210,11 +210,11 @@ db.createCollection("properties", {
           description: "Creation timestamp",
         },
         updatedAt: {
-          bsonType: ["date", "null", "undefined"],
+          bsonType: ["date", "null"],
           description: "Last update timestamp",
         },
         deletedAt: {
-          bsonType: ["date", "null", "undefined"],
+          bsonType: ["date", "null"],
           description: "Deletion timestamp - for soft deletes",
         },
       },

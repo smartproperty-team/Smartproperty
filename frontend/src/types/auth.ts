@@ -20,6 +20,22 @@ export enum UserStatus {
 export enum AuthProvider {
   LOCAL = "local",
   GOOGLE = "google",
+  FACEBOOK = "facebook",
+}
+
+export interface UserNotificationPreferences {
+  email: boolean;
+  sms: boolean;
+  push: boolean;
+}
+
+export interface UserPreferences {
+  propertyTypes: string[];
+  budgetRange: [number, number];
+  locations: string;
+  notifications: UserNotificationPreferences;
+  completed: boolean;
+  skipped: boolean;
 }
 
 export interface User {
@@ -35,6 +51,7 @@ export interface User {
   authProvider?: AuthProvider;
   isEmailVerified: boolean;
   twoFactorEnabled: boolean;
+  preferences?: UserPreferences;
   lastLogin?: string;
   createdAt: string;
   updatedAt: string;

@@ -3,29 +3,30 @@
 // ===========================================
 
 import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    HttpCode,
-    HttpStatus,
-    Param,
-    Put,
-    Query,
-    UseGuards,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Put,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
-    ApiBearerAuth,
-    ApiOperation,
-    ApiQuery,
-    ApiResponse,
-    ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
 
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { UserPreferencesDto } from './dto/preferences.dto';
 import { UserRole, UserStatus } from './entities/user.entity';
 import type { FindUsersOptions, UpdateUserDto } from './users.service';
 import { UsersService } from './users.service';
@@ -107,6 +108,29 @@ export class UsersController {
   ) {
     const user = await this.usersService.update(userId, updateUserDto);
     return user.toJSON();
+  }
+
+  @Get('preferences')
+  @ApiOperation({ summary: 'Get current user preferences' })
+  @ApiResponse({
+    status: 200,
+    description: 'User preferences',
+  })
+  async getPreferences(@CurrentUser('id') userId: string) {
+    return this.usersService.getPreferences(userId);
+  }
+
+  @Put('preferences')
+  @ApiOperation({ summary: 'Update current user preferences' })
+  @ApiResponse({
+    status: 200,
+    description: 'User preferences updated successfully',
+  })
+  async updatePreferences(
+    @CurrentUser('id') userId: string,
+    @Body() updatePreferencesDto: UserPreferencesDto,
+  ) {
+    return this.usersService.updatePreferences(userId, updatePreferencesDto);
   }
 
   // ===========================================

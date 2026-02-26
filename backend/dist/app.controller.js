@@ -25,7 +25,6 @@ let AppController = class AppController {
         return this.appService.getHealth();
     }
 };
-exports.AppController = AppController;
 __decorate([
     (0, common_1.Get)(),
     (0, swagger_1.ApiOperation)({ summary: 'Get API information' }),
@@ -45,9 +44,10 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Object)
 ], AppController.prototype, "getHealth", null);
-exports.AppController = AppController = __decorate([
+AppController = __decorate([
     (0, swagger_1.ApiTags)('Health'),
     (0, common_1.Controller)(),
     __metadata("design:paramtypes", [app_service_1.AppService])
 ], AppController);
+exports.AppController = AppController;
 //# sourceMappingURL=app.controller.js.map

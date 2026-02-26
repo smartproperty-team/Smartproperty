@@ -89,12 +89,24 @@ export class PropertiesService {
 
     const ownerId = createPropertyDto.ownerId || currentUserId;
 
-    const property = this.propertyRepository.create({
+    // Build a clean object without undefined values – MongoDB's $jsonSchema
+    // validator does not recognise "undefined" as a BSON type, so sending
+    // keys with undefined values causes "Document failed validation" (code 121).
+    const raw: Record<string, any> = {
       ...createPropertyDto,
       ownerId,
       status: createPropertyDto.status || PropertyStatus.AVAILABLE,
       currency: createPropertyDto.currency || 'USD',
+    };
+
+    // Remove every key whose value is undefined
+    Object.keys(raw).forEach((key) => {
+      if (raw[key] === undefined) {
+        delete raw[key];
+      }
     });
+
+    const property = this.propertyRepository.create(raw as Partial<Property>);
 
     return this.propertyRepository.save(property);
   }

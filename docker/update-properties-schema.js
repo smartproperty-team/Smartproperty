@@ -18,7 +18,7 @@ db.runCommand({
           description: "Property title - required",
         },
         description: {
-          bsonType: ["string", "null", "undefined"],
+          bsonType: ["string", "null"],
           description: "Property description - optional",
         },
         type: {
@@ -38,19 +38,19 @@ db.runCommand({
           description: "Currency code",
         },
         address: {
-          bsonType: ["object", "null", "undefined"],
+          bsonType: ["object", "null"],
           description: "Property address",
         },
         features: {
-          bsonType: ["object", "null", "undefined"],
+          bsonType: ["object", "null"],
           description: "Property features - optional",
         },
         images: {
-          bsonType: ["array", "null", "undefined"],
+          bsonType: ["array", "null"],
           description: "Property images - optional",
         },
         virtualTour: {
-          bsonType: ["string", "null", "undefined"],
+          bsonType: ["string", "null"],
           description: "Virtual tour URL - optional",
         },
         ownerId: {
@@ -58,7 +58,7 @@ db.runCommand({
           description: "Reference to owner user - required",
         },
         managerId: {
-          bsonType: ["objectId", "string", "null", "undefined"],
+          bsonType: ["objectId", "string", "null"],
           description: "Reference to manager user - optional",
         },
         createdAt: {
@@ -66,19 +66,18 @@ db.runCommand({
           description: "Creation timestamp",
         },
         updatedAt: {
-          bsonType: ["date", "null", "undefined"],
+          bsonType: ["date", "null"],
           description: "Last update timestamp",
         },
         deletedAt: {
-          bsonType: ["date", "null", "undefined"],
+          bsonType: ["date", "null"],
           description: "Deletion timestamp - for soft deletes",
         },
       },
     },
   },
   validationLevel: "moderate",
-  validationAction: "error"
+  validationAction: "error",
 });
 
 print("✅ Properties collection schema validation updated successfully!");
-

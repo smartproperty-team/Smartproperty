@@ -2,9 +2,11 @@
 // SmartProperty - Home Navbar Component
 // ===========================================
 
+import { BellRing } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import "../../pages/home/home3.css";
+import { useAuthStore, usePreferencesStore } from "../../store";
 
 const navLinks = [
   { to: "/", label: "Home" },
@@ -17,8 +19,18 @@ const navLinks = [
 
 export default function HomeNavbar() {
   const location = useLocation();
+  const { isAuthenticated, user } = useAuthStore();
+  const { openOnboarding, getUserPreferences } = usePreferencesStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+
+  const userPreferences = user ? getUserPreferences(user.id) : null;
+  const showPreferencesReminder =
+    !!isAuthenticated &&
+    !!user &&
+    !!userPreferences &&
+    !userPreferences.completed &&
+    userPreferences.skipped;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -44,6 +56,16 @@ export default function HomeNavbar() {
 
   return (
     <header>
+      {showPreferencesReminder && (
+        <button
+          type="button"
+          onClick={openOnboarding}
+          className="fixed right-6 top-20 z-[90] flex animate-bounce items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-red-200 hover:bg-red-700"
+        >
+          <BellRing className="h-4 w-4" />
+          Complete your questions
+        </button>
+      )}
       <nav className="navbar" aria-label="Main navigation">
         <div className="navbar-container">
           <button
