@@ -25,6 +25,34 @@ export class NotificationPreferencesDto {
   push: boolean;
 }
 
+export class LocationCoordinatesDto {
+  @ApiProperty({ example: 36.8065 })
+  @IsNumber()
+  lat: number;
+
+  @ApiProperty({ example: 10.1815 })
+  @IsNumber()
+  lng: number;
+}
+
+export class LocationPreferenceDto {
+  @ApiPropertyOptional({ example: 'Ariana, Tunisia' })
+  @IsOptional()
+  @IsString()
+  label?: string;
+
+  @ApiPropertyOptional({ example: 11 })
+  @IsOptional()
+  @IsNumber()
+  radiusKm?: number;
+
+  @ApiPropertyOptional({ type: LocationCoordinatesDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => LocationCoordinatesDto)
+  coordinates?: LocationCoordinatesDto;
+}
+
 export class UserPreferencesDto {
   @ApiPropertyOptional({
     type: [String],
@@ -52,6 +80,12 @@ export class UserPreferencesDto {
   @IsOptional()
   @IsString()
   locations?: string;
+
+  @ApiPropertyOptional({ type: LocationPreferenceDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => LocationPreferenceDto)
+  locationPreference?: LocationPreferenceDto;
 
   @ApiPropertyOptional({ type: NotificationPreferencesDto })
   @IsOptional()

@@ -2,10 +2,10 @@
 // SmartProperty - Main App Component
 // ===========================================
 
-import { useEffect, useRef } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
-import './App.css';
-import { ProtectedRoute } from './components/auth';
+import { useEffect, useRef } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
+import "./App.css";
+import { ProtectedRoute } from "./components/auth";
 import {
   FacebookCallbackPage,
   ForgotPasswordPage,
@@ -14,25 +14,25 @@ import {
   RegisterPage,
   ResetPasswordPage,
   VerifyEmailPage,
-} from './pages/auth';
+} from "./pages/auth";
 import {
   AdminVerificationPage,
   DashboardPage,
   SessionsPage,
   VerificationPage,
-} from './pages/dashboard';
-import { HomePage } from './pages/home';
-import { PreferencesOnboardingModal } from './pages/onboarding';
-import { ProfilePage } from './pages/profile';
+} from "./pages/dashboard";
+import { HomePage } from "./pages/home";
+import { PreferencesOnboardingModal } from "./pages/onboarding";
+import { ProfilePage } from "./pages/profile";
 import {
   PropertiesPage,
   PropertyDetailPage,
   PropertyFormPage,
-} from './pages/properties';
-import { SettingsPage } from './pages/settings';
-import TwoFactorPage from './pages/security/TwoFactorPage';
-import { useAuthStore, usePreferencesStore } from './store';
-import { canManageProperties } from './utils';
+} from "./pages/properties";
+import TwoFactorPage from "./pages/security/TwoFactorPage";
+import { SettingsPage } from "./pages/settings";
+import { useAuthStore, usePreferencesStore } from "./store";
+import { canManageProperties, isOwner } from "./utils";
 
 function App() {
   const { checkAuth, isAuthenticated, user } = useAuthStore();
@@ -56,7 +56,7 @@ function App() {
       let resolvedPreferences = getUserPreferences(user.id);
 
       try {
-        const serverPreferences = await import('./services').then((m) =>
+        const serverPreferences = await import("./services").then((m) =>
           m.authService.getPreferences(),
         );
         if (!isCancelled) {
@@ -186,7 +186,7 @@ function App() {
           path="/properties/new"
           element={
             <ProtectedRoute>
-              {canManageProperties(user) ? (
+              {isOwner(user) ? (
                 <PropertyFormPage />
               ) : (
                 <Navigate to="/properties" replace />

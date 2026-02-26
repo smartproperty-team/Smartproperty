@@ -111,6 +111,7 @@ export class UsersController {
   }
 
   @Get('preferences')
+  @Roles(UserRole.TENANT)
   @ApiOperation({ summary: 'Get current user preferences' })
   @ApiResponse({
     status: 200,
@@ -121,6 +122,7 @@ export class UsersController {
   }
 
   @Put('preferences')
+  @Roles(UserRole.TENANT)
   @ApiOperation({ summary: 'Update current user preferences' })
   @ApiResponse({
     status: 200,

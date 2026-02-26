@@ -3,21 +3,13 @@
 // Based on JustHome Figma Design
 // ===========================================
 
-import {
-  Bell,
-  ChevronDown,
-  LogOut,
-  Menu,
-  Phone,
-  Plus,
-  User,
-  X,
-} from "lucide-react";
+import { Bell, ChevronDown, LogOut, Menu, Plus, User, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { notificationService } from "../../services";
 import type { Notification } from "../../services/notification.service";
 import { useAuthStore } from "../../store";
+import { isOwner } from "../../utils";
 
 // Logo Component
 const Logo = () => (
@@ -68,6 +60,7 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isAuthenticated, user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const canAddProperty = isOwner(user);
 
   // ── Notifications ──
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -144,12 +137,6 @@ export default function Navbar() {
 
         {/* Right Side Actions */}
         <div className="hidden lg:flex items-center gap-3">
-          {/* Phone */}
-          <div className="flex items-center gap-2 text-gray-900">
-            <Phone className="w-5 h-5" />
-            <span className="font-medium">+68 685 88666</span>
-          </div>
-
           {/* Notification Bell (authenticated only) */}
           {isAuthenticated && (
             <div className="relative" ref={notifPanelRef}>
@@ -170,7 +157,9 @@ export default function Navbar() {
               {showNotifPanel && (
                 <div className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden z-50">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                    <h3 className="font-semibold text-gray-900">Notifications</h3>
+                    <h3 className="font-semibold text-gray-900">
+                      Notifications
+                    </h3>
                     {unreadCount > 0 && (
                       <button
                         className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
@@ -284,13 +273,15 @@ export default function Navbar() {
           )}
 
           {/* Add Property Button */}
-          <Link
-            to={isAuthenticated ? "/properties/new" : "/login"}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-gray-900 font-medium text-gray-900 hover:bg-gray-900 hover:text-white transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Property
-          </Link>
+          {canAddProperty && (
+            <Link
+              to="/properties/new"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-gray-900 font-medium text-gray-900 hover:bg-gray-900 hover:text-white transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Property
+            </Link>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -321,11 +312,6 @@ export default function Navbar() {
           <hr className="my-4" />
 
           <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2 text-gray-900 px-4">
-              <Phone className="w-5 h-5" />
-              <span className="font-medium">+68 685 88666</span>
-            </div>
-
             <div className="flex gap-3">
               {isAuthenticated ? (
                 <>
@@ -351,12 +337,14 @@ export default function Navbar() {
                 </Link>
               )}
 
-              <Link
-                to={isAuthenticated ? "/properties/new" : "/login"}
-                className="flex-1 py-2.5 rounded-full bg-gray-900 text-white font-medium text-center hover:bg-gray-800"
-              >
-                Add Property
-              </Link>
+              {canAddProperty && (
+                <Link
+                  to="/properties/new"
+                  className="flex-1 py-2.5 rounded-full bg-gray-900 text-white font-medium text-center hover:bg-gray-800"
+                >
+                  Add Property
+                </Link>
+              )}
             </div>
           </div>
         </div>

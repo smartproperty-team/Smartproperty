@@ -86,7 +86,7 @@ export class PropertiesController {
   // ===========================================
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER, UserRole.AGENT)
+  @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Create a property' })
   @ApiResponse({ status: 201, description: 'Property created' })
   async create(

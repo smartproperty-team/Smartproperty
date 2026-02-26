@@ -2,8 +2,6 @@
 // SmartProperty - Properties List Page
 // ===========================================
 
-import { useCallback, useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
 import { HomeFooter, Navbar } from "@/components/layout";
 import { propertyService } from "@/services/property.service";
 import { useAuthStore } from "@/store";
@@ -13,7 +11,9 @@ import type {
   PropertyStatus,
   PropertyType,
 } from "@/types/property";
-import { canManageProperties } from "@/utils";
+import { canManageProperties, isOwner } from "@/utils";
+import { useCallback, useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import "./properties.css";
 
 // ===========================================
@@ -128,7 +128,11 @@ interface PropertyCardProps {
   canManage?: boolean;
 }
 
-function PropertyCard({ property, onDelete, canManage = true }: PropertyCardProps) {
+function PropertyCard({
+  property,
+  onDelete,
+  canManage = true,
+}: PropertyCardProps) {
   const propertyId = property.id || property._id || "";
   const primaryImage =
     property.images?.find((img) => img.isPrimary) || property.images?.[0];
@@ -240,6 +244,7 @@ function PropertyCard({ property, onDelete, canManage = true }: PropertyCardProp
 export default function PropertiesPage() {
   const { user } = useAuthStore();
   const canManage = canManageProperties(user);
+  const canAddProperty = isOwner(user);
   const [searchParams, setSearchParams] = useSearchParams();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
@@ -337,7 +342,7 @@ export default function PropertiesPage() {
                 {total > 1 ? "s" : ""}
               </p>
             </div>
-            {canManage && (
+            {canAddProperty && (
               <Link to="/properties/new" className="btn-add-property">
                 <PlusIcon />
                 Ajouter une propriété
@@ -439,11 +444,11 @@ export default function PropertiesPage() {
             <p>
               {filters.search || filters.type || filters.status || filters.city
                 ? "Essayez de modifier vos filtres de recherche."
-                : canManage
+                : canAddProperty
                   ? "Commencez par ajouter votre première propriété."
                   : "Aucune propriété disponible pour le moment."}
             </p>
-            {canManage && (
+            {canAddProperty && (
               <Link to="/properties/new" className="btn-add-property">
                 <PlusIcon />
                 Ajouter une propriété

@@ -11,7 +11,10 @@ import {
 } from "../../components/ui";
 import { authService } from "../../services";
 import { useAuthStore, usePreferencesStore } from "../../store";
-import type { UserNotificationPreferences } from "../../types/auth";
+import type {
+  UserLocationPreference,
+  UserNotificationPreferences,
+} from "../../types/auth";
 
 type OnboardingStep = 1 | 2 | 3 | 4;
 
@@ -45,6 +48,11 @@ export default function PreferencesOnboardingModal() {
   const [minBudget, setMinBudget] = useState(500);
   const [maxBudget, setMaxBudget] = useState(3000);
   const [locations, setLocations] = useState("");
+  const [locationPreference, setLocationPreference] =
+    useState<UserLocationPreference>({
+      label: "",
+      radiusKm: 11,
+    });
   const [notifications, setNotifications] =
     useState<UserNotificationPreferences>({
       email: true,
@@ -64,11 +72,28 @@ export default function PreferencesOnboardingModal() {
     setMinBudget(existingPreferences.budgetRange[0]);
     setMaxBudget(existingPreferences.budgetRange[1]);
     setLocations(existingPreferences.locations);
+    setLocationPreference(
+      existingPreferences.locationPreference ?? {
+        label: existingPreferences.locations,
+        radiusKm: 11,
+      },
+    );
     setNotifications(existingPreferences.notifications);
     setCurrentStep(1);
   }, [existingPreferences, isOnboardingOpen]);
 
-  if (!isAuthenticated || !user || !isOnboardingOpen) {
+  useEffect(() => {
+    if (isOnboardingOpen && user && user.role !== "tenant") {
+      closeOnboarding();
+    }
+  }, [closeOnboarding, isOnboardingOpen, user]);
+
+  if (
+    !isAuthenticated ||
+    !user ||
+    !isOnboardingOpen ||
+    user.role !== "tenant"
+  ) {
     return null;
   }
 
@@ -147,6 +172,10 @@ export default function PreferencesOnboardingModal() {
         propertyTypes,
         budgetRange: [minBudget, maxBudget],
         locations: locations.trim(),
+        locationPreference: {
+          ...locationPreference,
+          label: locations.trim(),
+        },
         notifications,
         completed: false,
         skipped: true,
@@ -172,6 +201,10 @@ export default function PreferencesOnboardingModal() {
         propertyTypes,
         budgetRange: [minBudget, maxBudget],
         locations: locations.trim(),
+        locationPreference: {
+          ...locationPreference,
+          label: locations.trim(),
+        },
         notifications,
         completed: true,
         skipped: false,
@@ -287,6 +320,8 @@ export default function PreferencesOnboardingModal() {
               <LocationPreferenceMap
                 value={locations}
                 onChange={setLocations}
+                selection={locationPreference}
+                onSelectionChange={setLocationPreference}
                 disabled={isSaving}
               />
             </section>

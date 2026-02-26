@@ -2,6 +2,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { LocateFixed } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import type { UserLocationPreference } from "../../types/auth";
 
 import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
 import iconUrl from "leaflet/dist/images/marker-icon.png";
@@ -31,6 +32,8 @@ interface NominatimReverseResult {
 interface LocationPreferenceMapProps {
   value: string;
   onChange: (location: string) => void;
+  selection?: UserLocationPreference;
+  onSelectionChange?: (selection: UserLocationPreference) => void;
   disabled?: boolean;
 }
 
@@ -80,6 +83,8 @@ const reverseGeocode = async (
 export default function LocationPreferenceMap({
   value,
   onChange,
+  selection,
+  onSelectionChange,
   disabled = false,
 }: LocationPreferenceMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -88,13 +93,27 @@ export default function LocationPreferenceMap({
   const circleRef = useRef<L.Circle | null>(null);
   const searchTimeoutRef = useRef<number | undefined>(undefined);
 
-  const [radiusKm, setRadiusKm] = useState<number>(11);
-  const [selectedCoords, setSelectedCoords] = useState(DEFAULT_CENTER);
+  const [radiusKm, setRadiusKm] = useState<number>(selection?.radiusKm ?? 11);
+  const [selectedCoords, setSelectedCoords] = useState(
+    selection?.coordinates ?? DEFAULT_CENTER,
+  );
   const [searchQuery, setSearchQuery] = useState(value);
   const [suggestions, setSuggestions] = useState<NominatimSearchResult[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+
+  const emitSelection = (
+    nextLabel: string,
+    nextRadiusKm: number,
+    nextCoords: { lat: number; lng: number },
+  ) => {
+    onSelectionChange?.({
+      label: nextLabel,
+      radiusKm: nextRadiusKm,
+      coordinates: nextCoords,
+    });
+  };
 
   const updateMapSelection = (
     lat: number,
@@ -152,14 +171,15 @@ export default function LocationPreferenceMap({
         return;
       }
 
-      const { lat, lng } = event.latlng;
-      setSelectedCoords({ lat, lng });
-      updateMapSelection(lat, lng, radiusKm);
+      const nextCoords = { lat: event.latlng.lat, lng: event.latlng.lng };
+      setSelectedCoords(nextCoords);
+      updateMapSelection(nextCoords.lat, nextCoords.lng, radiusKm);
 
-      const resolved = await reverseGeocode(lat, lng);
+      const resolved = await reverseGeocode(nextCoords.lat, nextCoords.lng);
       if (resolved?.display_name) {
         setSearchQuery(resolved.display_name);
         onChange(resolved.display_name);
+        emitSelection(resolved.display_name, radiusKm, nextCoords);
       }
     });
 
@@ -178,7 +198,21 @@ export default function LocationPreferenceMap({
 
   useEffect(() => {
     updateMapSelection(selectedCoords.lat, selectedCoords.lng, radiusKm, false);
-  }, [radiusKm, selectedCoords.lat, selectedCoords.lng]);
+    emitSelection(searchQuery.trim(), radiusKm, selectedCoords);
+  }, [radiusKm, searchQuery, selectedCoords.lat, selectedCoords.lng]);
+
+  useEffect(() => {
+    if (selection?.radiusKm !== undefined) {
+      setRadiusKm(selection.radiusKm);
+    }
+    if (selection?.coordinates) {
+      setSelectedCoords(selection.coordinates);
+    }
+  }, [
+    selection?.coordinates?.lat,
+    selection?.coordinates?.lng,
+    selection?.radiusKm,
+  ]);
 
   useEffect(() => {
     if (!value.trim()) {
@@ -253,11 +287,13 @@ export default function LocationPreferenceMap({
       return;
     }
 
-    setSelectedCoords({ lat, lng });
+    const nextCoords = { lat, lng };
+    setSelectedCoords(nextCoords);
     setSearchQuery(result.display_name);
     setSuggestions([]);
     setShowSuggestions(false);
     onChange(result.display_name);
+    emitSelection(result.display_name, radiusKm, nextCoords);
     updateMapSelection(lat, lng, radiusKm);
   };
 
@@ -271,13 +307,15 @@ export default function LocationPreferenceMap({
       async ({ coords }) => {
         const lat = coords.latitude;
         const lng = coords.longitude;
-        setSelectedCoords({ lat, lng });
+        const nextCoords = { lat, lng };
+        setSelectedCoords(nextCoords);
         updateMapSelection(lat, lng, radiusKm);
 
         const resolved = await reverseGeocode(lat, lng);
         if (resolved?.display_name) {
           setSearchQuery(resolved.display_name);
           onChange(resolved.display_name);
+          emitSelection(resolved.display_name, radiusKm, nextCoords);
         }
         setIsLocating(false);
       },
@@ -304,7 +342,9 @@ export default function LocationPreferenceMap({
           onChange={(event) => handleSearchInputChange(event.target.value)}
           onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
           onBlur={() => {
-            onChange(searchQuery.trim());
+            const trimmedQuery = searchQuery.trim();
+            onChange(trimmedQuery);
+            emitSelection(trimmedQuery, radiusKm, selectedCoords);
             window.setTimeout(() => setShowSuggestions(false), 150);
           }}
           placeholder="Search location"
@@ -339,7 +379,11 @@ export default function LocationPreferenceMap({
         </label>
         <select
           value={radiusKm}
-          onChange={(event) => setRadiusKm(Number(event.target.value))}
+          onChange={(event) => {
+            const nextRadius = Number(event.target.value);
+            setRadiusKm(nextRadius);
+            emitSelection(searchQuery.trim(), nextRadius, selectedCoords);
+          }}
           disabled={disabled}
           className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-gray-900 shadow-sm focus:border-home-primary focus:outline-none focus:ring-2 focus:ring-home-primary/20 disabled:bg-gray-100"
         >

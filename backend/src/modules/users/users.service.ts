@@ -57,6 +57,10 @@ const DEFAULT_USER_PREFERENCES: UserPreferences = {
   propertyTypes: [],
   budgetRange: [500, 3000],
   locations: '',
+  locationPreference: {
+    label: '',
+    radiusKm: 11,
+  },
   notifications: {
     email: true,
     sms: false,

@@ -2,8 +2,8 @@
 // SmartProperty - Profile Page
 // ===========================================
 
-import { Calendar, Mail, Shield } from "lucide-react";
-import { useState } from "react";
+import { Calendar, Mail, Shield, User } from "lucide-react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HomeFooter, HomeNavbar } from "../../components/layout";
 import {
@@ -21,8 +21,10 @@ import { useAuthStore } from "../../store";
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { user, logout, setUser } = useAuthStore();
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isRequestingEmailChange, setIsRequestingEmailChange] = useState(false);
   const [isDeactivatingAccount, setIsDeactivatingAccount] = useState(false);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
@@ -32,6 +34,7 @@ export default function ProfilePage() {
     firstName: user?.firstName || "",
     lastName: user?.lastName || "",
     phone: user?.phone || "",
+    avatar: user?.avatar || "",
   });
   const [newEmail, setNewEmail] = useState(user?.email || "");
   const [emailChangeMessage, setEmailChangeMessage] = useState<{
@@ -50,6 +53,7 @@ export default function ProfilePage() {
       firstName: user?.firstName || "",
       lastName: user?.lastName || "",
       phone: user?.phone || "",
+      avatar: user?.avatar || "",
     });
     setNewEmail(user?.email || "");
     setIsEditingProfile(true);
@@ -61,6 +65,7 @@ export default function ProfilePage() {
       firstName: user?.firstName || "",
       lastName: user?.lastName || "",
       phone: user?.phone || "",
+      avatar: user?.avatar || "",
     });
     setNewEmail(user?.email || "");
     setEmailChangeMessage(null);
@@ -119,6 +124,7 @@ export default function ProfilePage() {
     const firstName = profileForm.firstName.trim();
     const lastName = profileForm.lastName.trim();
     const phone = profileForm.phone.trim();
+    const avatar = profileForm.avatar.trim();
 
     if (firstName.length < 2 || lastName.length < 2) {
       setProfileMessage({
@@ -136,6 +142,7 @@ export default function ProfilePage() {
         firstName,
         lastName,
         phone: phone || undefined,
+        avatar,
       });
 
       setUser({
@@ -158,6 +165,70 @@ export default function ProfilePage() {
     } finally {
       setIsSavingProfile(false);
     }
+  };
+
+  const handleAvatarUploadClick = () => {
+    avatarInputRef.current?.click();
+  };
+
+  const handleAvatarFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setProfileMessage({
+        type: "error",
+        text: "Please select a valid image file.",
+      });
+      event.target.value = "";
+      return;
+    }
+
+    const maxSizeBytes = 5 * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+      setProfileMessage({
+        type: "error",
+        text: "Image size must be 5MB or less.",
+      });
+      event.target.value = "";
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    setProfileMessage(null);
+
+    try {
+      const uploaded = await authService.uploadAvatar(file);
+      setProfileForm((prev) => ({
+        ...prev,
+        avatar: uploaded.url,
+      }));
+    } catch (error: unknown) {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message || "Failed to upload image. Please try again.";
+      setProfileMessage({
+        type: "error",
+        text: message,
+      });
+      event.target.value = "";
+      setIsUploadingAvatar(false);
+      return;
+    }
+
+    setIsUploadingAvatar(false);
+    event.target.value = "";
+  };
+
+  const handleRemoveAvatar = () => {
+    setProfileForm((prev) => ({
+      ...prev,
+      avatar: "",
+    }));
   };
 
   const handleDeactivateAccount = async () => {
@@ -242,6 +313,67 @@ export default function ProfilePage() {
                     />
                   </div>
                 )}
+
+                <div className="mb-6 rounded-xl border border-gray-200 p-4">
+                  <h3 className="mb-3 font-medium text-gray-900">
+                    Profile Picture
+                  </h3>
+                  <div className="flex items-center gap-4">
+                    <div className="h-20 w-20 overflow-hidden rounded-full border border-gray-200 bg-gray-100">
+                      {profileForm.avatar ? (
+                        <img
+                          src={profileForm.avatar}
+                          alt={user?.firstName || "Profile"}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-gray-500">
+                          <User className="h-8 w-8" />
+                        </div>
+                      )}
+                    </div>
+
+                    {isEditingProfile ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input
+                          ref={avatarInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAvatarFileChange}
+                          className="hidden"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleAvatarUploadClick}
+                          isLoading={isUploadingAvatar}
+                          disabled={isSavingProfile}
+                        >
+                          Upload Photo
+                        </Button>
+                        {profileForm.avatar && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleRemoveAvatar}
+                            disabled={isUploadingAvatar || isSavingProfile}
+                          >
+                            Remove
+                          </Button>
+                        )}
+                        <p className="w-full text-xs text-gray-500">
+                          JPG, PNG, WEBP up to 5MB.
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-600">
+                        Add a profile picture to personalize your account.
+                      </p>
+                    )}
+                  </div>
+                </div>
 
                 <div className="mb-6 grid gap-4 sm:grid-cols-2">
                   <div>
@@ -369,7 +501,7 @@ export default function ProfilePage() {
                       <Button
                         variant="outline"
                         onClick={handleCancelProfileEdit}
-                        disabled={isSavingProfile}
+                        disabled={isSavingProfile || isUploadingAvatar}
                       >
                         Cancel
                       </Button>
@@ -377,6 +509,7 @@ export default function ProfilePage() {
                         variant="default"
                         onClick={handleSaveProfile}
                         isLoading={isSavingProfile}
+                        disabled={isUploadingAvatar}
                       >
                         Save Changes
                       </Button>
