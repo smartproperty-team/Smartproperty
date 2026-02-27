@@ -238,7 +238,7 @@ export default function AddressInput({
       {/* Search with OpenStreetMap */}
       <div className="form-group full-width">
         <label htmlFor="address-search">
-          � Rechercher une adresse (OpenStreetMap gratuit)
+
         </label>
 
         {/* Map Picker Button */}
@@ -367,13 +367,10 @@ export default function AddressInput({
                   marginTop: "0.25rem",
                 }}
               >
-                ❌ Aucun résultat trouvé
               </small>
             )}
         </div>
-        <small style={{ color: "#666", display: "block", marginTop: "0.5rem" }}>
-          ✅ Utilise OpenStreetMap (gratuit, pas de clé API requise)
-        </small>
+
 
         {/* Success Message */}
         {showSuccessMessage && (
