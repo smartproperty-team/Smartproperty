@@ -16,6 +16,7 @@ import {
   VerifyEmailPage,
 } from "./pages/auth";
 import {
+  AdminUsersPage,
   AdminVerificationPage,
   DashboardPage,
   SessionsPage,
@@ -151,6 +152,18 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminVerificationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute>
+              {user?.role === "admin" ? (
+                <AdminUsersPage />
+              ) : (
+                <Navigate to="/dashboard" replace />
+              )}
             </ProtectedRoute>
           }
         />

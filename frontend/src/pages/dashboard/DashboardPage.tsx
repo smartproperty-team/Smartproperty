@@ -614,14 +614,24 @@ export default function DashboardPage() {
                       </p>
                     </div>
                   </div>
-                  <Button
-                    onClick={() => navigate("/admin/verifications")}
-                    className="shrink-0 bg-white text-amber-600 shadow-md hover:bg-amber-50 focus-visible:ring-white"
-                    size="lg"
-                  >
-                    <Shield className="mr-2 h-5 w-5" />
-                    Review Verifications
-                  </Button>
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    <Button
+                      onClick={() => navigate("/admin/verifications")}
+                      className="bg-white text-amber-600 shadow-md hover:bg-amber-50 focus-visible:ring-white"
+                      size="lg"
+                    >
+                      <Shield className="mr-2 h-5 w-5" />
+                      Review Verifications
+                    </Button>
+                    <Button
+                      onClick={() => navigate("/admin/users")}
+                      className="bg-white text-amber-600 shadow-md hover:bg-amber-50 focus-visible:ring-white"
+                      size="lg"
+                    >
+                      <Users className="mr-2 h-5 w-5" />
+                      Manage Users
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
