@@ -4,11 +4,104 @@
 // WCAG 2.1 AA Compliant
 // ===========================================
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { HomeFooter, Navbar } from "../../components/layout";
-import { propertyService } from "../../services/property.service";
-import type { Property } from "../../types/property";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { HomeFooter, Navbar } from '../../components/layout';
+import { propertyService } from '../../services/property.service';
+import type { Property as BackendProperty } from '../../types/property';
+
+// Property type for cards
+interface Property {
+  id: number;
+  title: string;
+  address: string;
+  beds: number;
+  baths: number;
+  sqft: number;
+  price: string;
+  priceUnit?: string;
+  type: 'sale' | 'rent';
+  featured?: boolean;
+  image: string;
+}
+
+// Sample property data
+const properties: Property[] = [
+  {
+    id: 1,
+    title: 'Luxurious Sea View Apartment',
+    address: 'La Marsa, Tunis',
+    beds: 4,
+    baths: 2,
+    sqft: 450,
+    price: '850,000 TND',
+    type: 'sale',
+    featured: false,
+    image: '/tq_0gdp_lwjwx-pmhk-1500h.png',
+  },
+  {
+    id: 2,
+    title: 'Modern Lac 2 Residence',
+    address: 'Les Berges du Lac, Tunis',
+    beds: 4,
+    baths: 2,
+    sqft: 400,
+    price: '2,500 TND',
+    priceUnit: '/month',
+    type: 'rent',
+    featured: true,
+    image: '/tq_1s1jvryd0n-ta2j-1500h.png',
+  },
+  {
+    id: 3,
+    title: 'Carthage Heritage Penthouse',
+    address: 'Carthage, Tunis',
+    beds: 4,
+    baths: 2,
+    sqft: 450,
+    price: '1,200,000 TND',
+    type: 'sale',
+    featured: true,
+    image: '/tq_4mbtfjfs1k-qkmj-1500h.png',
+  },
+  {
+    id: 4,
+    title: 'Villa Kantaoui With Pool',
+    address: 'Port El Kantaoui, Sousse',
+    beds: 3,
+    baths: 2,
+    sqft: 350,
+    price: '3,500 TND',
+    priceUnit: '/month',
+    type: 'rent',
+    featured: true,
+    image: '/tq_7wibftipib-omw-1500h.png',
+  },
+  {
+    id: 5,
+    title: 'Sidi Bou Said Apartment',
+    address: 'Sidi Bou Said, Tunis',
+    beds: 4,
+    baths: 3,
+    sqft: 500,
+    price: '920,000 TND',
+    type: 'sale',
+    featured: true,
+    image: '/tq_a7h2f2xeaz-7bp-1500h.png',
+  },
+  {
+    id: 6,
+    title: 'Hammamet Beach Villa',
+    address: 'Yasmine Hammamet, Nabeul',
+    beds: 3,
+    baths: 2,
+    sqft: 450,
+    price: '680,000 TND',
+    type: 'sale',
+    featured: true,
+    image: '/tq_b4rcqm58py-gcw-1500h.png',
+  },
+];
 
 // City data - Famous cities in Tunisia
 const cities = [
@@ -177,12 +270,130 @@ function CityCard({ city }: { city: (typeof cities)[0] }) {
   );
 }
 
+// Rental Property Card (from backend data)
+function RentalPropertyCard({ property }: { property: BackendProperty }) {
+  const address = property.address
+    ? `${property.address.city}, ${property.address.country}`
+    : 'Location unavailable';
+  const beds = property.features?.bedrooms ?? 0;
+  const baths = property.features?.bathrooms ?? 0;
+  const sqft = property.features?.area ?? 0;
+  const primaryImage = property.images?.find((img) => img.isPrimary)?.url
+    ?? property.images?.[0]?.url
+    ?? '/tq_1s1jvryd0n-ta2j-1500h.png';
+  const price = `${property.price.toLocaleString()} ${property.currency}`;
+
+  return (
+    <article
+      className="property-card"
+      aria-label={`${property.title} - ${price}/month`}
+    >
+      <div className="property-card-image">
+        <img
+          src={primaryImage}
+          alt={property.title}
+          loading="lazy"
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).src = '/tq_1s1jvryd0n-ta2j-1500h.png';
+          }}
+        />
+        <span className="property-badge rent" aria-label="Property for rent">
+          For Rent
+        </span>
+      </div>
+      <div className="property-card-content">
+        <h3 className="property-title">{property.title}</h3>
+        <p className="property-address">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+          <span className="sr-only">Location: </span>
+          {address}
+        </p>
+        <dl className="property-meta" aria-label="Property details">
+          <div className="meta-item">
+            <dt className="sr-only">Bedrooms</dt>
+            <dd>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M3 7v11a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7" />
+                <path d="M21 7H3l2-4h14l2 4z" />
+              </svg>
+              {beds} Beds
+            </dd>
+          </div>
+          <div className="meta-item">
+            <dt className="sr-only">Bathrooms</dt>
+            <dd>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M4 12h16a1 1 0 0 1 1 1v3a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-3a1 1 0 0 1 1-1z" />
+                <path d="M6 12V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v7" />
+              </svg>
+              {baths} Baths
+            </dd>
+          </div>
+          {sqft > 0 && (
+            <div className="meta-item">
+              <dt className="sr-only">Square feet</dt>
+              <dd>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <path d="M3 9h18" />
+                  <path d="M9 21V9" />
+                </svg>
+                {sqft} sqft
+              </dd>
+            </div>
+          )}
+        </dl>
+        <div className="property-price">
+          <span className="price" aria-label="Price">{price}</span>
+          <span className="price-unit">/month</span>
+        </div>
+        <Link
+          to={`/properties/${property.id || property._id}`}
+          className="property-link"
+          aria-label={`View details for ${property.title}`}
+        >
+          View Details
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M5 12h14" />
+            <path d="m12 5 7 7-7 7" />
+          </svg>
+        </Link>
+      </div>
+    </article>
+  );
+}
+
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<"sale" | "rent">("sale");
   const [searchQuery, setSearchQuery] = useState("");
   const [propertyType, setPropertyType] = useState("");
   const [properties, setProperties] = useState<Property[]>([]);
   const mainContentRef = useRef<HTMLElement>(null);
+  const [rentalProperties, setRentalProperties] = useState<BackendProperty[]>([]);
+  const [rentalLoading, setRentalLoading] = useState(true);
+  const [rentalError, setRentalError] = useState<string | null>(null);
+
+  // Fetch rental properties from backend
+  useEffect(() => {
+    const fetchRentals = async () => {
+      try {
+        setRentalLoading(true);
+        setRentalError(null);
+        const response = await propertyService.getProperties({ status: 'available', limit: 6 });
+        // Filter for rented/available properties — show all available since status is 'available'
+        setRentalProperties(response.properties || []);
+      } catch (err) {
+        console.error('Failed to fetch rental properties:', err);
+        setRentalError('Unable to load properties at the moment.');
+      } finally {
+        setRentalLoading(false);
+      }
+    };
+    fetchRentals();
+  }, []);
 
   useEffect(() => {
     const loadHomeProperties = async () => {
@@ -433,16 +644,49 @@ export default function HomePage() {
                 Find your perfect rental home today
               </p>
             </header>
-            {recentRentProperties.length > 0 ? (
-              <div className="properties-grid" role="list">
-                {recentRentProperties.map((property) => (
-                  <PropertyCard key={property.id} property={property} />
-                ))}
+            {rentalLoading ? (
+              <div className="flex justify-center items-center py-16" aria-live="polite" aria-label="Loading rental properties">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                  <p className="text-gray-500 text-sm">Loading properties...</p>
+                </div>
+              </div>
+            ) : rentalError ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3" aria-live="polite">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-400" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 8v4" />
+                  <path d="M12 16h.01" />
+                </svg>
+                <p className="text-gray-500">{rentalError}</p>
+                <Link to="/properties" className="text-emerald-600 hover:underline text-sm font-medium">
+                  Browse all properties →
+                </Link>
+              </div>
+            ) : rentalProperties.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <p className="text-gray-500">No rental properties available right now.</p>
+                <Link to="/properties" className="text-emerald-600 hover:underline text-sm font-medium">
+                  Browse all properties →
+                </Link>
               </div>
             ) : (
-              <p className="section-subtitle">
-                No rental properties available right now.
-              </p>
+              <>
+                <div className="properties-grid" role="list">
+                  {rentalProperties.map((property) => (
+                    <RentalPropertyCard key={property.id || property._id} property={property} />
+                  ))}
+                </div>
+                <div className="section-cta">
+                  <Link to="/properties" className="view-all-btn">
+                    View All Rentals
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                      <path d="M5 12h14" />
+                      <path d="m12 5 7 7-7 7" />
+                    </svg>
+                  </Link>
+                </div>
+              </>
             )}
           </div>
         </section>
