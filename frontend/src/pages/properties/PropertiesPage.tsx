@@ -376,6 +376,7 @@ export default function PropertiesPage() {
     <div className="properties-page">
       <Navbar />
 
+
       <main className="properties-container" id="main-content">
         {/* Header */}
         <div className="properties-header">
@@ -393,6 +394,78 @@ export default function PropertiesPage() {
                 Ajouter une propriété
               </Link>
             )}
+            {/* Filters */}
+            <form className="properties-filters" onSubmit={handleSearch}>
+              <div className="filters-row">
+                <div className="filter-group">
+                  <label htmlFor="filter-search">Recherche</label>
+                  <input
+                      id="filter-search"
+                      type="text"
+                      placeholder="Titre, description..."
+                      value={filters.search || ""}
+                      onChange={(e) => handleFilterChange("search", e.target.value)}
+                  />
+                </div>
+
+                <div className="filter-group">
+                  <label htmlFor="filter-type">Type</label>
+                  <select
+                      id="filter-type"
+                      value={filters.type || ""}
+                      onChange={(e) => handleFilterChange("type", e.target.value)}
+                  >
+                    <option value="">Tous les types</option>
+                    <option value="apartment">Appartement</option>
+                    <option value="house">Maison</option>
+                    <option value="villa">Villa</option>
+                    <option value="studio">Studio</option>
+                    <option value="condo">Condo</option>
+                    <option value="land">Terrain</option>
+                  </select>
+                </div>
+
+                <div className="filter-group">
+                  <label htmlFor="filter-status">Statut</label>
+                  <select
+                      id="filter-status"
+                      value={filters.status || ""}
+                      onChange={(e) => handleFilterChange("status", e.target.value)}
+                  >
+                    <option value="">Tous les statuts</option>
+                    <option value="available">Disponible</option>
+                    <option value="rented">Loué</option>
+                    <option value="maintenance">Maintenance</option>
+                    <option value="unlisted">Non listé</option>
+                  </select>
+                </div>
+
+                <div className="filter-group">
+                  <label htmlFor="filter-city">Ville</label>
+                  <input
+                      id="filter-city"
+                      type="text"
+                      placeholder="Ville..."
+                      value={filters.city || ""}
+                      onChange={(e) => handleFilterChange("city", e.target.value)}
+                  />
+                </div>
+
+                <div className="filter-actions">
+                  <button type="submit" className="btn-filter primary">
+                    <SearchIcon />
+                    Rechercher
+                  </button>
+                  <button
+                      type="button"
+                      className="btn-filter secondary"
+                      onClick={handleResetFilters}
+                  >
+                    Réinitialiser
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
 
@@ -439,80 +512,6 @@ export default function PropertiesPage() {
             )}
           </section>
         )}
-
-        {/* Filters */}
-        <form className="properties-filters" onSubmit={handleSearch}>
-          <div className="filters-row">
-            <div className="filter-group">
-              <label htmlFor="filter-search">Recherche</label>
-              <input
-                id="filter-search"
-                type="text"
-                placeholder="Titre, description..."
-                value={filters.search || ""}
-                onChange={(e) => handleFilterChange("search", e.target.value)}
-              />
-            </div>
-
-            <div className="filter-group">
-              <label htmlFor="filter-type">Type</label>
-              <select
-                id="filter-type"
-                value={filters.type || ""}
-                onChange={(e) => handleFilterChange("type", e.target.value)}
-              >
-                <option value="">Tous les types</option>
-                <option value="apartment">Appartement</option>
-                <option value="house">Maison</option>
-                <option value="villa">Villa</option>
-                <option value="studio">Studio</option>
-                <option value="condo">Condo</option>
-                <option value="land">Terrain</option>
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label htmlFor="filter-status">Statut</label>
-              <select
-                id="filter-status"
-                value={filters.status || ""}
-                onChange={(e) => handleFilterChange("status", e.target.value)}
-              >
-                <option value="">Tous les statuts</option>
-                <option value="available">Disponible</option>
-                <option value="rented">Loué</option>
-                <option value="maintenance">Maintenance</option>
-                <option value="unlisted">Non listé</option>
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label htmlFor="filter-city">Ville</label>
-              <input
-                id="filter-city"
-                type="text"
-                placeholder="Ville..."
-                value={filters.city || ""}
-                onChange={(e) => handleFilterChange("city", e.target.value)}
-              />
-            </div>
-
-            <div className="filter-actions">
-              <button type="submit" className="btn-filter primary">
-                <SearchIcon />
-                Rechercher
-              </button>
-              <button
-                type="button"
-                className="btn-filter secondary"
-                onClick={handleResetFilters}
-              >
-                Réinitialiser
-              </button>
-            </div>
-          </div>
-        </form>
-
         {/* Content */}
         {loading ? (
           <div className="loading-state">
