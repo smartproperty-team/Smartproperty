@@ -237,9 +237,7 @@ export default function AddressInput({
     <div className="address-input-container">
       {/* Search with OpenStreetMap */}
       <div className="form-group full-width">
-        <label htmlFor="address-search">
-
-        </label>
+        <label htmlFor="address-search"></label>
 
         {/* Map Picker Button */}
         <button
@@ -328,12 +326,19 @@ export default function AddressInput({
               }}
             >
               {searchResults.map((result, index) => (
-                <div
+                <button
+                  type="button"
                   key={index}
                   onClick={() => handleSelectAddress(result)}
                   style={{
+                    width: "100%",
                     padding: "0.75rem",
                     borderBottom: "1px solid #f0f0f0",
+                    borderLeft: "none",
+                    borderRight: "none",
+                    borderTop: "none",
+                    backgroundColor: "white",
+                    textAlign: "left",
                     cursor: "pointer",
                     transition: "background-color 0.2s",
                   }}
@@ -352,7 +357,7 @@ export default function AddressInput({
                   <small style={{ color: "#666" }}>
                     {result.display_name.split(",").slice(3).join(", ")}
                   </small>
-                </div>
+                </button>
               ))}
             </div>
           )}
@@ -366,11 +371,9 @@ export default function AddressInput({
                   color: "#888",
                   marginTop: "0.25rem",
                 }}
-              >
-              </small>
+              ></small>
             )}
         </div>
-
 
         {/* Success Message */}
         {showSuccessMessage && (

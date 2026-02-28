@@ -3,7 +3,7 @@
 // ===========================================
 
 import { useEffect, useState } from "react";
-import { HomeFooter, HomeNavbar } from "../../components/layout";
+import { AppSidebar, HomeFooter } from "../../components/layout";
 import { useAuthStore, useSessionsStore } from "../../store";
 import type { Session } from "../../types/auth";
 
@@ -108,6 +108,17 @@ export const SessionsPage = () => {
     fetchSessions();
   }, [fetchSessions]);
 
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && showLogoutAllModal) {
+        setShowLogoutAllModal(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [showLogoutAllModal]);
+
   const handleRevokeSession = async (sessionId: string, isCurrent: boolean) => {
     if (isCurrent) {
       // If revoking current session, just logout
@@ -135,8 +146,8 @@ export const SessionsPage = () => {
   if (isLoading && sessions.length === 0) {
     return (
       <>
-        <HomeNavbar />
-        <div className="min-h-screen bg-gray-50 py-8 pt-24">
+        <AppSidebar />
+        <div className="min-h-screen bg-gray-50 py-8 pt-16 lg:pt-24">
           <div className="max-w-4xl mx-auto px-4">
             <div className="animate-pulse">
               <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
@@ -158,8 +169,8 @@ export const SessionsPage = () => {
 
   return (
     <>
-      <HomeNavbar />
-      <div className="min-h-screen bg-gray-50 py-8 pt-24">
+      <AppSidebar />
+      <div className="min-h-screen bg-gray-50 py-8 pt-16 lg:pt-24">
         <div className="max-w-4xl mx-auto px-4">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
@@ -227,7 +238,7 @@ export const SessionsPage = () => {
             {sessions.length === 0 ? (
               <div className="bg-white rounded-lg shadow p-8 text-center">
                 <svg
-                  className="w-16 h-16 text-gray-300 mx-auto mb-4"
+                  className="w-16 h-16 text-gray-400 mx-auto mb-4"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -291,7 +302,7 @@ export const SessionsPage = () => {
                             <span className="font-medium">Last active:</span>{" "}
                             {formatRelativeTime(session.lastActivityAt)}
                           </p>
-                          <p className="text-xs text-gray-400">
+                          <p className="text-xs text-gray-500">
                             Started: {formatDate(session.createdAt)} • Expires:{" "}
                             {formatDate(session.expiresAt)}
                           </p>
@@ -359,7 +370,12 @@ export const SessionsPage = () => {
 
         {/* Logout All Modal */}
         {showLogoutAllModal && (
-          <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div
+            className="fixed inset-0 z-50 overflow-y-auto"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sessions-logout-all-title"
+          >
             <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
               {/* Backdrop */}
               <div
@@ -386,7 +402,10 @@ export const SessionsPage = () => {
                     </svg>
                   </div>
                   <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                    <h3 className="text-lg font-medium leading-6 text-gray-900">
+                    <h3
+                      id="sessions-logout-all-title"
+                      className="text-lg font-medium leading-6 text-gray-900"
+                    >
                       Sign out of all devices?
                     </h3>
                     <div className="mt-2">

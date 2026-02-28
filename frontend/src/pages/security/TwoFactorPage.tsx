@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { HomeFooter, HomeNavbar } from "../../components/layout";
+import { AppSidebar, HomeFooter } from "../../components/layout";
 import { Alert } from "../../components/ui/Alert";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
@@ -147,8 +147,8 @@ export default function TwoFactorPage() {
 
   return (
     <>
-      <HomeNavbar />
-      <div className="min-h-screen bg-gray-50 py-12 px-4 pt-24 sm:px-6 lg:px-8">
+      <AppSidebar />
+      <div className="min-h-screen bg-gray-50 px-4 py-12 pt-16 sm:px-6 lg:px-8 lg:pt-24">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900">

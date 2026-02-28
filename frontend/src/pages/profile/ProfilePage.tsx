@@ -2,10 +2,10 @@
 // SmartProperty - Profile Page
 // ===========================================
 
-import { Calendar, Mail, Shield, User } from "lucide-react";
-import { useRef, useState } from "react";
+import { Calendar, Mail, Pencil, Shield, User } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { HomeFooter, HomeNavbar } from "../../components/layout";
+import { AppSidebar, HomeFooter } from "../../components/layout";
 import {
   Alert,
   Button,
@@ -22,7 +22,9 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const { user, logout, setUser } = useAuthStore();
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editingField, setEditingField] = useState<
+    "avatar" | "name" | "email" | "phone" | null
+  >(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isRequestingEmailChange, setIsRequestingEmailChange] = useState(false);
@@ -46,7 +48,20 @@ export default function ProfilePage() {
     text: string;
   } | null>(null);
 
-  const handleStartProfileEdit = () => {
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (showDeactivateModal) setShowDeactivateModal(false);
+      if (showDeleteModal) setShowDeleteModal(false);
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [showDeactivateModal, showDeleteModal]);
+
+  const handleStartFieldEdit = (
+    field: "avatar" | "name" | "email" | "phone",
+  ) => {
     setProfileMessage(null);
     setEmailChangeMessage(null);
     setProfileForm({
@@ -56,11 +71,11 @@ export default function ProfilePage() {
       avatar: user?.avatar || "",
     });
     setNewEmail(user?.email || "");
-    setIsEditingProfile(true);
+    setEditingField(field);
   };
 
-  const handleCancelProfileEdit = () => {
-    setIsEditingProfile(false);
+  const handleCancelFieldEdit = () => {
+    setEditingField(null);
     setProfileForm({
       firstName: user?.firstName || "",
       lastName: user?.lastName || "",
@@ -120,13 +135,13 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSaveProfile = async () => {
+  const handleSaveProfileField = async (field: "avatar" | "name" | "phone") => {
     const firstName = profileForm.firstName.trim();
     const lastName = profileForm.lastName.trim();
     const phone = profileForm.phone.trim();
     const avatar = profileForm.avatar.trim();
 
-    if (firstName.length < 2 || lastName.length < 2) {
+    if (field === "name" && (firstName.length < 2 || lastName.length < 2)) {
       setProfileMessage({
         type: "error",
         text: "First name and last name must be at least 2 characters.",
@@ -138,12 +153,14 @@ export default function ProfilePage() {
     setProfileMessage(null);
 
     try {
-      const updatedUser = await authService.updateProfile({
-        firstName,
-        lastName,
-        phone: phone || undefined,
-        avatar,
-      });
+      const payload =
+        field === "name"
+          ? { firstName, lastName }
+          : field === "phone"
+            ? { phone: phone || undefined }
+            : { avatar };
+
+      const updatedUser = await authService.updateProfile(payload);
 
       setUser({
         ...updatedUser,
@@ -152,7 +169,7 @@ export default function ProfilePage() {
           `${updatedUser.firstName} ${updatedUser.lastName}`.trim(),
       });
 
-      setIsEditingProfile(false);
+      setEditingField(null);
       setProfileMessage({
         type: "success",
         text: "Profile updated successfully.",
@@ -272,11 +289,11 @@ export default function ProfilePage() {
 
   return (
     <>
-      <HomeNavbar />
-      <div className="min-h-screen bg-gray-50 pt-24">
+      <AppSidebar />
+      <div className="min-h-screen bg-gray-50 pt-16 lg:pt-24">
         {/* Header */}
         <header className="border-b border-gray-200 bg-white shadow-sm">
-          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => navigate("/dashboard")}
@@ -285,10 +302,9 @@ export default function ProfilePage() {
                 ← Back to Dashboard
               </button>
             </div>
-            <h1 className="text-xl font-bold text-gray-900">
+            <h1 className="text-lg font-bold text-gray-900 sm:text-xl">
               Profile Settings
             </h1>
-            <div className="w-32" />
           </div>
         </header>
 
@@ -315,10 +331,20 @@ export default function ProfilePage() {
                 )}
 
                 <div className="mb-6 rounded-xl border border-gray-200 p-4">
-                  <h3 className="mb-3 font-medium text-gray-900">
-                    Profile Picture
-                  </h3>
-                  <div className="flex items-center gap-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="font-medium text-gray-900">
+                      Profile Picture
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => handleStartFieldEdit("avatar")}
+                      disabled={isSavingProfile || isUploadingAvatar}
+                      className="text-gray-500 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
                     <div className="h-20 w-20 overflow-hidden rounded-full border border-gray-200 bg-gray-100">
                       {profileForm.avatar ? (
                         <img
@@ -333,7 +359,7 @@ export default function ProfilePage() {
                       )}
                     </div>
 
-                    {isEditingProfile ? (
+                    {editingField === "avatar" ? (
                       <div className="flex flex-wrap items-center gap-2">
                         <input
                           ref={avatarInputRef}
@@ -363,6 +389,25 @@ export default function ProfilePage() {
                             Remove
                           </Button>
                         )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleCancelFieldEdit}
+                          disabled={isUploadingAvatar || isSavingProfile}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleSaveProfileField("avatar")}
+                          isLoading={isSavingProfile}
+                          disabled={isUploadingAvatar}
+                        >
+                          Save
+                        </Button>
                         <p className="w-full text-xs text-gray-500">
                           JPG, PNG, WEBP up to 5MB.
                         </p>
@@ -377,29 +422,62 @@ export default function ProfilePage() {
 
                 <div className="mb-6 grid gap-4 sm:grid-cols-2">
                   <div>
-                    <h3 className="font-medium text-gray-900">Full Name</h3>
-                    {isEditingProfile ? (
-                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                        <Input
-                          placeholder="First name"
-                          value={profileForm.firstName}
-                          onChange={(e) =>
-                            setProfileForm((prev) => ({
-                              ...prev,
-                              firstName: e.target.value,
-                            }))
-                          }
-                        />
-                        <Input
-                          placeholder="Last name"
-                          value={profileForm.lastName}
-                          onChange={(e) =>
-                            setProfileForm((prev) => ({
-                              ...prev,
-                              lastName: e.target.value,
-                            }))
-                          }
-                        />
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium text-gray-900">Full Name</h3>
+                      <button
+                        type="button"
+                        onClick={() => handleStartFieldEdit("name")}
+                        disabled={isSavingProfile || isUploadingAvatar}
+                        className="text-gray-500 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {editingField === "name" ? (
+                      <div className="mt-2 space-y-2">
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <Input
+                            placeholder="First name"
+                            value={profileForm.firstName}
+                            onChange={(e) =>
+                              setProfileForm((prev) => ({
+                                ...prev,
+                                firstName: e.target.value,
+                              }))
+                            }
+                          />
+                          <Input
+                            placeholder="Last name"
+                            value={profileForm.lastName}
+                            onChange={(e) =>
+                              setProfileForm((prev) => ({
+                                ...prev,
+                                lastName: e.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleCancelFieldEdit}
+                            disabled={isSavingProfile || isUploadingAvatar}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleSaveProfileField("name")}
+                            isLoading={isSavingProfile}
+                            disabled={isUploadingAvatar}
+                          >
+                            Save
+                          </Button>
+                        </div>
                       </div>
                     ) : (
                       <p className="mt-1 text-gray-700">
@@ -408,11 +486,21 @@ export default function ProfilePage() {
                     )}
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-900">Email</h3>
-                    {isEditingProfile ? (
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium text-gray-900">Email</h3>
+                      <button
+                        type="button"
+                        onClick={() => handleStartFieldEdit("email")}
+                        disabled={isSavingProfile || isUploadingAvatar}
+                        className="text-gray-500 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {editingField === "email" ? (
                       <div className="mt-1 space-y-2">
                         <p className="flex items-center text-gray-700 text-sm">
-                          <Mail className="mr-2 h-4 w-4 text-gray-400" />
+                          <Mail className="mr-2 h-4 w-4 text-gray-500" />
                           {user?.email}
                           {user?.isEmailVerified && (
                             <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800">
@@ -420,7 +508,7 @@ export default function ProfilePage() {
                             </span>
                           )}
                         </p>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
                           <Input
                             type="email"
                             placeholder="new.email@example.com"
@@ -436,6 +524,15 @@ export default function ProfilePage() {
                           >
                             Change
                           </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            onClick={handleCancelFieldEdit}
+                            disabled={isRequestingEmailChange}
+                          >
+                            Close
+                          </Button>
                         </div>
                         {emailChangeMessage && (
                           <Alert
@@ -447,7 +544,7 @@ export default function ProfilePage() {
                       </div>
                     ) : (
                       <div className="mt-1 flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-gray-400" />
+                        <Mail className="h-4 w-4 text-gray-500" />
                         <span className="text-gray-700">{user?.email}</span>
                         {user?.isEmailVerified && (
                           <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800">
@@ -458,20 +555,52 @@ export default function ProfilePage() {
                     )}
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-900">Phone</h3>
-                    {isEditingProfile ? (
-                      <Input
-                        type="tel"
-                        placeholder="+1 (555) 123-4567"
-                        value={profileForm.phone}
-                        onChange={(e) =>
-                          setProfileForm((prev) => ({
-                            ...prev,
-                            phone: e.target.value,
-                          }))
-                        }
-                        className="mt-1"
-                      />
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium text-gray-900">Phone</h3>
+                      <button
+                        type="button"
+                        onClick={() => handleStartFieldEdit("phone")}
+                        disabled={isSavingProfile || isUploadingAvatar}
+                        className="text-gray-500 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {editingField === "phone" ? (
+                      <div className="mt-1 space-y-2">
+                        <Input
+                          type="tel"
+                          placeholder="+1 (555) 123-4567"
+                          value={profileForm.phone}
+                          onChange={(e) =>
+                            setProfileForm((prev) => ({
+                              ...prev,
+                              phone: e.target.value,
+                            }))
+                          }
+                        />
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleCancelFieldEdit}
+                            disabled={isSavingProfile || isUploadingAvatar}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleSaveProfileField("phone")}
+                            isLoading={isSavingProfile}
+                            disabled={isUploadingAvatar}
+                          >
+                            Save
+                          </Button>
+                        </div>
+                      </div>
                     ) : (
                       <p className="mt-1 text-gray-700">
                         {user?.phone || "Not provided"}
@@ -481,7 +610,7 @@ export default function ProfilePage() {
                   <div>
                     <h3 className="font-medium text-gray-900">Member Since</h3>
                     <div className="mt-1 flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-400" />
+                      <Calendar className="h-4 w-4 text-gray-500" />
                       <span className="text-gray-700">
                         {user?.createdAt
                           ? new Date(user.createdAt).toLocaleDateString()
@@ -489,32 +618,6 @@ export default function ProfilePage() {
                       </span>
                     </div>
                   </div>
-                </div>
-
-                <div className="border-t pt-6">
-                  {!isEditingProfile ? (
-                    <Button variant="default" onClick={handleStartProfileEdit}>
-                      Edit Profile
-                    </Button>
-                  ) : (
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={handleCancelProfileEdit}
-                        disabled={isSavingProfile || isUploadingAvatar}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        variant="default"
-                        onClick={handleSaveProfile}
-                        isLoading={isSavingProfile}
-                        disabled={isUploadingAvatar}
-                      >
-                        Save Changes
-                      </Button>
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -579,10 +682,15 @@ export default function ProfilePage() {
 
       {/* Deactivate Confirmation Modal */}
       {showDeactivateModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="deactivate-modal-title"
+        >
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
             <h3 className="text-lg font-semibold text-gray-900">
-              Deactivate your account?
+              <span id="deactivate-modal-title">Deactivate your account?</span>
             </h3>
             <p className="mt-2 text-sm text-gray-600">
               Your account will become inactive and you will be signed out
@@ -610,10 +718,17 @@ export default function ProfilePage() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-modal-title"
+        >
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
             <h3 className="text-lg font-semibold text-red-900">
-              Permanently delete your account?
+              <span id="delete-modal-title">
+                Permanently delete your account?
+              </span>
             </h3>
             <p className="mt-2 text-sm text-gray-600">
               This action cannot be undone. Your account and all associated

@@ -675,6 +675,15 @@ export default function PropertyFormPage() {
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={() => document.getElementById("image-input")?.click()}
+              role="button"
+              tabIndex={0}
+              aria-label="Upload property images"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  document.getElementById("image-input")?.click();
+                }
+              }}
             >
               <ImageIcon />
               <h4>Glissez-déposez vos images ici</h4>

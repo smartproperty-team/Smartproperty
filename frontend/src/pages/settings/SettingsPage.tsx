@@ -6,7 +6,7 @@ import * as Slider from "@radix-ui/react-slider";
 import { Shield } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { HomeFooter, HomeNavbar } from "../../components/layout";
+import { AppSidebar, HomeFooter } from "../../components/layout";
 import LocationPreferenceMap from "../../components/settings/LocationPreferenceMap";
 import {
   Alert,
@@ -181,11 +181,11 @@ export default function SettingsPage() {
 
   return (
     <>
-      <HomeNavbar />
-      <div className="min-h-screen bg-gray-50 pt-24">
+      <AppSidebar />
+      <div className="min-h-screen bg-gray-50 pt-16 lg:pt-24">
         {/* Header */}
         <header className="border-b border-gray-200 bg-white shadow-sm">
-          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => navigate("/dashboard")}
@@ -194,10 +194,9 @@ export default function SettingsPage() {
                 ← Back to Dashboard
               </button>
             </div>
-            <h1 className="text-xl font-bold text-gray-900">
+            <h1 className="text-lg font-bold text-gray-900 sm:text-xl">
               Security Settings
             </h1>
-            <div className="w-32" />
           </div>
         </header>
 
@@ -214,7 +213,7 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent>
                 <div className="rounded-lg border-2 border-dashed border-yellow-300 bg-yellow-50 p-6">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center">
                       <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-yellow-100">
                         <Shield className="h-6 w-6 text-yellow-600" />
@@ -393,19 +392,19 @@ export default function SettingsPage() {
                     </div>
                   </button>
 
-                  <button
-                    onClick={() => navigate("/sessions")}
-                    className="flex items-center rounded-lg border border-gray-200 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50"
-                  >
-                    <div className="text-left">
-                      <p className="font-medium text-gray-900">
-                        Active Sessions
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Manage your sessions
-                      </p>
-                    </div>
-                  </button>
+                  <div className="rounded-lg border border-gray-200 p-4">
+                    <p className="font-medium text-gray-900">Active Sessions</p>
+                    <p className="mb-3 text-sm text-gray-600">
+                      Manage your sessions
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate("/sessions")}
+                    >
+                      Open Active Sessions
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

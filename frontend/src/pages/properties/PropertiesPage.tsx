@@ -326,6 +326,20 @@ export default function PropertiesPage() {
     [user],
   );
 
+  const getPropertyId = (property: Property) => property.id || property._id;
+
+  const myPropertyIds = new Set(
+    myProperties.map((property) => getPropertyId(property)).filter(Boolean),
+  );
+
+  const visibleProperties = isOwnerUser
+    ? properties.filter((property) => {
+        const propertyId = getPropertyId(property);
+        if (!propertyId) return true;
+        return !myPropertyIds.has(propertyId);
+      })
+    : properties;
+
   // Handle filter changes
   const handleFilterChange = (key: keyof PropertyFilters, value: string) => {
     const newFilters = { ...filters, [key]: value || undefined, page: 1 };
@@ -376,7 +390,6 @@ export default function PropertiesPage() {
     <div className="properties-page">
       <Navbar />
 
-
       <main className="properties-container" id="main-content">
         {/* Header */}
         <div className="properties-header">
@@ -400,20 +413,22 @@ export default function PropertiesPage() {
                 <div className="filter-group">
                   <label htmlFor="filter-search">Recherche</label>
                   <input
-                      id="filter-search"
-                      type="text"
-                      placeholder="Titre, description..."
-                      value={filters.search || ""}
-                      onChange={(e) => handleFilterChange("search", e.target.value)}
+                    id="filter-search"
+                    type="text"
+                    placeholder="Titre, description..."
+                    value={filters.search || ""}
+                    onChange={(e) =>
+                      handleFilterChange("search", e.target.value)
+                    }
                   />
                 </div>
 
                 <div className="filter-group">
                   <label htmlFor="filter-type">Type</label>
                   <select
-                      id="filter-type"
-                      value={filters.type || ""}
-                      onChange={(e) => handleFilterChange("type", e.target.value)}
+                    id="filter-type"
+                    value={filters.type || ""}
+                    onChange={(e) => handleFilterChange("type", e.target.value)}
                   >
                     <option value="">Tous les types</option>
                     <option value="apartment">Appartement</option>
@@ -428,9 +443,11 @@ export default function PropertiesPage() {
                 <div className="filter-group">
                   <label htmlFor="filter-status">Statut</label>
                   <select
-                      id="filter-status"
-                      value={filters.status || ""}
-                      onChange={(e) => handleFilterChange("status", e.target.value)}
+                    id="filter-status"
+                    value={filters.status || ""}
+                    onChange={(e) =>
+                      handleFilterChange("status", e.target.value)
+                    }
                   >
                     <option value="">Tous les statuts</option>
                     <option value="available">Disponible</option>
@@ -443,11 +460,11 @@ export default function PropertiesPage() {
                 <div className="filter-group">
                   <label htmlFor="filter-city">Ville</label>
                   <input
-                      id="filter-city"
-                      type="text"
-                      placeholder="Ville..."
-                      value={filters.city || ""}
-                      onChange={(e) => handleFilterChange("city", e.target.value)}
+                    id="filter-city"
+                    type="text"
+                    placeholder="Ville..."
+                    value={filters.city || ""}
+                    onChange={(e) => handleFilterChange("city", e.target.value)}
                   />
                 </div>
 
@@ -457,9 +474,9 @@ export default function PropertiesPage() {
                     Rechercher
                   </button>
                   <button
-                      type="button"
-                      className="btn-filter secondary"
-                      onClick={handleResetFilters}
+                    type="button"
+                    className="btn-filter secondary"
+                    onClick={handleResetFilters}
                   >
                     Réinitialiser
                   </button>
@@ -525,29 +542,34 @@ export default function PropertiesPage() {
               Réessayer
             </button>
           </div>
-        ) : properties.length === 0 ? (
-          <div className="empty-state">
-            <HomeIcon />
-            <h3>Aucune propriété trouvée</h3>
-            <p>
-              {filters.search || filters.type || filters.status || filters.city
-                ? "Essayez de modifier vos filtres de recherche."
-                : canAddProperty
-                  ? "Commencez par ajouter votre première propriété."
-                  : "Aucune propriété disponible pour le moment."}
-            </p>
-            {canAddProperty && (
-              <Link to="/properties/new" className="btn-add-property">
-                <PlusIcon />
-                Ajouter une propriété
-              </Link>
-            )}
-          </div>
+        ) : visibleProperties.length === 0 ? (
+          isOwnerUser ? null : (
+            <div className="empty-state">
+              <HomeIcon />
+              <h3>Aucune propriété trouvée</h3>
+              <p>
+                {filters.search ||
+                filters.type ||
+                filters.status ||
+                filters.city
+                  ? "Essayez de modifier vos filtres de recherche."
+                  : canAddProperty
+                    ? "Commencez par ajouter votre première propriété."
+                    : "Aucune propriété disponible pour le moment."}
+              </p>
+              {canAddProperty && (
+                <Link to="/properties/new" className="btn-add-property">
+                  <PlusIcon />
+                  Ajouter une propriété
+                </Link>
+              )}
+            </div>
+          )
         ) : (
           <>
             {/* Properties Grid */}
             <div className="properties-grid">
-              {properties.map((property) => (
+              {visibleProperties.map((property) => (
                 <PropertyCard
                   key={property.id || property._id}
                   property={property}

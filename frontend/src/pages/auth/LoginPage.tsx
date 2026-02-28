@@ -2,14 +2,14 @@
 // SmartProperty - Login Page
 // ===========================================
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Building2, Lock, Mail } from 'lucide-react';
-import { useState } from 'react';
-import ReCAPTCHA from 'react-google-recaptcha';
-import { useForm } from 'react-hook-form';
-import { Link, useNavigate } from 'react-router-dom';
-import { z } from 'zod';
-import { HomeFooter, Navbar } from '../../components/layout';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Building2, Lock, Mail } from "lucide-react";
+import { useEffect, useState } from "react";
+import ReCAPTCHA from "react-google-recaptcha";
+import { useForm } from "react-hook-form";
+import { Link, useNavigate } from "react-router-dom";
+import { z } from "zod";
+import { HomeFooter, Navbar } from "../../components/layout";
 import {
   Alert,
   Button,
@@ -20,9 +20,9 @@ import {
   CardHeader,
   CardTitle,
   Input,
-} from '../../components/ui';
-import { authService } from '../../services';
-import { useAuthStore } from '../../store';
+} from "../../components/ui";
+import { authService } from "../../services";
+import { useAuthStore } from "../../store";
 
 // Google Icon SVG Component
 const GoogleIcon = () => (
@@ -54,8 +54,8 @@ const FacebookIcon = () => (
 );
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(1, 'Password is required'),
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(1, "Password is required"),
   twoFactorCode: z.string().optional(),
 });
 
@@ -75,6 +75,18 @@ export default function LoginPage() {
     twoFactorCode?: string;
   } | null>(null);
 
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && showReactivateModal) {
+        setShowReactivateModal(false);
+        setPendingLoginData(null);
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [showReactivateModal]);
+
   const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string | undefined;
 
   const {
@@ -89,14 +101,14 @@ export default function LoginPage() {
     try {
       clearError();
       if (!captchaToken) {
-        setCaptchaError('Please complete the CAPTCHA.');
+        setCaptchaError("Please complete the CAPTCHA.");
         return;
       }
       setCaptchaError(null);
       await login(data.email, data.password, captchaToken, data.twoFactorCode);
-      setSuccessMessage('Login successful! Redirecting...');
+      setSuccessMessage("Login successful! Redirecting...");
       setTimeout(() => {
-        navigate('/dashboard');
+        navigate("/dashboard");
       }, 1000);
     } catch (err: any) {
       // Check if 2FA is required
@@ -196,7 +208,7 @@ export default function LoginPage() {
                   icon={<Mail className="h-5 w-5" />}
                   error={errors.email?.message}
                   className="focus-visible:ring-home-primary"
-                  {...register('email')}
+                  {...register("email")}
                 />
 
                 <Input
@@ -206,7 +218,7 @@ export default function LoginPage() {
                   icon={<Lock className="h-5 w-5" />}
                   error={errors.password?.message}
                   className="focus-visible:ring-home-primary"
-                  {...register('password')}
+                  {...register("password")}
                 />
 
                 {show2FA && (
@@ -306,7 +318,7 @@ export default function LoginPage() {
                 </Button>
 
                 <p className="text-center text-sm text-home-muted">
-                  Don't have an account?{' '}
+                  Don't have an account?{" "}
                   <Link
                     to="/register"
                     className="font-medium text-home-primary hover:text-home-primary-dark"
@@ -321,7 +333,7 @@ export default function LoginPage() {
           <div className="mt-6 rounded-lg border border-home-border bg-white/70 p-4 backdrop-blur">
             <p className="text-center text-sm text-home-muted">
               <span className="font-medium">Testing?</span> Register a new
-              account or use the API docs at{' '}
+              account or use the API docs at{" "}
               <a
                 href="http://localhost:3000/api/docs"
                 target="_blank"
@@ -338,9 +350,17 @@ export default function LoginPage() {
       <HomeFooter />
 
       {showReactivateModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reactivate-modal-title"
+        >
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3
+              id="reactivate-modal-title"
+              className="text-lg font-semibold text-gray-900"
+            >
               Reactivate your account?
             </h3>
             <p className="mt-2 text-sm text-gray-600">

@@ -1,4 +1,4 @@
-import { HomeFooter, HomeNavbar } from "@/components/layout";
+import { AppSidebar, HomeFooter } from "@/components/layout";
 import {
   Alert,
   Button,
@@ -185,14 +185,25 @@ export default function AdminUsersPage() {
     }
   };
 
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && selectedUser) {
+        setSelectedUser(null);
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [selectedUser]);
+
   if (user?.role !== UserRole.ADMIN) {
     return null;
   }
 
   return (
     <>
-      <HomeNavbar />
-      <div className="min-h-screen bg-gray-50 pt-24">
+      <AppSidebar />
+      <div className="min-h-screen bg-gray-50 pt-16 lg:pt-24">
         <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="mb-6 flex items-center justify-between">
             <div>
@@ -227,7 +238,7 @@ export default function AdminUsersPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-3 md:grid-cols-5">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 <Input
                   placeholder="Search name or email"
                   value={search}
@@ -270,7 +281,7 @@ export default function AdminUsersPage() {
                   <option value={20}>20 / page</option>
                   <option value={50}>50 / page</option>
                 </select>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
                   <Button onClick={handleSearch} className="w-full">
                     Search
                   </Button>
@@ -298,7 +309,7 @@ export default function AdminUsersPage() {
                 <p className="text-sm text-gray-600">Loading users...</p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm">
+                  <table className="min-w-[760px] text-sm">
                     <thead>
                       <tr className="border-b text-left text-gray-600">
                         <th className="px-3 py-2">Name</th>
@@ -324,7 +335,7 @@ export default function AdminUsersPage() {
                                   <UserRound className="h-5 w-5" />
                                 )}
                               </div>
-                              <span className="font-medium text-gray-900">
+                              <span className="max-w-[220px] truncate font-medium text-gray-900">
                                 {item.fullName ||
                                   `${item.firstName} ${item.lastName}`}
                               </span>
@@ -425,14 +436,22 @@ export default function AdminUsersPage() {
       </div>
 
       {selectedUser && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/40 px-4">
+        <div
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/40 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="admin-user-modal-title"
+        >
           <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl">
             <div className="flex items-start gap-4 border-b border-gray-100 pb-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
                 <UserRound className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900">
+                <h3
+                  id="admin-user-modal-title"
+                  className="text-2xl font-semibold text-gray-900"
+                >
                   User details
                 </h3>
                 <p className="mt-1 text-sm text-gray-600">

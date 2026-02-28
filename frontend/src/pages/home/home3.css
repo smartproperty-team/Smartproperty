@@ -35,10 +35,10 @@
 /* Reset and Base Styles */
 .home-page {
   font-family:
-    'Inter',
+    "Inter",
     -apple-system,
     BlinkMacSystemFont,
-    'Segoe UI',
+    "Segoe UI",
     Roboto,
     sans-serif;
   color: var(--color-text);
@@ -167,7 +167,7 @@ select:focus-visible {
 }
 
 .nav-link::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 0;
   left: 0;
@@ -443,11 +443,17 @@ select:focus-visible {
 
 .notif-item {
   display: flex;
+  width: 100%;
   gap: 12px;
   padding: 14px 20px;
   cursor: pointer;
   transition: background var(--transition-fast);
   border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  background: transparent;
+  text-align: left;
 }
 
 .notif-item:hover {
@@ -924,7 +930,7 @@ select:focus-visible {
   width: 100%;
   z-index: 1;
   height: 45%;
-  background: url('/images/image1.png') center bottom/cover no-repeat;
+  background: url("/images/image1.png") center bottom/cover no-repeat;
 }
 
 .hero-cityscape img {
@@ -1314,7 +1320,7 @@ select:focus-visible {
 }
 
 .city-card::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   background: linear-gradient(transparent 30%, rgba(0, 0, 0, 0.75));
@@ -1429,7 +1435,7 @@ select:focus-visible {
 }
 
 .step-icon::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: -4px;
   border-radius: 50%;
@@ -1469,7 +1475,7 @@ select:focus-visible {
       rgba(245, 158, 11, 0.95) 0%,
       rgba(217, 119, 6, 0.95) 100%
     ),
-    url('/tq_kruixmu0b--lzi-1500h.png') center/cover no-repeat;
+    url("/tq_kruixmu0b--lzi-1500h.png") center/cover no-repeat;
   padding: 6rem 2rem;
   text-align: center;
 }

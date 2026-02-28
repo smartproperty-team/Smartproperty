@@ -2,22 +2,23 @@
 // SmartProperty - Property Detail Page
 // ===========================================
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-import iconUrl from "leaflet/dist/images/marker-icon.png";
-import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
-import shadowUrl from "leaflet/dist/images/marker-shadow.png";
 import { HomeFooter, Navbar } from "@/components/layout";
 import { propertyService } from "@/services/property.service";
 import { useAuthStore } from "@/store";
 import type { Property, PropertyImage } from "@/types/property";
 import { canManageProperties } from "@/utils";
+import L from "leaflet";
+import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
+import iconUrl from "leaflet/dist/images/marker-icon.png";
+import shadowUrl from "leaflet/dist/images/marker-shadow.png";
+import "leaflet/dist/leaflet.css";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import "./properties.css";
 
 // Fix Leaflet default marker icons (Vite asset handling)
-delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
+delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)
+  ._getIconUrl;
 L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
 
 // Custom pin icon — vivid green, larger, stands out on the map
@@ -69,11 +70,15 @@ async function nominatimSearch(query: string): Promise<NominatimResult | null> {
   }
 }
 
-async function geocodeAddress(address: Property["address"]): Promise<{ lat: number; lng: number; zoom: number } | null> {
+async function geocodeAddress(
+  address: Property["address"],
+): Promise<{ lat: number; lng: number; zoom: number } | null> {
   const { street, city, state, zipCode, country } = address;
 
   // Strategy 1 — full precision: street + city + state + zip + country
-  const full = [street, city, state, zipCode, country].filter(Boolean).join(", ");
+  const full = [street, city, state, zipCode, country]
+    .filter(Boolean)
+    .join(", ");
   const r1 = await nominatimSearch(full);
   if (r1) return { lat: parseFloat(r1.lat), lng: parseFloat(r1.lon), zoom: 17 };
 
@@ -103,13 +108,21 @@ function PropertyMap({ address, title }: PropertyMapProps) {
   const mapInstanceRef = useRef<L.Map | null>(null);
   const [mapError, setMapError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [resolvedCoords, setResolvedCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [resolvedCoords, setResolvedCoords] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
   const [accuracyLabel, setAccuracyLabel] = useState<string>("");
 
   useEffect(() => {
     if (!mapRef.current) return;
 
-    const initMap = (lat: number, lng: number, zoom: number, accuracy: string) => {
+    const initMap = (
+      lat: number,
+      lng: number,
+      zoom: number,
+      accuracy: string,
+    ) => {
       if (!mapRef.current) return;
 
       if (mapInstanceRef.current) {
@@ -152,12 +165,13 @@ function PropertyMap({ address, title }: PropertyMapProps) {
               ${address.city}${address.state ? `, ${address.state}` : ""}<br>
               ${address.country}
             </div>
-            ${zoom >= 16
-              ? `<div style="margin-top:6px;font-size:0.72rem;color:#10b981;font-weight:600">📍 Exact location</div>`
-              : `<div style="margin-top:6px;font-size:0.72rem;color:#f59e0b;font-weight:600">📍 Approximate location</div>`
+            ${
+              zoom >= 16
+                ? `<div style="margin-top:6px;font-size:0.72rem;color:#10b981;font-weight:600">📍 Exact location</div>`
+                : `<div style="margin-top:6px;font-size:0.72rem;color:#f59e0b;font-weight:600">📍 Approximate location</div>`
             }
           </div>`,
-          { maxWidth: 240 }
+          { maxWidth: 240 },
         )
         .openPopup();
 
@@ -173,7 +187,7 @@ function PropertyMap({ address, title }: PropertyMapProps) {
           address.coordinates.lat,
           address.coordinates.lng,
           17,
-          "Exact location (saved coordinates)"
+          "Exact location (saved coordinates)",
         );
         return;
       }
@@ -182,9 +196,11 @@ function PropertyMap({ address, title }: PropertyMapProps) {
       const result = await geocodeAddress(address);
       if (result) {
         const accuracy =
-          result.zoom >= 17 ? "Exact street location" :
-          result.zoom >= 16 ? "Street-level location" :
-          "Approximate area";
+          result.zoom >= 17
+            ? "Exact street location"
+            : result.zoom >= 16
+              ? "Street-level location"
+              : "Approximate area";
         initMap(result.lat, result.lng, result.zoom, accuracy);
       } else {
         setMapError(true);
@@ -208,13 +224,19 @@ function PropertyMap({ address, title }: PropertyMapProps) {
       window.open(
         `https://www.openstreetmap.org/?mlat=${resolvedCoords.lat}&mlon=${resolvedCoords.lng}#map=17/${resolvedCoords.lat}/${resolvedCoords.lng}`,
         "_blank",
-        "noopener"
+        "noopener",
       );
     } else {
       const query = encodeURIComponent(
-        [address.street, address.city, address.state, address.country].filter(Boolean).join(", ")
+        [address.street, address.city, address.state, address.country]
+          .filter(Boolean)
+          .join(", "),
       );
-      window.open(`https://www.openstreetmap.org/search?query=${query}`, "_blank", "noopener");
+      window.open(
+        `https://www.openstreetmap.org/search?query=${query}`,
+        "_blank",
+        "noopener",
+      );
     }
   };
 
@@ -223,30 +245,59 @@ function PropertyMap({ address, title }: PropertyMapProps) {
       window.open(
         `https://www.google.com/maps?q=${resolvedCoords.lat},${resolvedCoords.lng}`,
         "_blank",
-        "noopener"
+        "noopener",
       );
     } else {
       const query = encodeURIComponent(
-        [address.street, address.city, address.state, address.country].filter(Boolean).join(", ")
+        [address.street, address.city, address.state, address.country]
+          .filter(Boolean)
+          .join(", "),
       );
-      window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, "_blank", "noopener");
+      window.open(
+        `https://www.google.com/maps/search/?api=1&query=${query}`,
+        "_blank",
+        "noopener",
+      );
     }
   };
 
   return (
     <div className="property-description" style={{ marginTop: "1.5rem" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem", flexWrap: "wrap", gap: "0.5rem" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: "0.75rem",
+          flexWrap: "wrap",
+          gap: "0.5rem",
+        }}
+      >
         <div>
           <h3 style={{ margin: 0 }}>Location</h3>
           {accuracyLabel && (
-            <span style={{
-              fontSize: "0.75rem", fontWeight: 500,
-              color: accuracyLabel.toLowerCase().includes("exact") ? "#10b981" : "#f59e0b",
-              display: "flex", alignItems: "center", gap: "0.25rem", marginTop: "2px",
-            }}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
+            <span
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 500,
+                color: accuracyLabel.toLowerCase().includes("exact")
+                  ? "#10b981"
+                  : "#f59e0b",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.25rem",
+                marginTop: "2px",
+              }}
+            >
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" />
               </svg>
               {accuracyLabel}
             </span>
@@ -258,18 +309,35 @@ function PropertyMap({ address, title }: PropertyMapProps) {
             onClick={openInMaps}
             title="Open in OpenStreetMap"
             style={{
-              display: "flex", alignItems: "center", gap: "0.35rem",
-              fontSize: "0.78rem", fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: "0.35rem",
+              fontSize: "0.78rem",
+              fontWeight: 600,
               color: "var(--color-primary, #10b981)",
               background: "rgba(16,185,129,0.08)",
               border: "1px solid rgba(16,185,129,0.2)",
-              cursor: "pointer", padding: "0.3rem 0.7rem",
-              borderRadius: "8px", transition: "all 0.15s",
+              cursor: "pointer",
+              padding: "0.3rem 0.7rem",
+              borderRadius: "8px",
+              transition: "all 0.15s",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(16,185,129,0.15)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(16,185,129,0.08)"; }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(16,185,129,0.15)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(16,185,129,0.08)";
+            }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
               <polyline points="15 3 21 3 21 9" />
               <line x1="10" y1="14" x2="21" y2="3" />
@@ -280,18 +348,35 @@ function PropertyMap({ address, title }: PropertyMapProps) {
             onClick={openInGoogleMaps}
             title="Open in Google Maps"
             style={{
-              display: "flex", alignItems: "center", gap: "0.35rem",
-              fontSize: "0.78rem", fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: "0.35rem",
+              fontSize: "0.78rem",
+              fontWeight: 600,
               color: "#4285F4",
               background: "rgba(66,133,244,0.08)",
               border: "1px solid rgba(66,133,244,0.2)",
-              cursor: "pointer", padding: "0.3rem 0.7rem",
-              borderRadius: "8px", transition: "all 0.15s",
+              cursor: "pointer",
+              padding: "0.3rem 0.7rem",
+              borderRadius: "8px",
+              transition: "all 0.15s",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(66,133,244,0.15)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(66,133,244,0.08)"; }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(66,133,244,0.15)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(66,133,244,0.08)";
+            }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
               <polyline points="15 3 21 3 21 9" />
               <line x1="10" y1="14" x2="21" y2="3" />
@@ -302,46 +387,105 @@ function PropertyMap({ address, title }: PropertyMapProps) {
       </div>
 
       {/* Map container */}
-      <div style={{
-        position: "relative", borderRadius: "14px", overflow: "hidden",
-        border: "1px solid var(--color-border, #e2e8f0)",
-        boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
-      }}>
+      <div
+        style={{
+          position: "relative",
+          borderRadius: "14px",
+          overflow: "hidden",
+          border: "1px solid var(--color-border, #e2e8f0)",
+          boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
+        }}
+      >
         {isLoading && (
-          <div style={{
-            position: "absolute", inset: 0, zIndex: 10,
-            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-            background: "#f8fafc", gap: "0.75rem",
-          }}>
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 10,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "#f8fafc",
+              gap: "0.75rem",
+            }}
+          >
             <div className="loading-spinner" />
-            <p style={{ fontSize: "0.85rem", color: "#64748b", margin: 0 }}>Locating property...</p>
+            <p style={{ fontSize: "0.85rem", color: "#64748b", margin: 0 }}>
+              Locating property...
+            </p>
           </div>
         )}
         {mapError ? (
-          <div style={{
-            height: "380px", display: "flex", flexDirection: "column",
-            alignItems: "center", justifyContent: "center", gap: "1rem",
-            background: "#f8fafc", color: "#64748b",
-          }}>
-            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+          <div
+            style={{
+              height: "380px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "1rem",
+              background: "#f8fafc",
+              color: "#64748b",
+            }}
+          >
+            <svg
+              width="44"
+              height="44"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              aria-hidden="true"
+            >
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
               <circle cx="12" cy="10" r="3" />
             </svg>
             <div style={{ textAlign: "center" }}>
-              <p style={{ margin: "0 0 0.25rem", fontWeight: 600, color: "#374151" }}>Location not found</p>
-              <p style={{ margin: 0, fontSize: "0.82rem" }}>Could not geocode this address</p>
+              <p
+                style={{
+                  margin: "0 0 0.25rem",
+                  fontWeight: 600,
+                  color: "#374151",
+                }}
+              >
+                Location not found
+              </p>
+              <p style={{ margin: 0, fontSize: "0.82rem" }}>
+                Could not geocode this address
+              </p>
             </div>
             <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button onClick={openInMaps} style={{
-                padding: "0.45rem 1rem", borderRadius: "8px",
-                background: "var(--color-primary, #10b981)", color: "#fff",
-                border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.82rem",
-              }}>OpenStreetMap</button>
-              <button onClick={openInGoogleMaps} style={{
-                padding: "0.45rem 1rem", borderRadius: "8px",
-                background: "#4285F4", color: "#fff",
-                border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.82rem",
-              }}>Google Maps</button>
+              <button
+                onClick={openInMaps}
+                style={{
+                  padding: "0.45rem 1rem",
+                  borderRadius: "8px",
+                  background: "var(--color-primary, #10b981)",
+                  color: "#fff",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  fontSize: "0.82rem",
+                }}
+              >
+                OpenStreetMap
+              </button>
+              <button
+                onClick={openInGoogleMaps}
+                style={{
+                  padding: "0.45rem 1rem",
+                  borderRadius: "8px",
+                  background: "#4285F4",
+                  color: "#fff",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  fontSize: "0.82rem",
+                }}
+              >
+                Google Maps
+              </button>
             </div>
           </div>
         ) : (
@@ -350,16 +494,39 @@ function PropertyMap({ address, title }: PropertyMapProps) {
       </div>
 
       {/* Address footer */}
-      <p style={{
-        fontSize: "0.79rem", color: "var(--color-text-muted, #94a3b8)",
-        marginTop: "0.5rem", display: "flex", alignItems: "flex-start", gap: "0.3rem",
-        lineHeight: 1.5,
-      }}>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginTop: "2px", flexShrink: 0 }} aria-hidden="true">
+      <p
+        style={{
+          fontSize: "0.79rem",
+          color: "var(--color-text-muted, #94a3b8)",
+          marginTop: "0.5rem",
+          display: "flex",
+          alignItems: "flex-start",
+          gap: "0.3rem",
+          lineHeight: 1.5,
+        }}
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          style={{ marginTop: "2px", flexShrink: 0 }}
+          aria-hidden="true"
+        >
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
           <circle cx="12" cy="10" r="3" />
         </svg>
-        {[address.street, address.city, address.state, address.zipCode, address.country].filter(Boolean).join(", ")}
+        {[
+          address.street,
+          address.city,
+          address.state,
+          address.zipCode,
+          address.country,
+        ]
+          .filter(Boolean)
+          .join(", ")}
       </p>
     </div>
   );
@@ -558,10 +725,12 @@ function ImageGallery({ images }: ImageGalleryProps) {
       {images.length > 1 && (
         <div className="gallery-thumbnails">
           {thumbnails.slice(1, 3).map((img, index) => (
-            <div
+            <button
+              type="button"
               key={img.key || index}
               className="gallery-thumb"
               onClick={() => setSelectedIndex(index + 1)}
+              aria-label={`Show image ${index + 2}`}
             >
               <img
                 src={img.url}
@@ -574,7 +743,7 @@ function ImageGallery({ images }: ImageGalleryProps) {
               {index === 1 && images.length > 3 && (
                 <div className="gallery-more">+{images.length - 3} photos</div>
               )}
-            </div>
+            </button>
           ))}
         </div>
       )}
