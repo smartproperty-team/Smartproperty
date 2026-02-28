@@ -6,10 +6,12 @@
 import { Bell, ChevronDown, LogOut, Menu, Plus, User, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { notificationService } from "../../services";
-import type { Notification } from "../../services/notification.service";
-import { useAuthStore } from "../../store";
-import { isOwner } from "../../utils";
+import { notificationService } from "@/services";
+import type { Notification } from "@/services/notification.service";
+import { useAuthStore } from "@/store";
+import { isOwner } from "@/utils";
+import { useTranslation } from "@/i18n";
+import LanguageToggle from "@/components/ui/LanguageToggle";
 
 // Logo Component
 const Logo = () => (
@@ -61,6 +63,7 @@ export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuthStore();
   const navigate = useNavigate();
   const canAddProperty = isOwner(user);
+  const t = useTranslation();
 
   // ── Notifications ──
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -111,43 +114,36 @@ export default function Navbar() {
     <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-7xl">
       <div className="bg-white rounded-full shadow-lg px-6 py-3 flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex-shrink-0">
+        <Link to="/" className="shrink-0">
           <Logo />
         </Link>
 
         {/* Desktop Navigation */}
         <div className="hidden lg:flex items-center gap-1">
-          <NavLink to="/" hasDropdown>
-            Home
-          </NavLink>
-          <NavLink to="/properties" hasDropdown>
-            Listings
-          </NavLink>
-          <NavLink to="/members" hasDropdown>
-            Members
-          </NavLink>
-          <NavLink to="/blog" hasDropdown>
-            Blog
-          </NavLink>
-          <NavLink to="/pages" hasDropdown>
-            Pages
-          </NavLink>
-          <NavLink to="/contact">Contact</NavLink>
+          <NavLink to="/" hasDropdown>{t.nav.home}</NavLink>
+          <NavLink to="/properties" hasDropdown>{t.nav.listings}</NavLink>
+          <NavLink to="/members" hasDropdown>{t.nav.members}</NavLink>
+          <NavLink to="/blog" hasDropdown>{t.nav.blog}</NavLink>
+          <NavLink to="/pages" hasDropdown>{t.nav.pages}</NavLink>
+          <NavLink to="/contact">{t.nav.contact}</NavLink>
         </div>
 
         {/* Right Side Actions */}
         <div className="hidden lg:flex items-center gap-3">
+          {/* Language Toggle */}
+          <LanguageToggle variant="pill" />
+
           {/* Notification Bell (authenticated only) */}
           {isAuthenticated && (
             <div className="relative" ref={notifPanelRef}>
               <button
                 onClick={() => setShowNotifPanel(!showNotifPanel)}
                 className="relative w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors"
-                aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
+                aria-label={`${t.nav.notifications}${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
               >
                 <Bell className="w-5 h-5 text-gray-700" />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center px-1">
+                  <span className="absolute -top-0.5 -right-0.5 min-w-4.5 h-4.5 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center px-1">
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 )}
@@ -158,7 +154,7 @@ export default function Navbar() {
                 <div className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden z-50">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                     <h3 className="font-semibold text-gray-900">
-                      Notifications
+                      {t.nav.notifications}
                     </h3>
                     {unreadCount > 0 && (
                       <button
@@ -168,7 +164,7 @@ export default function Navbar() {
                           await fetchNotifications();
                         }}
                       >
-                        Mark all read
+                        {t.nav.markAllRead}
                       </button>
                     )}
                   </div>
@@ -176,7 +172,7 @@ export default function Navbar() {
                     {notifications.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-8 text-gray-400">
                         <Bell className="w-8 h-8 mb-2" />
-                        <p className="text-sm">No notifications yet</p>
+                        <p className="text-sm">{t.nav.noNotifications}</p>
                       </div>
                     ) : (
                       notifications.map((n) => (
@@ -221,7 +217,7 @@ export default function Navbar() {
                             </span>
                           </div>
                           {!n.isRead && (
-                            <span className="w-2 h-2 rounded-full bg-indigo-500 mt-2 flex-shrink-0" />
+                            <span className="w-2 h-2 rounded-full bg-indigo-500 mt-2 shrink-0" />
                           )}
                         </div>
                       ))
@@ -247,7 +243,7 @@ export default function Navbar() {
               ) : (
                 <User className="w-4 h-4" />
               )}
-              <span className="text-sm font-medium text-gray-900 hidden xl:inline max-w-[120px] truncate">
+              <span className="text-sm font-medium text-gray-900 hidden xl:inline max-w-30 truncate">
                 {user?.fullName || user?.firstName}
               </span>
             </Link>
@@ -255,6 +251,7 @@ export default function Navbar() {
             <Link
               to="/login"
               className="w-10 h-10 rounded-full border border-gray-900 flex items-center justify-center hover:bg-gray-100 transition-colors"
+              aria-label={t.nav.signIn}
             >
               <User className="w-4 h-4" />
             </Link>
@@ -265,8 +262,8 @@ export default function Navbar() {
             <button
               onClick={handleLogout}
               className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-red-50 text-gray-600 hover:text-red-600 transition-colors"
-              aria-label="Sign out"
-              title="Sign out"
+              aria-label={t.nav.signOut}
+              title={t.nav.signOut}
             >
               <LogOut className="w-5 h-5" />
             </button>
@@ -279,7 +276,7 @@ export default function Navbar() {
               className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-gray-900 font-medium text-gray-900 hover:bg-gray-900 hover:text-white transition-colors"
             >
               <Plus className="w-4 h-4" />
-              Add Property
+              {t.nav.addProperty}
             </Link>
           )}
         </div>
@@ -301,25 +298,27 @@ export default function Navbar() {
       {isMobileMenuOpen && (
         <div className="lg:hidden mt-2 bg-white rounded-3xl shadow-lg p-4">
           <div className="flex flex-col gap-2">
-            <NavLink to="/">Home</NavLink>
-            <NavLink to="/properties">Listings</NavLink>
-            <NavLink to="/members">Members</NavLink>
-            <NavLink to="/blog">Blog</NavLink>
-            <NavLink to="/pages">Pages</NavLink>
-            <NavLink to="/contact">Contact</NavLink>
+            <NavLink to="/">{t.nav.home}</NavLink>
+            <NavLink to="/properties">{t.nav.listings}</NavLink>
+            <NavLink to="/members">{t.nav.members}</NavLink>
+            <NavLink to="/blog">{t.nav.blog}</NavLink>
+            <NavLink to="/pages">{t.nav.pages}</NavLink>
+            <NavLink to="/contact">{t.nav.contact}</NavLink>
           </div>
 
           <hr className="my-4" />
 
           <div className="flex flex-col gap-3">
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
+              {/* Language toggle in mobile */}
+              <LanguageToggle variant="pill" className="shrink-0" />
               {isAuthenticated ? (
                 <>
                   <Link
                     to="/dashboard"
                     className="flex-1 py-2.5 rounded-full border border-gray-900 font-medium text-center hover:bg-gray-100"
                   >
-                    Dashboard
+                    {t.nav.dashboard}
                   </Link>
                   <button
                     onClick={handleLogout}
@@ -333,7 +332,7 @@ export default function Navbar() {
                   to="/login"
                   className="flex-1 py-2.5 rounded-full border border-gray-900 font-medium text-center hover:bg-gray-100"
                 >
-                  Sign In
+                  {t.nav.signIn}
                 </Link>
               )}
 
@@ -342,7 +341,7 @@ export default function Navbar() {
                   to="/properties/new"
                   className="flex-1 py-2.5 rounded-full bg-gray-900 text-white font-medium text-center hover:bg-gray-800"
                 >
-                  Add Property
+                  {t.nav.addProperty}
                 </Link>
               )}
             </div>
