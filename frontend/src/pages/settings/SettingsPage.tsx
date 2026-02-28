@@ -2,10 +2,12 @@
 // SmartProperty - Settings Page
 // ===========================================
 
+import * as Slider from "@radix-ui/react-slider";
 import { Shield } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HomeFooter, HomeNavbar } from "../../components/layout";
+import LocationPreferenceMap from "../../components/settings/LocationPreferenceMap";
 import {
   Alert,
   Button,
@@ -13,11 +15,13 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  Input,
 } from "../../components/ui";
 import { authService } from "../../services";
 import { useAuthStore, usePreferencesStore } from "../../store";
-import type { UserNotificationPreferences } from "../../types/auth";
+import type {
+  UserLocationPreference,
+  UserNotificationPreferences,
+} from "../../types/auth";
 
 const PROPERTY_TYPE_OPTIONS = [
   "Apartment",
@@ -31,11 +35,17 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { getUserPreferences, setUserPreferences } = usePreferencesStore();
+  const isTenant = user?.role === "tenant";
 
   const [propertyTypes, setPropertyTypes] = useState<string[]>([]);
   const [minBudget, setMinBudget] = useState(500);
   const [maxBudget, setMaxBudget] = useState(3000);
   const [locations, setLocations] = useState("");
+  const [locationPreference, setLocationPreference] =
+    useState<UserLocationPreference>({
+      label: "",
+      radiusKm: 11,
+    });
   const [notifications, setNotifications] =
     useState<UserNotificationPreferences>({
       email: true,
@@ -50,7 +60,7 @@ export default function SettingsPage() {
   } | null>(null);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !isTenant) {
       return;
     }
 
@@ -59,6 +69,12 @@ export default function SettingsPage() {
     setMinBudget(localPreferences.budgetRange[0]);
     setMaxBudget(localPreferences.budgetRange[1]);
     setLocations(localPreferences.locations);
+    setLocationPreference(
+      localPreferences.locationPreference ?? {
+        label: localPreferences.locations,
+        radiusKm: 11,
+      },
+    );
     setNotifications(localPreferences.notifications);
 
     let isCancelled = false;
@@ -74,6 +90,12 @@ export default function SettingsPage() {
         setMinBudget(serverPreferences.budgetRange[0]);
         setMaxBudget(serverPreferences.budgetRange[1]);
         setLocations(serverPreferences.locations);
+        setLocationPreference(
+          serverPreferences.locationPreference ?? {
+            label: serverPreferences.locations,
+            radiusKm: 11,
+          },
+        );
         setNotifications(serverPreferences.notifications);
       } catch {
         if (!isCancelled) {
@@ -94,7 +116,7 @@ export default function SettingsPage() {
     return () => {
       isCancelled = true;
     };
-  }, [getUserPreferences, setUserPreferences, user]);
+  }, [getUserPreferences, isTenant, setUserPreferences, user]);
 
   const togglePropertyType = (propertyType: string) => {
     setPropertyTypes((currentPropertyTypes) => {
@@ -114,8 +136,16 @@ export default function SettingsPage() {
     }));
   };
 
+  const handleBudgetRangeChange = (value: number[]) => {
+    if (value.length !== 2) {
+      return;
+    }
+    setMinBudget(Math.min(value[0], value[1]));
+    setMaxBudget(Math.max(value[0], value[1]));
+  };
+
   const handleSavePreferences = async () => {
-    if (!user) {
+    if (!user || !isTenant) {
       return;
     }
 
@@ -126,6 +156,10 @@ export default function SettingsPage() {
         propertyTypes,
         budgetRange: [minBudget, maxBudget],
         locations: locations.trim(),
+        locationPreference: {
+          ...locationPreference,
+          label: locations.trim(),
+        },
         notifications,
         completed: true,
         skipped: false,
@@ -212,145 +246,130 @@ export default function SettingsPage() {
             </Card>
           </div>
 
-          <div className="mb-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Property Preferences</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {preferencesMessage && (
-                  <Alert
-                    type={preferencesMessage.type}
-                    message={preferencesMessage.text}
-                    onClose={() => setPreferencesMessage(null)}
-                  />
-                )}
+          {isTenant && (
+            <div className="mb-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Property Preferences</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {preferencesMessage && (
+                    <Alert
+                      type={preferencesMessage.type}
+                      message={preferencesMessage.text}
+                      onClose={() => setPreferencesMessage(null)}
+                    />
+                  )}
 
-                <section className="space-y-3">
-                  <h3 className="text-sm font-semibold text-gray-900">
-                    Property type preferences
-                  </h3>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {PROPERTY_TYPE_OPTIONS.map((option) => (
-                      <label
-                        key={option}
-                        className="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={propertyTypes.includes(option)}
-                          onChange={() => togglePropertyType(option)}
-                          className="h-4 w-4 rounded border-gray-300 text-home-primary focus:ring-home-primary"
-                        />
-                        {option}
-                      </label>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="space-y-3">
-                  <div className="flex items-center justify-between gap-3">
+                  <section className="space-y-3">
                     <h3 className="text-sm font-semibold text-gray-900">
-                      Budget range preferences
+                      Property type preferences
                     </h3>
-                    <span className="text-sm text-gray-600">
-                      ${minBudget.toLocaleString()} - $
-                      {maxBudget.toLocaleString()}
-                    </span>
-                  </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {PROPERTY_TYPE_OPTIONS.map((option) => (
+                        <label
+                          key={option}
+                          className="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={propertyTypes.includes(option)}
+                            onChange={() => togglePropertyType(option)}
+                            className="h-4 w-4 rounded border-gray-300 text-home-primary focus:ring-home-primary"
+                          />
+                          {option}
+                        </label>
+                      ))}
+                    </div>
+                  </section>
 
-                  <div className="space-y-3 rounded-lg border border-gray-200 p-4">
-                    <div>
-                      <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-500">
-                        Minimum budget
-                      </label>
-                      <input
-                        type="range"
+                  <section className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        Budget range preferences
+                      </h3>
+                      <span className="text-sm text-gray-600">
+                        ${minBudget.toLocaleString()} - $
+                        {maxBudget.toLocaleString()}
+                      </span>
+                    </div>
+
+                    <div className="rounded-lg border border-gray-200 p-5">
+                      <Slider.Root
+                        className="relative flex h-6 w-full touch-none select-none items-center"
                         min={500}
                         max={10000}
                         step={100}
-                        value={minBudget}
-                        onChange={(event) =>
-                          setMinBudget(
-                            Math.min(Number(event.target.value), maxBudget),
-                          )
-                        }
-                        className="w-full accent-home-primary"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-500">
-                        Maximum budget
-                      </label>
-                      <input
-                        type="range"
-                        min={500}
-                        max={10000}
-                        step={100}
-                        value={maxBudget}
-                        onChange={(event) =>
-                          setMaxBudget(
-                            Math.max(Number(event.target.value), minBudget),
-                          )
-                        }
-                        className="w-full accent-home-primary"
-                      />
-                    </div>
-                  </div>
-                </section>
-
-                <section className="space-y-3">
-                  <h3 className="text-sm font-semibold text-gray-900">
-                    Location preferences
-                  </h3>
-                  <Input
-                    label="Preferred locations"
-                    placeholder="Example: Casablanca, Rabat, Marrakech"
-                    value={locations}
-                    onChange={(event) => setLocations(event.target.value)}
-                  />
-                </section>
-
-                <section className="space-y-3">
-                  <h3 className="text-sm font-semibold text-gray-900">
-                    Notification preferences
-                  </h3>
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    {(
-                      [
-                        { key: "email", label: "Email" },
-                        { key: "sms", label: "SMS" },
-                        { key: "push", label: "Push" },
-                      ] as const
-                    ).map((item) => (
-                      <label
-                        key={item.key}
-                        className="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700"
+                        minStepsBetweenThumbs={1}
+                        value={[minBudget, maxBudget]}
+                        onValueChange={handleBudgetRangeChange}
                       >
-                        <input
-                          type="checkbox"
-                          checked={notifications[item.key]}
-                          onChange={() => handleNotificationToggle(item.key)}
-                          className="h-4 w-4 rounded border-gray-300 text-home-primary focus:ring-home-primary"
-                        />
-                        {item.label}
-                      </label>
-                    ))}
-                  </div>
-                </section>
+                        <Slider.Track className="relative h-2 grow rounded-full bg-gray-200">
+                          <Slider.Range className="absolute h-full rounded-full bg-home-primary" />
+                        </Slider.Track>
+                        <Slider.Thumb className="block h-5 w-5 rounded-full border border-home-primary bg-white shadow focus:outline-none focus:ring-2 focus:ring-home-primary" />
+                        <Slider.Thumb className="block h-5 w-5 rounded-full border border-home-primary bg-white shadow focus:outline-none focus:ring-2 focus:ring-home-primary" />
+                      </Slider.Root>
+                      <div className="mt-3 flex justify-between text-xs text-gray-500">
+                        <span>$500</span>
+                        <span>$10,000</span>
+                      </div>
+                    </div>
+                  </section>
 
-                <div className="flex justify-end">
-                  <Button
-                    onClick={handleSavePreferences}
-                    isLoading={isSavingPreferences || isLoadingPreferences}
-                  >
-                    Save Preferences
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                  <section className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-900">
+                      Location preferences
+                    </h3>
+                    <LocationPreferenceMap
+                      value={locations}
+                      onChange={setLocations}
+                      selection={locationPreference}
+                      onSelectionChange={setLocationPreference}
+                      disabled={isLoadingPreferences || isSavingPreferences}
+                    />
+                  </section>
+
+                  <section className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-900">
+                      Notification preferences
+                    </h3>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {(
+                        [
+                          { key: "email", label: "Email" },
+                          { key: "sms", label: "SMS" },
+                          { key: "push", label: "Push" },
+                        ] as const
+                      ).map((item) => (
+                        <label
+                          key={item.key}
+                          className="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={notifications[item.key]}
+                            onChange={() => handleNotificationToggle(item.key)}
+                            className="h-4 w-4 rounded border-gray-300 text-home-primary focus:ring-home-primary"
+                          />
+                          {item.label}
+                        </label>
+                      ))}
+                    </div>
+                  </section>
+
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleSavePreferences}
+                      isLoading={isSavingPreferences || isLoadingPreferences}
+                    >
+                      Save Preferences
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* Other Security Options */}
           <div className="mb-8">

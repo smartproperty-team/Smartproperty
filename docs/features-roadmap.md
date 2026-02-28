@@ -10,20 +10,20 @@ This document outlines all features to be implemented in the SmartProperty platf
 
 ### Infrastructure
 
-- [X]  Docker Compose configuration (MongoDB, Redis, Mongo Express, Redis Commander, MailHog)
-- [X]  Environment variables setup (.env files for root, backend, frontend)
-- [X]  Backend configuration modules (database, JWT, Redis, mail, AWS, throttler)
-- [X]  NestJS application bootstrap with security middleware
-- [X]  Swagger API documentation setup
-- [X]  CORS configuration
-- [X]  Rate limiting setup
+- [x] Docker Compose configuration (MongoDB, Redis, Mongo Express, Redis Commander, MailHog)
+- [x] Environment variables setup (.env files for root, backend, frontend)
+- [x] Backend configuration modules (database, JWT, Redis, mail, AWS, throttler)
+- [x] NestJS application bootstrap with security middleware
+- [x] Swagger API documentation setup
+- [x] CORS configuration
+- [x] Rate limiting setup
 
 ### Database
 
-- [X]  MongoDB connection with TypeORM
-- [X]  Database schema design (12 collections)
-- [X]  Redis cache configuration
-- [X]  Bull queue for background jobs
+- [x] MongoDB connection with TypeORM
+- [x] Database schema design (12 collections)
+- [x] Redis cache configuration
+- [x] Bull queue for background jobs
 
 ---
 
@@ -31,52 +31,52 @@ This document outlines all features to be implemented in the SmartProperty platf
 
 ### User Registration
 
-- [X]  Email/password registration
-- [X]  Input validation (email format, password strength)
-- [X]  Password hashing with bcrypt
-- [X]  Email verification flow
-- [X]  Welcome email sending
+- [x] Email/password registration
+- [x] Input validation (email format, password strength)
+- [x] Password hashing with bcrypt
+- [x] Email verification flow
+- [x] Welcome email sending
 
 ### User Login
 
-- [X]  Email/password login
-- [X]  JWT access token generation
-- [X]  JWT refresh token generation
-- [X]  Login attempt tracking
-- [X]  Account lockout after failed attempts
+- [x] Email/password login
+- [x] JWT access token generation
+- [x] JWT refresh token generation
+- [x] Login attempt tracking
+- [x] Account lockout after failed attempts
 
 ### Token Management
 
-- [X]  Access token (short-lived: 15min - 1hr)
-- [X]  Refresh token (long-lived: 7-30 days)
-- [X]  Token refresh endpoint
-- [X]  Token blacklisting on logout
-- [X]  Multiple device session management (max 5 sessions, device tracking, revocation)
-- [X]  Session list endpoint with device info
-- [X]  Single session revocation endpoint
-- [X]  Logout from all devices endpoint
+- [x] Access token (short-lived: 15min - 1hr)
+- [x] Refresh token (long-lived: 7-30 days)
+- [x] Token refresh endpoint
+- [x] Token blacklisting on logout
+- [x] Multiple device session management (max 5 sessions, device tracking, revocation)
+- [x] Session list endpoint with device info
+- [x] Single session revocation endpoint
+- [x] Logout from all devices endpoint
 
 ### Password Management
 
-- [X]  Forgot password flow
-- [X]  Password reset email
-- [X]  Password reset with token
-- [X]  Password change (authenticated)
-- [X]  Password history (prevent reuse of last 5 passwords)
+- [x] Forgot password flow
+- [x] Password reset email
+- [x] Password reset with token
+- [x] Password change (authenticated)
+- [x] Password history (prevent reuse of last 5 passwords)
 
 ### OAuth Integration (Optional)
 
-- [X]  Google OAuth2 login
-- [X]  Facebook OAuth login
-- [ ]  Apple Sign-In
+- [x] Google OAuth2 login
+- [x] Facebook OAuth login
+- [ ] Apple Sign-In
 
 ### Security Features
 
-- [X]  Rate limiting on auth endpoints
-- [X]  CAPTCHA integration (optional)
-- [X]  Two-factor authentication (2FA)
-- [X]  Session management (Session entity with device info, expiry, revocation)
-- [ ]  Audit logging for auth events
+- [x] Rate limiting on auth endpoints
+- [x] CAPTCHA integration (optional)
+- [x] Two-factor authentication (2FA)
+- [x] Session management (Session entity with device info, expiry, revocation)
+- [ ] Audit logging for auth events
 
 ---
 
@@ -84,44 +84,43 @@ This document outlines all features to be implemented in the SmartProperty platf
 
 ### User Entity
 
-- [X]  User entity with TypeORM/MongoDB
-- [X]  User roles (admin, owner, tenant, manager, agent)
-- [X]  User status (active, inactive, suspended, pending_verification)
-- [X]  Full user profile fields (firstName, lastName, phone, avatar, etc.)
-- [ ]  Avatar upload and storage
+- [x] User entity with TypeORM/MongoDB
+- [x] User roles (admin, owner, tenant, manager, agent)
+- [x] User status (active, inactive, suspended, pending_verification)
+- [x] Full user profile fields (firstName, lastName, phone, avatar, etc.)
+- [ ] Avatar upload and storage
 
 ### User CRUD Operations
 
-- [X]  Get current user profile (/auth/me endpoint)
-- [X]  Get user sessions with device info
-- [X]  Update user profile
-- [X]  Change email (with verification)
-- [X]  Deactivate account
-- [X]  Delete account (GDPR compliance)
+- [x] Get current user profile (/auth/me endpoint)
+- [x] Get user sessions with device info
+- [x] Update user profile
+- [x] Change email (with verification)
+- [x] Deactivate account
+- [x] Delete account (GDPR compliance)
 
 ### User Preferences
 
-- [ ]  Property type preferences
-- [ ]  Budget range preferences
-- [ ]  Location preferences
-- [ ]  Notification preferences
+- [ ] Property type preferences
+- [ ] Budget range preferences
+- [ ] Location preferences
+- [ ] Notification preferences
 
 ### Document Management
 
-- [X]  Upload identity documents
-- [X]  Upload proof of income
-- [X]  Document verification status
-- [X]  Secure document storage (AWS S3)
-- [ ]  email me when get verified or rejected
+- [x] Upload identity documents
+- [x] Upload proof of income
+- [x] Document verification status
+- [x] Secure document storage (AWS S3)
+- [ ] email me when get verified or rejected
 
 ### Admin User Management
 
-- [X]  List all users (paginated)
-- [X]  Search/filter users
-- [X]  View user details
-- [X]  Activate/deactivate users
-- [X]  Change user roles
-- [ ]  Impersonate user (for support)
+- [x] List all users (paginated)
+- [x] Search/filter users
+- [x] View user details
+- [x] Activate/deactivate users
+- [x] Change user roles
 
 ---
 
@@ -129,50 +128,50 @@ This document outlines all features to be implemented in the SmartProperty platf
 
 ### Property Entity
 
-- [X]  Property entity with all fields
-- [X]  Property types enum
-- [X]  Property status enum
-- [X]  Address embedded document
-- [X]  Features embedded document
-- [X]  Geospatial coordinates
+- [x] Property entity with all fields
+- [x] Property types enum
+- [x] Property status enum
+- [x] Address embedded document
+- [x] Features embedded document
+- [x] Geospatial coordinates
 
 ### Property CRUD
 
-- [X]  Create property listing
-- [X]  Update property details
-- [X]  Delete property (soft delete)
-- [X]  Get property by ID
-- [X]  List owner's properties
+- [x] Create property listing
+- [x] Update property details
+- [x] Delete property (soft delete)
+- [x] Get property by ID
+- [x] List owner's properties
 
 ### Property Images
 
-- [X]  Multiple image upload
-- [X]  Image optimization/resizing
-- [X]  Primary image selection
-- [X]  Image reordering
-- [X]  Image deletion
-- [X]  AWS S3/MinIO storage integration
+- [x] Multiple image upload
+- [x] Image optimization/resizing
+- [x] Primary image selection
+- [x] Image reordering
+- [x] Image deletion
+- [x] AWS S3/MinIO storage integration
 
 ### Property Search
 
-- [X]  Full-text search
-- [X]  Filter by type
-- [X]  Filter by price range
-- [ ]  Filter by bedrooms/bathrooms
-- [ ]  Filter by amenities
-- [X]  Filter by location/city
-- [ ]  Geospatial search (nearby)
-- [X]  Sort options (price, date, relevance)
-- [X]  Pagination
+- [x] Full-text search
+- [x] Filter by type
+- [x] Filter by price range
+- [ ] Filter by bedrooms/bathrooms
+- [ ] Filter by amenities
+- [x] Filter by location/city
+- [ ] Geospatial search (nearby)
+- [x] Sort options (price, date, relevance)
+- [x] Pagination
 
 ### Property Features
 
-- [X]  Virtual tour URL
-- [X]  Amenities list
-- [ ]  Availability calendar
-- [ ]  Property comparison
-- [ ]  Share property link
-- [ ]  QR code generation
+- [x] Virtual tour URL
+- [x] Amenities list
+- [ ] Availability calendar
+- [ ] Property comparison
+- [ ] Share property link
+- [ ] QR code generation
 
 ---
 
@@ -180,34 +179,34 @@ This document outlines all features to be implemented in the SmartProperty platf
 
 ### Application Entity
 
-- [ ]  Application entity
-- [ ]  Application status workflow
-- [ ]  Employment info embedded
-- [ ]  References embedded
+- [ ] Application entity
+- [ ] Application status workflow
+- [ ] Employment info embedded
+- [ ] References embedded
 
 ### Tenant Features
 
-- [ ]  Submit rental application
-- [ ]  Upload required documents
-- [ ]  Track application status
-- [ ]  Withdraw application
-- [ ]  View application history
+- [ ] Submit rental application
+- [ ] Upload required documents
+- [ ] Track application status
+- [ ] Withdraw application
+- [ ] View application history
 
 ### Owner/Manager Features
 
-- [ ]  View received applications
-- [ ]  Review application details
-- [ ]  Request additional documents
-- [ ]  Approve application
-- [ ]  Reject application (with reason)
-- [ ]  Schedule property viewing
+- [ ] View received applications
+- [ ] Review application details
+- [ ] Request additional documents
+- [ ] Approve application
+- [ ] Reject application (with reason)
+- [ ] Schedule property viewing
 
 ### Notifications
 
-- [ ]  New application notification
-- [ ]  Status change notification
-- [ ]  Document request notification
-- [ ]  Application deadline reminders
+- [ ] New application notification
+- [ ] Status change notification
+- [ ] Document request notification
+- [ ] Application deadline reminders
 
 ---
 
@@ -215,34 +214,34 @@ This document outlines all features to be implemented in the SmartProperty platf
 
 ### Lease Entity
 
-- [ ]  Lease entity with terms
-- [ ]  Lease status workflow
-- [ ]  Document attachments
-- [ ]  Digital signatures
+- [ ] Lease entity with terms
+- [ ] Lease status workflow
+- [ ] Document attachments
+- [ ] Digital signatures
 
 ### Lease Management
 
-- [ ]  Create lease from approved application
-- [ ]  Lease template generation
-- [ ]  Custom terms and conditions
-- [ ]  Lease document upload
-- [ ]  Digital signature integration
-- [ ]  Lease activation
+- [ ] Create lease from approved application
+- [ ] Lease template generation
+- [ ] Custom terms and conditions
+- [ ] Lease document upload
+- [ ] Digital signature integration
+- [ ] Lease activation
 
 ### Lease Lifecycle
 
-- [ ]  Active lease tracking
-- [ ]  Lease renewal reminders
-- [ ]  Lease renewal process
-- [ ]  Lease termination (early/normal)
-- [ ]  Move-out process
-- [ ]  Security deposit handling
+- [ ] Active lease tracking
+- [ ] Lease renewal reminders
+- [ ] Lease renewal process
+- [ ] Lease termination (early/normal)
+- [ ] Move-out process
+- [ ] Security deposit handling
 
 ### Reporting
 
-- [ ]  Lease expiration reports
-- [ ]  Occupancy reports
-- [ ]  Revenue projections
+- [ ] Lease expiration reports
+- [ ] Occupancy reports
+- [ ] Revenue projections
 
 ---
 
@@ -250,35 +249,35 @@ This document outlines all features to be implemented in the SmartProperty platf
 
 ### Payment Entity
 
-- [ ]  Payment entity
-- [ ]  Payment types (rent, deposit, etc.)
-- [ ]  Payment methods
-- [ ]  Transaction tracking
+- [ ] Payment entity
+- [ ] Payment types (rent, deposit, etc.)
+- [ ] Payment methods
+- [ ] Transaction tracking
 
 ### Payment Processing
 
-- [ ]  Stripe integration
-- [ ]  Card payment processing
-- [ ]  Bank transfer support
-- [ ]  Payment scheduling
-- [ ]  Recurring payments (auto-pay)
-- [ ]  Partial payments
+- [ ] Stripe integration
+- [ ] Card payment processing
+- [ ] Bank transfer support
+- [ ] Payment scheduling
+- [ ] Recurring payments (auto-pay)
+- [ ] Partial payments
 
 ### Payment Features
 
-- [ ]  Payment history
-- [ ]  Payment receipts (PDF)
-- [ ]  Invoice generation
-- [ ]  Late fee calculation
-- [ ]  Payment reminders
-- [ ]  Overdue notifications
+- [ ] Payment history
+- [ ] Payment receipts (PDF)
+- [ ] Invoice generation
+- [ ] Late fee calculation
+- [ ] Payment reminders
+- [ ] Overdue notifications
 
 ### Financial Reporting
 
-- [ ]  Income reports
-- [ ]  Payment analytics
-- [ ]  Export to CSV/Excel
-- [ ]  Tax documentation
+- [ ] Income reports
+- [ ] Payment analytics
+- [ ] Export to CSV/Excel
+- [ ] Tax documentation
 
 ---
 
@@ -286,34 +285,34 @@ This document outlines all features to be implemented in the SmartProperty platf
 
 ### Maintenance Entity
 
-- [ ]  Maintenance request entity
-- [ ]  Category classification
-- [ ]  Priority levels
-- [ ]  Status workflow
+- [ ] Maintenance request entity
+- [ ] Category classification
+- [ ] Priority levels
+- [ ] Status workflow
 
 ### Tenant Features
 
-- [ ]  Submit maintenance request
-- [ ]  Upload photos/videos
-- [ ]  Track request status
-- [ ]  Rate completed work
-- [ ]  Emergency contact
+- [ ] Submit maintenance request
+- [ ] Upload photos/videos
+- [ ] Track request status
+- [ ] Rate completed work
+- [ ] Emergency contact
 
 ### Owner/Manager Features
 
-- [ ]  View maintenance requests
-- [ ]  Assign to staff/contractor
-- [ ]  Schedule maintenance
-- [ ]  Update status
-- [ ]  Record costs
-- [ ]  Close requests
+- [ ] View maintenance requests
+- [ ] Assign to staff/contractor
+- [ ] Schedule maintenance
+- [ ] Update status
+- [ ] Record costs
+- [ ] Close requests
 
 ### Notifications
 
-- [ ]  New request alerts
-- [ ]  Status update notifications
-- [ ]  Scheduling reminders
-- [ ]  Completion notifications
+- [ ] New request alerts
+- [ ] Status update notifications
+- [ ] Scheduling reminders
+- [ ] Completion notifications
 
 ---
 
@@ -321,26 +320,26 @@ This document outlines all features to be implemented in the SmartProperty platf
 
 ### Conversations
 
-- [ ]  Conversation entity
-- [ ]  Participant management
-- [ ]  Property-linked conversations
-- [ ]  Unread count tracking
+- [ ] Conversation entity
+- [ ] Participant management
+- [ ] Property-linked conversations
+- [ ] Unread count tracking
 
 ### Messages
 
-- [ ]  Message entity
-- [ ]  Text messages
-- [ ]  File attachments
-- [ ]  Read receipts
-- [ ]  Message search
+- [ ] Message entity
+- [ ] Text messages
+- [ ] File attachments
+- [ ] Read receipts
+- [ ] Message search
 
 ### Real-time Features
 
-- [ ]  WebSocket integration (Socket.io)
-- [ ]  Real-time message delivery
-- [ ]  Typing indicators
-- [ ]  Online status
-- [ ]  Push notifications
+- [ ] WebSocket integration (Socket.io)
+- [ ] Real-time message delivery
+- [ ] Typing indicators
+- [ ] Online status
+- [ ] Push notifications
 
 ---
 
@@ -348,26 +347,26 @@ This document outlines all features to be implemented in the SmartProperty platf
 
 ### Notification System
 
-- [ ]  Notification entity
-- [ ]  Notification types
-- [ ]  In-app notifications
-- [ ]  Email notifications
-- [ ]  Push notifications (mobile)
+- [ ] Notification entity
+- [ ] Notification types
+- [ ] In-app notifications
+- [ ] Email notifications
+- [ ] Push notifications (mobile)
 
 ### Notification Preferences
 
-- [ ]  Email notification settings
-- [ ]  Push notification settings
-- [ ]  Notification frequency
-- [ ]  Quiet hours
+- [ ] Email notification settings
+- [ ] Push notification settings
+- [ ] Notification frequency
+- [ ] Quiet hours
 
 ### Notification Features
 
-- [ ]  Mark as read
-- [ ]  Mark all as read
-- [ ]  Delete notifications
-- [ ]  Notification history
-- [ ]  Notification grouping
+- [ ] Mark as read
+- [ ] Mark all as read
+- [ ] Delete notifications
+- [ ] Notification history
+- [ ] Notification grouping
 
 ---
 
@@ -375,19 +374,19 @@ This document outlines all features to be implemented in the SmartProperty platf
 
 ### Reviews
 
-- [ ]  Review entity
-- [ ]  Property ratings
-- [ ]  Category ratings
-- [ ]  Verified tenant reviews
-- [ ]  Review moderation
-- [ ]  Response to reviews
+- [ ] Review entity
+- [ ] Property ratings
+- [ ] Category ratings
+- [ ] Verified tenant reviews
+- [ ] Review moderation
+- [ ] Response to reviews
 
 ### Favorites
 
-- [ ]  Save property to favorites
-- [ ]  Remove from favorites
-- [ ]  Favorites list view
-- [ ]  Share favorites
+- [ ] Save property to favorites
+- [ ] Remove from favorites
+- [ ] Favorites list view
+- [ ] Share favorites
 
 ---
 
@@ -395,93 +394,93 @@ This document outlines all features to be implemented in the SmartProperty platf
 
 ### Core Setup
 
-- [X]  React 19 + Vite configuration
-- [X]  TailwindCSS v4 styling
-- [X]  React Router setup
-- [X]  Zustand state management with localStorage persistence
-- [X]  Axios API client with token refresh interceptors
-- [X]  React Hook Form + Zod validation
-- [X]  Custom useAuth hook with auto-initialization
-- [X]  Form validation utilities (email, password, phone)
-- [X]  Error handling utilities
-- [X]  Auth configuration constants
+- [x] React 19 + Vite configuration
+- [x] TailwindCSS v4 styling
+- [x] React Router setup
+- [x] Zustand state management with localStorage persistence
+- [x] Axios API client with token refresh interceptors
+- [x] React Hook Form + Zod validation
+- [x] Custom useAuth hook with auto-initialization
+- [x] Form validation utilities (email, password, phone)
+- [x] Error handling utilities
+- [x] Auth configuration constants
 
 ### Layout & Navigation
 
-- [X]  Main layout component (Dashboard header)
-- [X]  Responsive navigation
-- [X]  Footer component
-- [ ]  Sidebar (dashboard)
-- [ ]  Mobile menu
+- [x] Main layout component (Dashboard header)
+- [x] Responsive navigation
+- [x] Footer component
+- [ ] Sidebar (dashboard)
+- [ ] Mobile menu
 
 ### Authentication Pages
 
-- [X]  Login page with validation
-- [X]  Registration page with password requirements display
-- [X]  Forgot password page
-- [X]  Reset password page
-- [X]  Email verification page with auto-redirect to dashboard
-- [X]  Protected route wrapper
-- [X]  Sessions management page (view/revoke)
+- [x] Login page with validation
+- [x] Registration page with password requirements display
+- [x] Forgot password page
+- [x] Reset password page
+- [x] Email verification page with auto-redirect to dashboard
+- [x] Protected route wrapper
+- [x] Sessions management page (view/revoke)
 
 ### Dashboard
 
-- [X]  Dashboard layout with header and user menu
-- [X]  Email verification status alert
-- [ ]  Overview widgets
-- [ ]  Quick actions
-- [ ]  Recent activity
-- [X]  Notifications dropdown
-- [X]  User profile card
+- [x] Dashboard layout with header and user menu
+- [x] Email verification status alert
+- [ ] Overview widgets
+- [ ] Quick actions
+- [ ] Recent activity
+- [x] Notifications dropdown
+- [x] User profile card
 
 ### Property Pages
 
-- [X]  Property listing grid
-- [X]  Property search with filters
-- [X]  Property detail page
-- [ ]  Property map view (Mapbox)
-- [X]  Image gallery/carousel
-- [ ]  Virtual tour viewer
+- [x] Property listing grid
+- [x] Property search with filters
+- [x] Property detail page
+- [ ] Property map view (Mapbox)
+- [x] Image gallery/carousel
+- [ ] Virtual tour viewer
 
 ### User Pages
 
-- [ ]  User profile page
-- [ ]  Profile edit form
-- [ ]  Document upload
-- [ ]  Preferences settings
-- [ ]  Password change
+- [ ] User profile page
+- [ ] Profile edit form
+- [ ] Document upload
+- [ ] Preferences settings
+- [ ] Password change
 
 ### Application Pages
 
-- [ ]  Application form
-- [ ]  Application status tracking
-- [ ]  Application list (owner view)
-- [ ]  Application review page
+- [ ] Application form
+- [ ] Application status tracking
+- [ ] Application list (owner view)
+- [ ] Application review page
 
 ### Lease Pages
 
-- [ ]  Lease list view
-- [ ]  Lease detail page
-- [ ]  Lease document viewer
+- [ ] Lease list view
+- [ ] Lease detail page
+- [ ] Lease document viewer
 
 ### Payment Pages
 
-- [ ]  Payment history
-- [ ]  Make payment form
-- [ ]  Payment receipts
-- [ ]  Payment settings
+- [ ] Payment history
+- [ ] Make payment form
+- [ ] Payment receipts
+- [ ] Payment settings
 
 ### Maintenance Pages
 
-- [ ]  Submit request form
-- [ ]  Request list view
-- [ ]  Request detail page
+- [ ] Submit request form
+- [ ] Request list view
+- [ ] Request detail page
 
 ### Messaging
 
-- [ ]  Inbox view
-- [ ]  Conversation thread
-- [ ]  New message composer
+- [ ] Inbox view
+- [ ] Conversation thread
+- [ ] New message composer
 
 ---
 
@@ -489,34 +488,34 @@ This document outlines all features to be implemented in the SmartProperty platf
 
 ### Maps & Location
 
-- [ ]  Mapbox GL integration
-- [ ]  Property markers on map
-- [ ]  Geolocation search
-- [ ]  Neighborhood info
-- [ ]  Distance calculation
+- [ ] Mapbox GL integration
+- [ ] Property markers on map
+- [ ] Geolocation search
+- [ ] Neighborhood info
+- [ ] Distance calculation
 
 ### 3D Visualization
 
-- [ ]  React Three Fiber setup
-- [ ]  3D property viewer
-- [ ]  Floor plan visualization
-- [ ]  Virtual staging (future)
+- [ ] React Three Fiber setup
+- [ ] 3D property viewer
+- [ ] Floor plan visualization
+- [ ] Virtual staging (future)
 
 ### Analytics Dashboard
 
-- [ ]  Property performance metrics
-- [ ]  Revenue analytics
-- [ ]  Occupancy trends
-- [ ]  User engagement stats
-- [ ]  Chart.js/Recharts integration
+- [ ] Property performance metrics
+- [ ] Revenue analytics
+- [ ] Occupancy trends
+- [ ] User engagement stats
+- [ ] Chart.js/Recharts integration
 
 ### Search & Discovery
 
-- [ ]  Elasticsearch integration (optional)
-- [ ]  Advanced search filters
-- [ ]  Saved searches
-- [ ]  Search alerts
-- [ ]  Recently viewed
+- [ ] Elasticsearch integration (optional)
+- [ ] Advanced search filters
+- [ ] Saved searches
+- [ ] Search alerts
+- [ ] Recently viewed
 
 ---
 
@@ -524,31 +523,31 @@ This document outlines all features to be implemented in the SmartProperty platf
 
 ### Property Recommendations
 
-- [ ]  User preference analysis
-- [ ]  Collaborative filtering
-- [ ]  Content-based recommendations
-- [ ]  ML model training
+- [ ] User preference analysis
+- [ ] Collaborative filtering
+- [ ] Content-based recommendations
+- [ ] ML model training
 
 ### Price Prediction
 
-- [ ]  Market data collection
-- [ ]  Price prediction model
-- [ ]  Rental price suggestions
-- [ ]  Market trend analysis
+- [ ] Market data collection
+- [ ] Price prediction model
+- [ ] Rental price suggestions
+- [ ] Market trend analysis
 
 ### Image Analysis
 
-- [ ]  Property image classification
-- [ ]  Quality scoring
-- [ ]  Auto-tagging
-- [ ]  Duplicate detection
+- [ ] Property image classification
+- [ ] Quality scoring
+- [ ] Auto-tagging
+- [ ] Duplicate detection
 
 ### NLP Features
 
-- [ ]  Natural language search
-- [ ]  Chatbot assistant
-- [ ]  Automated responses
-- [ ]  Sentiment analysis
+- [ ] Natural language search
+- [ ] Chatbot assistant
+- [ ] Automated responses
+- [ ] Sentiment analysis
 
 ---
 
@@ -556,33 +555,33 @@ This document outlines all features to be implemented in the SmartProperty platf
 
 ### CI/CD
 
-- [ ]  GitHub Actions workflows
-- [ ]  Automated testing
-- [ ]  Code quality checks
-- [ ]  Automated deployments
+- [ ] GitHub Actions workflows
+- [ ] Automated testing
+- [ ] Code quality checks
+- [ ] Automated deployments
 
 ### Monitoring
 
-- [ ]  Application logging
-- [ ]  Error tracking (Sentry)
-- [ ]  Performance monitoring
-- [ ]  Health checks
+- [ ] Application logging
+- [ ] Error tracking (Sentry)
+- [ ] Performance monitoring
+- [ ] Health checks
 
 ### Security
 
-- [ ]  Security headers
-- [ ]  SQL injection prevention
-- [ ]  XSS protection
-- [ ]  CSRF protection
-- [ ]  Rate limiting
-- [ ]  DDoS protection
+- [ ] Security headers
+- [ ] SQL injection prevention
+- [ ] XSS protection
+- [ ] CSRF protection
+- [ ] Rate limiting
+- [ ] DDoS protection
 
 ### Documentation
 
-- [ ]  API documentation
-- [ ]  Code documentation
-- [ ]  User guides
-- [ ]  Developer guides
+- [ ] API documentation
+- [ ] Code documentation
+- [ ] User guides
+- [ ] Developer guides
 
 ---
 
@@ -615,7 +614,6 @@ This document outlines all features to be implemented in the SmartProperty platf
 ---
 
 ## Timeline Estimates
-
 
 | Phase    | Estimated Duration | Status      |
 | -------- | ------------------ | ----------- |

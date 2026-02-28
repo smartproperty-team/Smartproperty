@@ -21,7 +21,6 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -111,6 +110,7 @@ export class UsersController {
   }
 
   @Get('preferences')
+  @Roles(UserRole.TENANT)
   @ApiOperation({ summary: 'Get current user preferences' })
   @ApiResponse({
     status: 200,
@@ -121,6 +121,7 @@ export class UsersController {
   }
 
   @Put('preferences')
+  @Roles(UserRole.TENANT)
   @ApiOperation({ summary: 'Update current user preferences' })
   @ApiResponse({
     status: 200,

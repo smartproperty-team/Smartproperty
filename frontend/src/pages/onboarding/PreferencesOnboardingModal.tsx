@@ -1,5 +1,6 @@
 import * as Slider from "@radix-ui/react-slider";
 import { useEffect, useMemo, useState } from "react";
+import LocationPreferenceMap from "../../components/settings/LocationPreferenceMap";
 import {
   Alert,
   Button,
@@ -7,11 +8,13 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  Input,
 } from "../../components/ui";
 import { authService } from "../../services";
 import { useAuthStore, usePreferencesStore } from "../../store";
-import type { UserNotificationPreferences } from "../../types/auth";
+import type {
+  UserLocationPreference,
+  UserNotificationPreferences,
+} from "../../types/auth";
 
 type OnboardingStep = 1 | 2 | 3 | 4;
 
@@ -45,6 +48,11 @@ export default function PreferencesOnboardingModal() {
   const [minBudget, setMinBudget] = useState(500);
   const [maxBudget, setMaxBudget] = useState(3000);
   const [locations, setLocations] = useState("");
+  const [locationPreference, setLocationPreference] =
+    useState<UserLocationPreference>({
+      label: "",
+      radiusKm: 11,
+    });
   const [notifications, setNotifications] =
     useState<UserNotificationPreferences>({
       email: true,
@@ -64,11 +72,28 @@ export default function PreferencesOnboardingModal() {
     setMinBudget(existingPreferences.budgetRange[0]);
     setMaxBudget(existingPreferences.budgetRange[1]);
     setLocations(existingPreferences.locations);
+    setLocationPreference(
+      existingPreferences.locationPreference ?? {
+        label: existingPreferences.locations,
+        radiusKm: 11,
+      },
+    );
     setNotifications(existingPreferences.notifications);
     setCurrentStep(1);
   }, [existingPreferences, isOnboardingOpen]);
 
-  if (!isAuthenticated || !user || !isOnboardingOpen) {
+  useEffect(() => {
+    if (isOnboardingOpen && user && user.role !== "tenant") {
+      closeOnboarding();
+    }
+  }, [closeOnboarding, isOnboardingOpen, user]);
+
+  if (
+    !isAuthenticated ||
+    !user ||
+    !isOnboardingOpen ||
+    user.role !== "tenant"
+  ) {
     return null;
   }
 
@@ -147,6 +172,10 @@ export default function PreferencesOnboardingModal() {
         propertyTypes,
         budgetRange: [minBudget, maxBudget],
         locations: locations.trim(),
+        locationPreference: {
+          ...locationPreference,
+          label: locations.trim(),
+        },
         notifications,
         completed: false,
         skipped: true,
@@ -172,6 +201,10 @@ export default function PreferencesOnboardingModal() {
         propertyTypes,
         budgetRange: [minBudget, maxBudget],
         locations: locations.trim(),
+        locationPreference: {
+          ...locationPreference,
+          label: locations.trim(),
+        },
         notifications,
         completed: true,
         skipped: false,
@@ -207,9 +240,7 @@ export default function PreferencesOnboardingModal() {
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm text-gray-600">
-              <span>
-                Question {currentStep} of 4
-              </span>
+              <span>Question {currentStep} of 4</span>
               <span>{stepTitle}</span>
             </div>
             <div className="h-2 w-full rounded-full bg-gray-200">
@@ -286,11 +317,12 @@ export default function PreferencesOnboardingModal() {
               <h3 className="text-sm font-semibold text-gray-900">
                 Which locations are you interested in?
               </h3>
-              <Input
-                label="Preferred locations"
-                placeholder="Example: Casablanca, Rabat, Marrakech"
+              <LocationPreferenceMap
                 value={locations}
-                onChange={(event) => setLocations(event.target.value)}
+                onChange={setLocations}
+                selection={locationPreference}
+                onSelectionChange={setLocationPreference}
+                disabled={isSaving}
               />
             </section>
           )}
@@ -347,19 +379,11 @@ export default function PreferencesOnboardingModal() {
             )}
 
             {currentStep < 4 ? (
-              <Button
-                type="button"
-                onClick={goToNextStep}
-                disabled={isSaving}
-              >
+              <Button type="button" onClick={goToNextStep} disabled={isSaving}>
                 Validate & Next
               </Button>
             ) : (
-              <Button
-                type="button"
-                onClick={handleSubmit}
-                isLoading={isSaving}
-              >
+              <Button type="button" onClick={handleSubmit} isLoading={isSaving}>
                 Save preferences
               </Button>
             )}

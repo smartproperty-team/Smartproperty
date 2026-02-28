@@ -29,10 +29,20 @@ export interface UserNotificationPreferences {
   push: boolean;
 }
 
+export interface UserLocationPreference {
+  label?: string;
+  radiusKm?: number;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
+}
+
 export interface UserPreferences {
   propertyTypes: string[];
   budgetRange: [number, number];
   locations: string;
+  locationPreference?: UserLocationPreference;
   notifications: UserNotificationPreferences;
   completed: boolean;
   skipped: boolean;
@@ -107,6 +117,7 @@ export interface UpdateProfileData {
   firstName?: string;
   lastName?: string;
   phone?: string;
+  avatar?: string;
 }
 
 export interface RequestEmailChangeData {

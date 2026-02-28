@@ -99,4 +99,6 @@ export interface PropertyFilters {
   maxPrice?: number;
   city?: string;
   search?: string;
+  ownerId?: string;
+  managerId?: string;
 }

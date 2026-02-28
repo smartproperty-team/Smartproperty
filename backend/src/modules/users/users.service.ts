@@ -57,6 +57,10 @@ const DEFAULT_USER_PREFERENCES: UserPreferences = {
   propertyTypes: [],
   budgetRange: [500, 3000],
   locations: '',
+  locationPreference: {
+    label: '',
+    radiusKm: 11,
+  },
   notifications: {
     email: true,
     sms: false,
@@ -107,29 +111,50 @@ export class UsersService {
     page: number;
     limit: number;
   }> {
-    const { page = 1, limit = 10, role, status, search } = options;
+    const { role, status, search } = options;
+    const parsedPage = Number.parseInt(String(options.page ?? 1), 10);
+    const parsedLimit = Number.parseInt(String(options.limit ?? 10), 10);
+    const page =
+      Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+    const limit =
+      Number.isInteger(parsedLimit) && parsedLimit > 0
+        ? Math.min(parsedLimit, 100)
+        : 10;
     const skip = (page - 1) * limit;
-
-    const queryBuilder = this.userRepository.createQueryBuilder('user');
+    const mongoRepository =
+      this.userRepository.manager.getMongoRepository(User);
+    const filter: any = {};
 
     if (role) {
-      queryBuilder.andWhere('user.role = :role', { role });
+      filter.role = role;
     }
 
     if (status) {
-      queryBuilder.andWhere('user.status = :status', { status });
+      filter.status = status;
     }
 
-    if (search) {
-      queryBuilder.andWhere(
-        '(user.firstName LIKE :search OR user.lastName LIKE :search OR user.email LIKE :search)',
-        { search: `%${search}%` },
-      );
+    if (search?.trim()) {
+      const escapedSearch = search
+        .trim()
+        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const searchRegex = new RegExp(escapedSearch, 'i');
+
+      filter.$or = [
+        { firstName: searchRegex },
+        { lastName: searchRegex },
+        { email: searchRegex },
+      ];
     }
 
-    queryBuilder.skip(skip).take(limit).orderBy('user.createdAt', 'DESC');
-
-    const [users, total] = await queryBuilder.getManyAndCount();
+    const [users, total] = await Promise.all([
+      mongoRepository.find({
+        where: filter,
+        skip,
+        take: limit,
+        order: { createdAt: 'DESC' },
+      }),
+      mongoRepository.countDocuments(filter),
+    ]);
 
     return {
       users: users.map((user) => user.toJSON() as User),
@@ -305,10 +330,11 @@ export class UsersService {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    const newThisMonth = await this.userRepository
-      .createQueryBuilder('user')
-      .where('user.createdAt >= :startOfMonth', { startOfMonth })
-      .getCount();
+    const mongoRepository =
+      this.userRepository.manager.getMongoRepository(User);
+    const newThisMonth = await mongoRepository.countDocuments({
+      createdAt: { $gte: startOfMonth },
+    });
 
     return { total, byRole, byStatus, newThisMonth };
   }

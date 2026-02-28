@@ -2,21 +2,7 @@
 // SmartProperty - Dashboard Page
 // ===========================================
 
-import {
-  Bell,
-  Building2,
-  Calendar,
-  FileText,
-  Home,
-  Mail,
-  Pencil,
-  Shield,
-  ShieldCheck,
-  Users,
-} from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { HomeFooter, HomeNavbar } from '@/components/layout';
+import { HomeFooter, HomeNavbar } from "@/components/layout";
 import {
   Alert,
   Button,
@@ -25,11 +11,25 @@ import {
   CardHeader,
   CardTitle,
   Input,
-} from '@/components/ui';
-import { authService, verificationService } from '@/services';
-import { useAuthStore } from '@/store';
-import { VerificationStatus } from '@/types/verification';
-import { canManageProperties } from '@/utils';
+} from "@/components/ui";
+import { authService, propertyService, verificationService } from "@/services";
+import { useAuthStore } from "@/store";
+import type { Property } from "@/types/property";
+import { VerificationStatus } from "@/types/verification";
+import { canManageProperties } from "@/utils";
+import {
+  Bell,
+  Building2,
+  Calendar,
+  FileText,
+  Home,
+  Mail,
+  Shield,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -45,29 +45,32 @@ export default function DashboardPage() {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [profileForm, setProfileForm] = useState({
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    phone: user?.phone || '',
+    firstName: user?.firstName || "",
+    lastName: user?.lastName || "",
+    phone: user?.phone || "",
   });
-  const [newEmail, setNewEmail] = useState(user?.email || '');
+  const [newEmail, setNewEmail] = useState(user?.email || "");
   const [emailMessage, setEmailMessage] = useState<{
-    type: 'success' | 'error';
+    type: "success" | "error";
     text: string;
   } | null>(null);
   const [verificationStatus, setVerificationStatus] =
     useState<VerificationStatus | null>(null);
   const [emailChangeMessage, setEmailChangeMessage] = useState<{
-    type: 'success' | 'error';
+    type: "success" | "error";
     text: string;
   } | null>(null);
   const [profileMessage, setProfileMessage] = useState<{
-    type: 'success' | 'error';
+    type: "success" | "error";
     text: string;
   } | null>(null);
+  const [ownerProperties, setOwnerProperties] = useState<Property[]>([]);
+  const [isLoadingOwnerProperties, setIsLoadingOwnerProperties] =
+    useState(false);
 
   // Fetch verification status for tenants
   useEffect(() => {
-    if (user?.role === 'tenant') {
+    if (user?.role === "tenant") {
       verificationService
         .getVerificationStatus()
         .then((data) => setVerificationStatus(data.overallStatus))
@@ -75,49 +78,58 @@ export default function DashboardPage() {
     }
   }, [user?.role]);
 
+  useEffect(() => {
+    if (user?.role !== "owner" || !user.id) {
+      setOwnerProperties([]);
+      return;
+    }
+
+    const loadOwnerProperties = async () => {
+      setIsLoadingOwnerProperties(true);
+      try {
+        const response = await propertyService.getProperties({
+          ownerId: user.id,
+          page: 1,
+          limit: 6,
+        });
+        setOwnerProperties(response.properties);
+      } catch {
+        setOwnerProperties([]);
+      } finally {
+        setIsLoadingOwnerProperties(false);
+      }
+    };
+
+    void loadOwnerProperties();
+  }, [user?.id, user?.role]);
+
   const handleResendVerification = async () => {
     if (!user?.email) return;
     setResendingEmail(true);
     try {
       await authService.resendVerification(user.email);
       setEmailMessage({
-        type: 'success',
-        text: 'Verification email sent! Check your inbox or MailHog at localhost:8025',
+        type: "success",
+        text: "Verification email sent! Check your inbox or MailHog at localhost:8025",
       });
     } catch {
       setEmailMessage({
-        type: 'error',
-        text: 'Failed to send verification email. Please try again.',
+        type: "error",
+        text: "Failed to send verification email. Please try again.",
       });
     } finally {
       setResendingEmail(false);
     }
   };
 
-  const handleOpenProfileEditor = () => {
-    setProfileMessage(null);
-    setProfileForm({
-      firstName: user?.firstName || '',
-      lastName: user?.lastName || '',
-      phone: user?.phone || '',
-    });
-    setNewEmail(user?.email || '');
-    setEmailChangeMessage(null);
-    setIsEditingProfile(true);
-    accountInfoRef.current?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    });
-  };
-
   const handleCancelProfileEdit = () => {
     setIsEditingProfile(false);
     setProfileForm({
-      firstName: user?.firstName || '',
-      lastName: user?.lastName || '',
-      phone: user?.phone || '',
+      firstName: user?.firstName || "",
+      lastName: user?.lastName || "",
+      phone: user?.phone || "",
     });
-    setNewEmail(user?.email || '');
+    setNewEmail(user?.email || "");
     setEmailChangeMessage(null);
   };
 
@@ -129,16 +141,16 @@ export default function DashboardPage() {
 
     if (!emailRegex.test(normalizedEmail)) {
       setEmailChangeMessage({
-        type: 'error',
-        text: 'Please enter a valid email address.',
+        type: "error",
+        text: "Please enter a valid email address.",
       });
       return;
     }
 
     if (normalizedEmail === user.email.toLowerCase()) {
       setEmailChangeMessage({
-        type: 'error',
-        text: 'New email must be different from current email.',
+        type: "error",
+        text: "New email must be different from current email.",
       });
       return;
     }
@@ -151,18 +163,18 @@ export default function DashboardPage() {
         newEmail: normalizedEmail,
       });
       setEmailChangeMessage({
-        type: 'success',
+        type: "success",
         text:
           response.message ||
-          'Verification link sent to your new email. Please confirm it to complete the change.',
+          "Verification link sent to your new email. Please confirm it to complete the change.",
       });
     } catch (error: unknown) {
       const message =
         (error as { response?: { data?: { message?: string } } })?.response
           ?.data?.message ||
-        'Failed to request email change. Please try again.';
+        "Failed to request email change. Please try again.";
       setEmailChangeMessage({
-        type: 'error',
+        type: "error",
         text: message,
       });
     } finally {
@@ -177,8 +189,8 @@ export default function DashboardPage() {
 
     if (firstName.length < 2 || lastName.length < 2) {
       setProfileMessage({
-        type: 'error',
-        text: 'First name and last name must be at least 2 characters.',
+        type: "error",
+        text: "First name and last name must be at least 2 characters.",
       });
       return;
     }
@@ -202,14 +214,14 @@ export default function DashboardPage() {
 
       setIsEditingProfile(false);
       setProfileMessage({
-        type: 'success',
-        text: 'Profile updated successfully.',
+        type: "success",
+        text: "Profile updated successfully.",
       });
     } catch (error: unknown) {
       const message =
         (error as { response?: { data?: { message?: string } } })?.response
-          ?.data?.message || 'Failed to update profile. Please try again.';
-      setProfileMessage({ type: 'error', text: message });
+          ?.data?.message || "Failed to update profile. Please try again.";
+      setProfileMessage({ type: "error", text: message });
     } finally {
       setIsSavingProfile(false);
     }
@@ -222,12 +234,12 @@ export default function DashboardPage() {
     try {
       await authService.deactivateAccount();
       await logout();
-      navigate('/login');
+      navigate("/login");
     } catch (error: unknown) {
       const message =
         (error as { response?: { data?: { message?: string } } })?.response
-          ?.data?.message || 'Failed to deactivate account. Please try again.';
-      setProfileMessage({ type: 'error', text: message });
+          ?.data?.message || "Failed to deactivate account. Please try again.";
+      setProfileMessage({ type: "error", text: message });
     } finally {
       setIsDeactivatingAccount(false);
       setShowDeactivateModal(false);
@@ -241,13 +253,13 @@ export default function DashboardPage() {
     try {
       await authService.deleteAccountPermanently();
       await logout();
-      navigate('/login');
+      navigate("/login");
     } catch (error: unknown) {
       const message =
         (error as { response?: { data?: { message?: string } } })?.response
           ?.data?.message ||
-        'Failed to delete account permanently. Please try again.';
-      setProfileMessage({ type: 'error', text: message });
+        "Failed to delete account permanently. Please try again.";
+      setProfileMessage({ type: "error", text: message });
     } finally {
       setIsDeletingAccount(false);
       setShowDeleteModal(false);
@@ -256,31 +268,29 @@ export default function DashboardPage() {
 
   const getRoleBadgeColor = (role: string) => {
     const colors: Record<string, string> = {
-      admin: 'bg-red-100 text-red-800',
-      owner: 'bg-blue-100 text-blue-800',
-      tenant: 'bg-green-100 text-green-800',
-      manager: 'bg-purple-100 text-purple-800',
-      agent: 'bg-yellow-100 text-yellow-800',
+      admin: "bg-red-100 text-red-800",
+      owner: "bg-blue-100 text-blue-800",
+      tenant: "bg-green-100 text-green-800",
+      manager: "bg-purple-100 text-purple-800",
+      agent: "bg-yellow-100 text-yellow-800",
     };
-    return colors[role] || 'bg-gray-100 text-gray-800';
+    return colors[role] || "bg-gray-100 text-gray-800";
   };
 
   const getStatusBadgeColor = (status: string) => {
     const colors: Record<string, string> = {
-      active: 'bg-green-100 text-green-800',
-      inactive: 'bg-gray-100 text-gray-800',
-      suspended: 'bg-red-100 text-red-800',
-      pending_verification: 'bg-yellow-100 text-yellow-800',
+      active: "bg-green-100 text-green-800",
+      inactive: "bg-gray-100 text-gray-800",
+      suspended: "bg-red-100 text-red-800",
+      pending_verification: "bg-yellow-100 text-yellow-800",
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return colors[status] || "bg-gray-100 text-gray-800";
   };
 
   return (
     <>
       <HomeNavbar />
       <div className="min-h-screen bg-gray-50 pt-24">
-
-
         {/* Main Content */}
         <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           {/* Email verification warning - only show after initial load */}
@@ -341,7 +351,7 @@ export default function DashboardPage() {
                   <Shield className="mr-2 h-5 w-5 text-indigo-600" />
                   Your Account Information
                 </CardTitle>
-                {isEditingProfile ? (
+                {isEditingProfile && (
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
@@ -360,15 +370,6 @@ export default function DashboardPage() {
                       Save Changes
                     </Button>
                   </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleOpenProfileEditor}
-                  >
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit Profile
-                  </Button>
                 )}
               </CardHeader>
               <CardContent>
@@ -494,7 +495,7 @@ export default function DashboardPage() {
                       </div>
                     ) : (
                       <p className="mt-1 text-gray-900">
-                        {user?.phone || 'Not provided'}
+                        {user?.phone || "Not provided"}
                       </p>
                     )}
                   </div>
@@ -504,7 +505,7 @@ export default function DashboardPage() {
                     </label>
                     <p className="mt-1">
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${getRoleBadgeColor(user?.role || '')}`}
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${getRoleBadgeColor(user?.role || "")}`}
                       >
                         {user?.role}
                       </span>
@@ -516,9 +517,9 @@ export default function DashboardPage() {
                     </label>
                     <p className="mt-1">
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${getStatusBadgeColor(user?.status || '')}`}
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${getStatusBadgeColor(user?.status || "")}`}
                       >
-                        {user?.status?.replace('_', ' ')}
+                        {user?.status?.replace("_", " ")}
                       </span>
                     </p>
                   </div>
@@ -530,39 +531,10 @@ export default function DashboardPage() {
                       <Calendar className="mr-2 h-4 w-4 text-gray-400" />
                       {user?.createdAt
                         ? new Date(user.createdAt).toLocaleDateString()
-                        : 'N/A'}
+                        : "N/A"}
                     </p>
                   </div>
                 </div>
-
-                {/* 2FA Setup Button - Only show if not enabled */}
-                {!user?.twoFactorEnabled && (
-                  <div className="col-span-full mt-4 rounded-lg border-2 border-dashed border-yellow-300 bg-yellow-50 p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-100">
-                          <Shield className="h-5 w-5 text-yellow-600" />
-                        </div>
-                        <div className="ml-3">
-                          <h3 className="font-medium text-gray-900">
-                            Secure Your Account
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            Enable two-factor authentication for extra security
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => navigate('/security/2fa')}
-                        className="whitespace-nowrap"
-                      >
-                        Setup 2FA
-                      </Button>
-                    </div>
-                  </div>
-                )}
 
                 {isEditingProfile && (
                   <div className="col-span-full mt-4 rounded-lg border border-red-200 bg-red-50 p-4">
@@ -616,11 +588,11 @@ export default function DashboardPage() {
           </div>
 
           {/* Verify Me CTA - Show for tenants (hide if verified or rejected) */}
-          {user?.role === 'tenant' &&
+          {user?.role === "tenant" &&
             verificationStatus !== VerificationStatus.VERIFIED &&
             verificationStatus !== VerificationStatus.REJECTED && (
               <div className="mb-8">
-                  <div className="relative overflow-hidden rounded-xl border border-indigo-200 bg-linear-to-r from-indigo-500 via-purple-500 to-indigo-600 p-6 shadow-lg">
+                <div className="relative overflow-hidden rounded-xl border border-indigo-200 bg-linear-to-r from-indigo-500 via-purple-500 to-indigo-600 p-6 shadow-lg">
                   <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white/10" />
                   <div className="absolute -bottom-4 -left-4 h-24 w-24 rounded-full bg-white/10" />
                   <div className="relative flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -639,7 +611,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <Button
-                      onClick={() => navigate('/verification')}
+                      onClick={() => navigate("/verification")}
                       className="shrink-0 bg-white text-indigo-600 shadow-md hover:bg-indigo-50 focus-visible:ring-white"
                       size="lg"
                     >
@@ -652,9 +624,9 @@ export default function DashboardPage() {
             )}
 
           {/* Admin: Review Verifications CTA */}
-          {user?.role === 'admin' && (
+          {user?.role === "admin" && (
             <div className="mb-8">
-                  <div className="relative overflow-hidden rounded-xl border border-amber-200 bg-linear-to-r from-amber-500 via-orange-500 to-red-500 p-6 shadow-lg">
+              <div className="relative overflow-hidden rounded-xl border border-amber-200 bg-linear-to-r from-amber-500 via-orange-500 to-red-500 p-6 shadow-lg">
                 <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white/10" />
                 <div className="absolute -bottom-4 -left-4 h-24 w-24 rounded-full bg-white/10" />
                 <div className="relative flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -671,14 +643,24 @@ export default function DashboardPage() {
                       </p>
                     </div>
                   </div>
-                  <Button
-                    onClick={() => navigate('/admin/verifications')}
-                    className="shrink-0 bg-white text-amber-600 shadow-md hover:bg-amber-50 focus-visible:ring-white"
-                    size="lg"
-                  >
-                    <Shield className="mr-2 h-5 w-5" />
-                    Review Verifications
-                  </Button>
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    <Button
+                      onClick={() => navigate("/admin/verifications")}
+                      className="bg-white text-amber-600 shadow-md hover:bg-amber-50 focus-visible:ring-white"
+                      size="lg"
+                    >
+                      <Shield className="mr-2 h-5 w-5" />
+                      Review Verifications
+                    </Button>
+                    <Button
+                      onClick={() => navigate("/admin/users")}
+                      className="bg-white text-amber-600 shadow-md hover:bg-amber-50 focus-visible:ring-white"
+                      size="lg"
+                    >
+                      <Users className="mr-2 h-5 w-5" />
+                      Manage Users
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -694,7 +676,7 @@ export default function DashboardPage() {
                 <div className="ml-4">
                   <p className="text-2xl font-bold text-gray-900">0</p>
                   <p className="text-sm text-gray-500">
-                    {canManage ? 'Properties' : 'Browsed'}
+                    {canManage ? "Properties" : "Browsed"}
                   </p>
                 </div>
               </CardContent>
@@ -708,7 +690,7 @@ export default function DashboardPage() {
                 <div className="ml-4">
                   <p className="text-2xl font-bold text-gray-900">0</p>
                   <p className="text-sm text-gray-500">
-                    {canManage ? 'Tenants' : 'Applications'}
+                    {canManage ? "Tenants" : "Applications"}
                   </p>
                 </div>
               </CardContent>
@@ -738,6 +720,104 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </div>
+
+          {user?.role === "owner" && (
+            <Card className="mb-8">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center">
+                  <Home className="mr-2 h-5 w-5 text-indigo-600" />
+                  My Listed Properties
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate("/properties")}
+                >
+                  View All
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {isLoadingOwnerProperties ? (
+                  <p className="text-sm text-gray-600">
+                    Loading your properties...
+                  </p>
+                ) : ownerProperties.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-600">
+                    You have no listed properties yet.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {ownerProperties.map((property) => {
+                      const propertyId = property.id || property._id;
+                      const primaryImage =
+                        property.images?.find((img) => img.isPrimary) ||
+                        property.images?.[0];
+                      const imageUrl =
+                        primaryImage?.url || "/placeholder-property.svg";
+
+                      return (
+                        <div
+                          key={propertyId}
+                          className="flex flex-col gap-3 rounded-lg border border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={imageUrl}
+                              alt={property.title}
+                              className="h-16 w-24 rounded-md object-cover"
+                              onError={(event) => {
+                                (event.currentTarget as HTMLImageElement).src =
+                                  "/placeholder-property.svg";
+                              }}
+                            />
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {property.title}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                {property.address.city},{" "}
+                                {property.address.country}
+                              </p>
+                              <p className="mt-1 text-sm text-indigo-600">
+                                {property.price.toLocaleString()}{" "}
+                                {property.currency}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium capitalize text-gray-700">
+                              {property.status.replace("_", " ")}
+                            </span>
+                            {propertyId && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    navigate(`/properties/${propertyId}`)
+                                  }
+                                >
+                                  View
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() =>
+                                    navigate(`/properties/${propertyId}/edit`)
+                                  }
+                                >
+                                  Edit
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* API Testing Info */}
           <Card>
