@@ -3,6 +3,7 @@
 // ===========================================
 
 import { HomeFooter, Navbar } from "@/components/layout";
+import { useTranslation } from "@/i18n";
 import { propertyService } from "@/services/property.service";
 import { useAuthStore } from "@/store";
 import type { Property, PropertyImage } from "@/types/property";
@@ -103,16 +104,16 @@ interface PropertyMapProps {
   title: string;
 }
 
+type AccuracyLevel = "exactSaved" | "exactStreet" | "streetLevel" | "approximate";
+
 function PropertyMap({ address, title }: PropertyMapProps) {
+  const t = useTranslation();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const [mapError, setMapError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [resolvedCoords, setResolvedCoords] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
-  const [accuracyLabel, setAccuracyLabel] = useState<string>("");
+  const [resolvedCoords, setResolvedCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [accuracyKey, setAccuracyKey] = useState<AccuracyLevel | null>(null);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -121,7 +122,7 @@ function PropertyMap({ address, title }: PropertyMapProps) {
       lat: number,
       lng: number,
       zoom: number,
-      accuracy: string,
+      accuracy: AccuracyLevel,
     ) => {
       if (!mapRef.current) return;
 
@@ -165,10 +166,9 @@ function PropertyMap({ address, title }: PropertyMapProps) {
               ${address.city}${address.state ? `, ${address.state}` : ""}<br>
               ${address.country}
             </div>
-            ${
-              zoom >= 16
-                ? `<div style="margin-top:6px;font-size:0.72rem;color:#10b981;font-weight:600">📍 Exact location</div>`
-                : `<div style="margin-top:6px;font-size:0.72rem;color:#f59e0b;font-weight:600">📍 Approximate location</div>`
+            ${zoom >= 16
+              ? `<div style="margin-top:6px;font-size:0.72rem;color:#10b981;font-weight:600">📍 ${t.propertyDetail.map.accuracy.exactStreet}</div>`
+              : `<div style="margin-top:6px;font-size:0.72rem;color:#f59e0b;font-weight:600">📍 ${t.propertyDetail.map.accuracy.approximate}</div>`
             }
           </div>`,
           { maxWidth: 240 },
@@ -176,31 +176,22 @@ function PropertyMap({ address, title }: PropertyMapProps) {
         .openPopup();
 
       setResolvedCoords({ lat, lng });
-      setAccuracyLabel(accuracy);
+      setAccuracyKey(accuracy);
       setIsLoading(false);
     };
 
     const run = async () => {
       // Priority 1 — use stored coordinates (exact, zoom 17)
       if (address.coordinates?.lat && address.coordinates?.lng) {
-        initMap(
-          address.coordinates.lat,
-          address.coordinates.lng,
-          17,
-          "Exact location (saved coordinates)",
-        );
+        initMap(address.coordinates.lat, address.coordinates.lng, 17, "exactSaved");
         return;
       }
 
       // Priority 2 — geocode the address
       const result = await geocodeAddress(address);
       if (result) {
-        const accuracy =
-          result.zoom >= 17
-            ? "Exact street location"
-            : result.zoom >= 16
-              ? "Street-level location"
-              : "Approximate area";
+        const accuracy: AccuracyLevel =
+          result.zoom >= 17 ? "exactStreet" : result.zoom >= 16 ? "streetLevel" : "approximate";
         initMap(result.lat, result.lng, result.zoom, accuracy);
       } else {
         setMapError(true);
@@ -216,7 +207,7 @@ function PropertyMap({ address, title }: PropertyMapProps) {
         mapInstanceRef.current = null;
       }
     };
-  }, [address, title]);
+  }, [address, title, t]);
 
   const openInMaps = () => {
     if (resolvedCoords) {
@@ -261,45 +252,27 @@ function PropertyMap({ address, title }: PropertyMapProps) {
     }
   };
 
+  const accuracyColor =
+    accuracyKey === "approximate" ? "#f59e0b" : "#10b981";
+
+  const accuracyColor =
+    accuracyKey === "approximate" ? "#f59e0b" : "#10b981";
+
   return (
     <div className="property-description" style={{ marginTop: "1.5rem" }}>
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "0.75rem",
-          flexWrap: "wrap",
-          gap: "0.5rem",
-        }}
-      >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem", flexWrap: "wrap", gap: "0.5rem" }}>
         <div>
-          <h3 style={{ margin: 0 }}>Location</h3>
-          {accuracyLabel && (
-            <span
-              style={{
-                fontSize: "0.75rem",
-                fontWeight: 500,
-                color: accuracyLabel.toLowerCase().includes("exact")
-                  ? "#10b981"
-                  : "#f59e0b",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.25rem",
-                marginTop: "2px",
-              }}
-            >
-              <svg
-                width="10"
-                height="10"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" />
+          <h3 style={{ margin: 0 }}>{t.propertyDetail.location}</h3>
+          {accuracyKey && (
+            <span style={{
+              fontSize: "0.75rem", fontWeight: 500,
+              color: accuracyColor,
+              display: "flex", alignItems: "center", gap: "0.25rem", marginTop: "2px",
+            }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
               </svg>
-              {accuracyLabel}
+              {t.propertyDetail.map.accuracy[accuracyKey]}
             </span>
           )}
         </div>
@@ -307,7 +280,7 @@ function PropertyMap({ address, title }: PropertyMapProps) {
         <div style={{ display: "flex", gap: "0.5rem" }}>
           <button
             onClick={openInMaps}
-            title="Open in OpenStreetMap"
+            title={t.propertyDetail.openStreetMap}
             style={{
               display: "flex",
               alignItems: "center",
@@ -342,11 +315,11 @@ function PropertyMap({ address, title }: PropertyMapProps) {
               <polyline points="15 3 21 3 21 9" />
               <line x1="10" y1="14" x2="21" y2="3" />
             </svg>
-            OpenStreetMap
+            {t.propertyDetail.openStreetMap}
           </button>
           <button
             onClick={openInGoogleMaps}
-            title="Open in Google Maps"
+            title={t.propertyDetail.googleMaps}
             style={{
               display: "flex",
               alignItems: "center",
@@ -381,21 +354,15 @@ function PropertyMap({ address, title }: PropertyMapProps) {
               <polyline points="15 3 21 3 21 9" />
               <line x1="10" y1="14" x2="21" y2="3" />
             </svg>
-            Google Maps
+            {t.propertyDetail.googleMaps}
           </button>
         </div>
       </div>
-
-      {/* Map container */}
-      <div
-        style={{
-          position: "relative",
-          borderRadius: "14px",
-          overflow: "hidden",
-          border: "1px solid var(--color-border, #e2e8f0)",
-          boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
-        }}
-      >
+      <div style={{
+        position: "relative", borderRadius: "14px", overflow: "hidden",
+        border: "1px solid var(--color-border, #e2e8f0)",
+        boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
+      }}>
         {isLoading && (
           <div
             style={{
@@ -411,9 +378,7 @@ function PropertyMap({ address, title }: PropertyMapProps) {
             }}
           >
             <div className="loading-spinner" />
-            <p style={{ fontSize: "0.85rem", color: "#64748b", margin: 0 }}>
-              Locating property...
-            </p>
+            <p style={{ fontSize: "0.85rem", color: "#64748b", margin: 0 }}>{t.propertyDetail.map.locating}</p>
           </div>
         )}
         {mapError ? (
@@ -442,79 +407,32 @@ function PropertyMap({ address, title }: PropertyMapProps) {
               <circle cx="12" cy="10" r="3" />
             </svg>
             <div style={{ textAlign: "center" }}>
-              <p
-                style={{
-                  margin: "0 0 0.25rem",
-                  fontWeight: 600,
-                  color: "#374151",
-                }}
-              >
-                Location not found
-              </p>
-              <p style={{ margin: 0, fontSize: "0.82rem" }}>
-                Could not geocode this address
-              </p>
+              <p style={{ margin: "0 0 0.25rem", fontWeight: 600, color: "#374151" }}>{t.propertyDetail.map.notFoundTitle}</p>
+              <p style={{ margin: 0, fontSize: "0.82rem" }}>{t.propertyDetail.map.notFoundSubtitle}</p>
             </div>
             <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button
-                onClick={openInMaps}
-                style={{
-                  padding: "0.45rem 1rem",
-                  borderRadius: "8px",
-                  background: "var(--color-primary, #10b981)",
-                  color: "#fff",
-                  border: "none",
-                  cursor: "pointer",
-                  fontWeight: 600,
-                  fontSize: "0.82rem",
-                }}
-              >
-                OpenStreetMap
-              </button>
-              <button
-                onClick={openInGoogleMaps}
-                style={{
-                  padding: "0.45rem 1rem",
-                  borderRadius: "8px",
-                  background: "#4285F4",
-                  color: "#fff",
-                  border: "none",
-                  cursor: "pointer",
-                  fontWeight: 600,
-                  fontSize: "0.82rem",
-                }}
-              >
-                Google Maps
-              </button>
+              <button onClick={openInMaps} style={{
+                padding: "0.45rem 1rem", borderRadius: "8px",
+                background: "var(--color-primary, #10b981)", color: "#fff",
+                border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.82rem",
+              }}>{t.propertyDetail.openStreetMap}</button>
+              <button onClick={openInGoogleMaps} style={{
+                padding: "0.45rem 1rem", borderRadius: "8px",
+                background: "#4285F4", color: "#fff",
+                border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.82rem",
+              }}>{t.propertyDetail.googleMaps}</button>
             </div>
           </div>
         ) : (
           <div ref={mapRef} style={{ height: "380px", width: "100%" }} />
         )}
       </div>
-
-      {/* Address footer */}
-      <p
-        style={{
-          fontSize: "0.79rem",
-          color: "var(--color-text-muted, #94a3b8)",
-          marginTop: "0.5rem",
-          display: "flex",
-          alignItems: "flex-start",
-          gap: "0.3rem",
-          lineHeight: 1.5,
-        }}
-      >
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          style={{ marginTop: "2px", flexShrink: 0 }}
-          aria-hidden="true"
-        >
+      <p style={{
+        fontSize: "0.79rem", color: "var(--color-text-muted, #94a3b8)",
+        marginTop: "0.5rem", display: "flex", alignItems: "flex-start", gap: "0.3rem",
+        lineHeight: 1.5,
+      }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginTop: "2px", flexShrink: 0 }} aria-hidden="true">
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
           <circle cx="12" cy="10" r="3" />
         </svg>
@@ -690,6 +608,7 @@ interface ImageGalleryProps {
 }
 
 function ImageGallery({ images }: ImageGalleryProps) {
+  const t = useTranslation();
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const sortedImages = [...images].sort((a, b) => {
@@ -705,7 +624,7 @@ function ImageGallery({ images }: ImageGalleryProps) {
     return (
       <div className="property-gallery">
         <div className="gallery-main">
-          <img src="/placeholder-property.svg" alt="Pas d'image" />
+          <img src="/placeholder-property.svg" alt={t.propertyDetail.galleryPlaceholder} />
         </div>
       </div>
     );
@@ -716,7 +635,7 @@ function ImageGallery({ images }: ImageGalleryProps) {
       <div className="gallery-main">
         <img
           src={mainImage?.url}
-          alt={mainImage?.caption || "Image de la propriété"}
+          alt={mainImage?.caption || t.propertyDetail.galleryAlt}
           onError={(e) => {
             (e.target as HTMLImageElement).src = "/placeholder-property.svg";
           }}
@@ -734,16 +653,18 @@ function ImageGallery({ images }: ImageGalleryProps) {
             >
               <img
                 src={img.url}
-                alt={img.caption || `Image ${index + 2}`}
+                alt={img.caption || t.propertyDetail.galleryAlt}
                 onError={(e) => {
                   (e.target as HTMLImageElement).src =
                     "/placeholder-property.svg";
                 }}
               />
               {index === 1 && images.length > 3 && (
-                <div className="gallery-more">+{images.length - 3} photos</div>
+                <div className="gallery-more">
+                  {t.propertyDetail.morePhotos.replace("{{count}}", String(images.length - 3))}
+                </div>
               )}
-            </button>
+            </div>
           ))}
         </div>
       )}
@@ -759,10 +680,11 @@ export default function PropertyDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const t = useTranslation();
   const canManage = canManageProperties(user);
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<"load" | null>(null);
 
   const loadProperty = useCallback(async () => {
     if (!id) return;
@@ -775,7 +697,7 @@ export default function PropertyDetailPage() {
       setProperty(data);
     } catch (err) {
       console.error("Failed to load property:", err);
-      setError("Impossible de charger la propriété. Veuillez réessayer.");
+      setError("load");
     } finally {
       setLoading(false);
     }
@@ -792,51 +714,27 @@ export default function PropertyDetailPage() {
     if (!propertyId) return;
 
     if (
-      window.confirm("Êtes-vous sûr de vouloir supprimer cette propriété ?")
+      window.confirm(t.propertyDetail.deleteConfirm)
     ) {
       try {
         await propertyService.deleteProperty(propertyId);
         navigate("/properties");
       } catch (err) {
         console.error("Failed to delete property:", err);
-        alert("Impossible de supprimer la propriété. Veuillez réessayer.");
+        alert(t.propertyDetail.deleteError);
       }
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "available":
-        return "Disponible";
-      case "rented":
-        return "Loué";
-      case "maintenance":
-        return "En maintenance";
-      case "unlisted":
-        return "Non listé";
-      default:
-        return status;
-    }
-  };
+  const getStatusLabel = (status: string) =>
+    t.propertyDetail.status[
+      status as keyof typeof t.propertyDetail.status
+    ] || status;
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case "apartment":
-        return "Appartement";
-      case "house":
-        return "Maison";
-      case "villa":
-        return "Villa";
-      case "studio":
-        return "Studio";
-      case "condo":
-        return "Condo";
-      case "land":
-        return "Terrain";
-      default:
-        return type;
-    }
-  };
+  const getTypeLabel = (type: string) =>
+    t.propertyDetail.type[
+      type as keyof typeof t.propertyDetail.type
+    ] || type;
 
   if (loading) {
     return (
@@ -845,7 +743,7 @@ export default function PropertyDetailPage() {
         <main className="property-detail-container">
           <div className="loading-state">
             <div className="loading-spinner" />
-            <p>Chargement de la propriété...</p>
+            <p>{t.propertyDetail.loading}</p>
           </div>
         </main>
         <HomeFooter />
@@ -859,10 +757,10 @@ export default function PropertyDetailPage() {
         <Navbar />
         <main className="property-detail-container">
           <div className="empty-state">
-            <h3>Propriété non trouvée</h3>
-            <p>{error || "Cette propriété n'existe pas ou a été supprimée."}</p>
+            <h3>{t.propertyDetail.notFoundTitle}</h3>
+            <p>{error ? t.propertyDetail.loadError : t.propertyDetail.notFoundDescription}</p>
             <Link to="/properties" className="btn-filter primary">
-              Retour aux propriétés
+              {t.propertyDetail.returnToList}
             </Link>
           </div>
         </main>
@@ -883,7 +781,7 @@ export default function PropertyDetailPage() {
           style={{ marginBottom: "1.5rem" }}
         >
           <BackIcon />
-          Retour aux propriétés
+          {t.propertyDetail.backToList}
         </Link>
 
         {/* Header */}
@@ -933,7 +831,7 @@ export default function PropertyDetailPage() {
                 <div className="feature-item">
                   <BedIcon />
                   <div>
-                    <span className="label">Chambres</span>
+                    <span className="label">{t.propertyDetail.features.bedrooms}</span>
                     <span className="value">{property.features.bedrooms}</span>
                   </div>
                 </div>
@@ -942,7 +840,7 @@ export default function PropertyDetailPage() {
                 <div className="feature-item">
                   <BathIcon />
                   <div>
-                    <span className="label">Salles de bain</span>
+                    <span className="label">{t.propertyDetail.features.bathrooms}</span>
                     <span className="value">{property.features.bathrooms}</span>
                   </div>
                 </div>
@@ -951,7 +849,7 @@ export default function PropertyDetailPage() {
                 <div className="feature-item">
                   <AreaIcon />
                   <div>
-                    <span className="label">Surface</span>
+                    <span className="label">{t.propertyDetail.features.area}</span>
                     <span className="value">{property.features.area} m²</span>
                   </div>
                 </div>
@@ -960,10 +858,14 @@ export default function PropertyDetailPage() {
                 <div className="feature-item">
                   <CarIcon />
                   <div>
-                    <span className="label">Parking</span>
+                    <span className="label">{t.propertyDetail.features.parking}</span>
                     <span className="value">
-                      {property.features.parkingSpaces} place
-                      {property.features.parkingSpaces > 1 ? "s" : ""}
+                      {(() => {
+                        const spaces = property.features?.parkingSpaces ?? 0;
+                        return (spaces > 1
+                          ? t.propertyDetail.parkingPlural
+                          : t.propertyDetail.parkingSingle).replace("{{count}}", String(spaces));
+                      })()}
                     </span>
                   </div>
                 </div>
@@ -972,9 +874,9 @@ export default function PropertyDetailPage() {
                 <div className="feature-item">
                   <FurnitureIcon />
                   <div>
-                    <span className="label">Meublé</span>
+                    <span className="label">{t.propertyDetail.features.furnished}</span>
                     <span className="value">
-                      {property.features.furnished ? "Oui" : "Non"}
+                      {property.features.furnished ? t.propertyDetail.yes : t.propertyDetail.no}
                     </span>
                   </div>
                 </div>
@@ -983,28 +885,26 @@ export default function PropertyDetailPage() {
                 <div className="feature-item">
                   <PetIcon />
                   <div>
-                    <span className="label">Animaux acceptés</span>
+                    <span className="label">{t.propertyDetail.features.petFriendly}</span>
                     <span className="value">
-                      {property.features.petFriendly ? "Oui" : "Non"}
+                      {property.features.petFriendly ? t.propertyDetail.yes : t.propertyDetail.no}
                     </span>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Description */}
             {property.description && (
               <div className="property-description">
-                <h3>Description</h3>
+                <h3>{t.propertyDetail.description}</h3>
                 <p>{property.description}</p>
               </div>
             )}
 
-            {/* Amenities */}
             {property.features?.amenities &&
               property.features.amenities.length > 0 && (
                 <div className="property-description">
-                  <h3>Équipements</h3>
+                  <h3>{t.propertyDetail.amenities}</h3>
                   <div className="amenities-list">
                     {property.features.amenities.map((amenity, index) => (
                       <span key={index} className="amenity-tag">
@@ -1015,16 +915,21 @@ export default function PropertyDetailPage() {
                 </div>
               )}
 
-            {/* Map Section */}
+            {property.features?.amenities &&
+              property.features.amenities.length === 0 && (
+                <div className="property-description">
+                  <h3>{t.propertyDetail.amenities}</h3>
+                  <p>{t.propertyDetail.amenitiesEmpty}</p>
+                </div>
+              )}
+
             <PropertyMap address={property.address} title={property.title} />
           </div>
 
-          {/* Sidebar */}
           <div className="property-sidebar">
-            {/* Actions Card — hidden for tenants */}
             {canManage && (
               <div className="sidebar-card">
-                <h3>Actions</h3>
+                <h3>{t.propertyDetail.actions}</h3>
                 <div
                   style={{
                     display: "flex",
@@ -1038,14 +943,14 @@ export default function PropertyDetailPage() {
                     style={{ textAlign: "center" }}
                   >
                     <EditIcon />
-                    Modifier la propriété
+                    {t.propertyDetail.editProperty}
                   </Link>
                   <Link
                     to={`/properties/${property.id || property._id}/images`}
                     className="btn-edit"
                     style={{ textAlign: "center" }}
                   >
-                    Gérer les images
+                    {t.propertyDetail.manageImages}
                   </Link>
                   <button
                     className="btn-delete"
@@ -1053,33 +958,31 @@ export default function PropertyDetailPage() {
                     style={{ width: "100%" }}
                   >
                     <DeleteIcon />
-                    Supprimer
+                    {t.propertyDetail.deleteProperty}
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Owner Card */}
             {property.owner && (
               <div className="sidebar-card">
-                <h3>Propriétaire</h3>
+                <h3>{t.propertyDetail.owner}</h3>
                 <div className="owner-info">
                   <div className="owner-avatar">
-                    {property.owner.name?.charAt(0) || "P"}
+                    {property.owner.name?.charAt(0) || t.propertyDetail.ownerFallback.charAt(0)}
                   </div>
                   <div className="owner-details">
-                    <h4>{property.owner.name || "Propriétaire"}</h4>
+                    <h4>{property.owner.name || t.propertyDetail.ownerFallback}</h4>
                     <p>{property.owner.email}</p>
                   </div>
                 </div>
-                <button className="btn-contact">Contacter</button>
+                <button className="btn-contact">{t.propertyDetail.contactOwner}</button>
               </div>
             )}
 
-            {/* Informations Card — internal data, hidden for tenants */}
             {canManage && (
               <div className="sidebar-card">
-                <h3>Informations</h3>
+                <h3>{t.propertyDetail.info}</h3>
                 <div
                   style={{
                     fontSize: "0.875rem",
@@ -1087,15 +990,17 @@ export default function PropertyDetailPage() {
                   }}
                 >
                   <p>
-                    <strong>ID:</strong> {property.id || property._id}
+                    <strong>{t.propertyDetail.propertyId}:</strong> {property.id || property._id}
                   </p>
                   <p>
-                    <strong>Créé le:</strong>{" "}
-                    {new Date(property.createdAt).toLocaleDateString("fr-FR")}
+                    <strong>{t.propertyDetail.createdAt}:</strong>
+                    {" "}
+                    {new Date(property.createdAt).toLocaleDateString()}
                   </p>
                   <p>
-                    <strong>Mis à jour le:</strong>{" "}
-                    {new Date(property.updatedAt).toLocaleDateString("fr-FR")}
+                    <strong>{t.propertyDetail.updatedAt}:</strong>
+                    {" "}
+                    {new Date(property.updatedAt).toLocaleDateString()}
                   </p>
                 </div>
               </div>
