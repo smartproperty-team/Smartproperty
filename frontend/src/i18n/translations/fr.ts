@@ -30,8 +30,17 @@ export const fr: Translations = {
   home: {
     heroTitle: "Le site n°1 de l'immobilier",
     heroSubtitle: "en qui les professionnels ont confiance en Tunisie",
+    heroKicker: "Le meilleur moyen de",
+    heroLine1: "Trouver votre",
+    heroLine2: "Maison parfaite",
     sale: "Vente",
     rent: "Location",
+    forBuy: "Acheter",
+    locationPlaceholder: "Entrez un lieu repère",
+    allProperties: "Toutes les propriétés",
+    room: "Pièce",
+    anyPrice: "Tous les prix",
+    searchNow: "Rechercher",
     searchPlaceholder: "Entrez des mots-clés",
     type: "Type",
     apartment: "Appartement",
@@ -47,7 +56,8 @@ export const fr: Translations = {
     viewAllProperties: "Voir toutes les propriétés",
     locations: "Villes",
     exploreCities: "Explorer les villes",
-    exploreCitiesSubtitle: "Découvrez des propriétés dans les meilleurs endroits",
+    exploreCitiesSubtitle:
+      "Découvrez des propriétés dans les meilleurs endroits",
     properties: "Propriétés",
     forRent: "À louer",
     recentRentTitle: "Propriétés récentes à louer",
@@ -67,24 +77,32 @@ export const fr: Translations = {
     howItWorks: "Comment ça marche",
     howItWorksSubtitle: "Trouvez votre maison idéale en 3 étapes simples",
     step1Title: "Trouver un bien",
-    step1Desc: "Parcourez des milliers de propriétés avec nos filtres de recherche avancés.",
+    step1Desc:
+      "Parcourez des milliers de propriétés avec nos filtres de recherche avancés.",
     step2Title: "Rencontrer un agent",
-    step2Desc: "Connectez-vous avec nos agents professionnels qui vous guideront tout au long du processus.",
+    step2Desc:
+      "Connectez-vous avec nos agents professionnels qui vous guideront tout au long du processus.",
     step3Title: "Prendre les clés",
-    step3Desc: "Complétez les formalités et obtenez les clés de votre nouvelle maison.",
+    step3Desc:
+      "Complétez les formalités et obtenez les clés de votre nouvelle maison.",
     discoverPlace: "Découvrez un endroit où vous aimerez vivre",
-    discoverDesc: "Trouvez la maison de vos rêves parmi notre sélection de propriétés premium.",
+    discoverDesc:
+      "Trouvez la maison de vos rêves parmi notre sélection de propriétés premium.",
     viewProperties: "Voir les propriétés",
     whyUs: "Pourquoi nous",
     whyUsTitle: "Pourquoi travailler avec nous ?",
-    whyUsDesc: "Avec des années d'expérience dans l'immobilier, nous offrons un service de qualité pour trouver votre propriété idéale.",
+    whyUsDesc:
+      "Avec des années d'expérience dans l'immobilier, nous offrons un service de qualité pour trouver votre propriété idéale.",
     buyOrRent: "Acheter ou louer",
-    buyOrRentDesc: "Nous vendons votre bien au meilleur prix du marché rapidement et efficacement.",
+    buyOrRentDesc:
+      "Nous vendons votre bien au meilleur prix du marché rapidement et efficacement.",
     trustedTitle: "Approuvé par des milliers",
-    trustedDesc: "Nous offrons une consultation gratuite pour vous aider à financer votre nouvelle maison.",
+    trustedDesc:
+      "Nous offrons une consultation gratuite pour vous aider à financer votre nouvelle maison.",
     learnMore: "En savoir plus",
     newsletter: "Abonnez-vous à notre newsletter",
-    newsletterDesc: "Recevez les dernières mises à jour sur les nouvelles propriétés et offres exclusives",
+    newsletterDesc:
+      "Recevez les dernières mises à jour sur les nouvelles propriétés et offres exclusives",
     emailPlaceholder: "Votre adresse e-mail",
     subscribe: "S'abonner",
   },
@@ -105,7 +123,8 @@ export const fr: Translations = {
     searchBtn: "Rechercher",
     reset: "Réinitialiser",
     myProperties: "Mes propriétés",
-    myPropertiesDesc: "Propriétés qui vous appartiennent et que vous pouvez modifier.",
+    myPropertiesDesc:
+      "Propriétés qui vous appartiennent et que vous pouvez modifier.",
     loading: "Chargement des propriétés...",
     retry: "Réessayer",
     noProperties: "Aucune propriété trouvée",

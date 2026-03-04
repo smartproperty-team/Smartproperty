@@ -1,7 +1,3 @@
-// ===========================================
-// SmartProperty - Home Navbar Component
-// ===========================================
-
 import { LanguageToggle } from "@/components/ui";
 import { useTranslation } from "@/i18n";
 import { notificationService } from "@/services";
@@ -16,19 +12,10 @@ import {
   Settings,
   User,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import "../../pages/home/home3.css";
 import ReadAloudWidget from "../accessibility/ReadAloudWidget";
-
-const navLinks = [
-  { to: "/", label: "Home" },
-  { to: "/properties", label: "Listings" },
-  { to: "/members", label: "Members" },
-  { to: "/blog", label: "Blog" },
-  { to: "/pages", label: "Pages" },
-  { to: "/contact", label: "Contact" },
-];
 
 export default function HomeNavbar() {
   const location = useLocation();
@@ -36,14 +23,6 @@ export default function HomeNavbar() {
   const { user, logout, isAuthenticated } = useAuthStore();
   const { getUserPreferences, openOnboarding } = usePreferencesStore();
   const t = useTranslation();
-  const navLinks = [
-    { to: "/", label: t.nav.home },
-    { to: "/properties", label: t.nav.listings },
-    { to: "/members", label: t.nav.members },
-    { to: "/blog", label: t.nav.blog },
-    { to: "/pages", label: t.nav.pages },
-    { to: "/contact", label: t.nav.contact },
-  ];
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -53,8 +32,15 @@ export default function HomeNavbar() {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch notifications
-  const fetchNotifications = useCallback(async () => {
+  const navLinks = [
+    { to: "/", label: t.nav.home, hasDropdown: true },
+    { to: "/properties", label: "Property", hasDropdown: true },
+    { to: "/pages", label: t.nav.pages, hasDropdown: true },
+    { to: "/blog", label: "News", hasDropdown: true },
+    { to: "/contact", label: "Contact Us", hasDropdown: false },
+  ];
+
+  const fetchNotifications = async () => {
     if (!user) return;
     try {
       const [allNotifs, count] = await Promise.all([
@@ -66,16 +52,14 @@ export default function HomeNavbar() {
     } catch {
       // silently fail
     }
-  }, [user]);
+  };
 
   useEffect(() => {
     fetchNotifications();
-    // Poll every 30 seconds
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
-  }, [fetchNotifications]);
+  }, [user]);
 
-  // Close notification panel on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -89,7 +73,6 @@ export default function HomeNavbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Close user dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -150,6 +133,27 @@ export default function HomeNavbar() {
       )}
       <nav className="navbar" aria-label="Main navigation">
         <div className="navbar-container">
+          <Link
+            to="/"
+            className="navbar-logo"
+            aria-label="Smart Property - Home"
+          >
+            <svg
+              className="logo-icon-svg"
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+            <span className="logo-text">Smart Property</span>
+          </Link>
+
           <button
             type="button"
             className="mobile-menu-btn"
@@ -176,37 +180,26 @@ export default function HomeNavbar() {
                   role="menuitem"
                   aria-current={isActive ? "page" : undefined}
                 >
-                  {link.label}
+                  <span>{link.label}</span>
+                  {link.hasDropdown && (
+                    <ChevronDown
+                      size={15}
+                      strokeWidth={2.25}
+                      aria-hidden="true"
+                    />
+                  )}
                 </Link>
               );
             })}
           </div>
 
-          <Link
-            to="/"
-            className="navbar-logo"
-            aria-label="Smart Property - Home"
-          >
-            <svg
-              className="logo-icon-svg"
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              aria-hidden="true"
-            >
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-              <polyline points="9 22 9 12 15 12 15 22" />
-            </svg>
-            <span className="logo-text">Smart Property</span>
-          </Link>
-
           <div className="navbar-actions">
-            <ReadAloudWidget mode="inline" showLabel={false} />
+            <ReadAloudWidget
+              mode="inline"
+              showLabel={false}
+              className="navbar-readaloud"
+            />
 
-            {/* User menu */}
             {user ? (
               <div className="relative" ref={userDropdownRef}>
                 <button
@@ -218,7 +211,7 @@ export default function HomeNavbar() {
                   aria-haspopup="menu"
                   aria-controls="user-menu"
                 >
-                  <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-indigo-100 text-indigo-600">
+                  <div className="navbar-avatar-shell flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-indigo-100 text-indigo-600">
                     {user.avatar ? (
                       <img
                         src={user.avatar}
@@ -232,7 +225,7 @@ export default function HomeNavbar() {
                   <span className="user-name hidden sm:inline">
                     {user.fullName || user.firstName}
                   </span>
-                  <ChevronDown className="h-4 w-4 text-gray-500" />
+                  <ChevronDown className="navbar-user-chevron h-4 w-4 text-gray-500" />
                 </button>
 
                 {showUserDropdown && (
@@ -329,6 +322,7 @@ export default function HomeNavbar() {
                 </svg>
               </Link>
             )}
+
             {user && (
               <div className="navbar-notif-wrapper" ref={notifPanelRef}>
                 <button
@@ -444,24 +438,17 @@ export default function HomeNavbar() {
                 )}
               </div>
             )}
+
             {isOwner(user) && (
               <Link to="/properties/new" className="btn-add-property">
-                <span className="btn-text">{t.nav.addProperty}</span>
-                <svg
-                  className="btn-icon"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  aria-hidden="true"
-                >
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
+                <span className="btn-text">ADD LISTING</span>
+                <span className="btn-icon" aria-hidden="true">
+                  +
+                </span>
               </Link>
             )}
-            <LanguageToggle variant="pill" />
+
+            <LanguageToggle variant="pill" className="navbar-language-btn" />
           </div>
         </div>
 

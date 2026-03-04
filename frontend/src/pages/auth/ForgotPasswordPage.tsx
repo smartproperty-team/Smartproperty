@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { z } from "zod";
-import { HomeFooter, HomeNavbar } from "../../components/layout";
+import { HomeFooter, Navbar } from "../../components/layout";
 import {
   Alert,
   Button,
@@ -59,7 +59,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <>
-      <HomeNavbar />
+      <Navbar />
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-100 via-white to-purple-100 px-4 py-12 pt-28">
         <div className="w-full max-w-md">
           {/* Logo */}

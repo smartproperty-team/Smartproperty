@@ -28,8 +28,17 @@ export const en = {
   home: {
     heroTitle: "The #1 site real estate",
     heroSubtitle: "professionals trust in Tunisia",
+    heroKicker: "The Best Way To",
+    heroLine1: "Find Your",
+    heroLine2: "Perfect Home",
     sale: "Sale",
     rent: "Rent",
+    forBuy: "For Buy",
+    locationPlaceholder: "Entry Landmark Location",
+    allProperties: "All Properties",
+    room: "Room",
+    anyPrice: "Any Price",
+    searchNow: "Search Now",
     searchPlaceholder: "Enter Keywords",
     type: "Type",
     apartment: "Apartment",
@@ -65,24 +74,32 @@ export const en = {
     howItWorks: "How It Works",
     howItWorksSubtitle: "Find your perfect home in 3 simple steps",
     step1Title: "Find Real Estate",
-    step1Desc: "Browse thousands of properties with our advanced search filters to find exactly what you need.",
+    step1Desc:
+      "Browse thousands of properties with our advanced search filters to find exactly what you need.",
     step2Title: "Meet Realtor",
-    step2Desc: "Connect with our professional realtors who will guide you through the process.",
+    step2Desc:
+      "Connect with our professional realtors who will guide you through the process.",
     step3Title: "Take The Keys",
-    step3Desc: "Complete the paperwork and get the keys to your new dream home.",
+    step3Desc:
+      "Complete the paperwork and get the keys to your new dream home.",
     discoverPlace: "Discover a place you'll love to live",
-    discoverDesc: "Find your dream home from our curated selection of premium properties.",
+    discoverDesc:
+      "Find your dream home from our curated selection of premium properties.",
     viewProperties: "View Properties",
     whyUs: "Why Us",
     whyUsTitle: "Why You Should Work With Us",
-    whyUsDesc: "With years of experience in the real estate industry, we provide top-notch service to help you find your perfect property.",
+    whyUsDesc:
+      "With years of experience in the real estate industry, we provide top-notch service to help you find your perfect property.",
     buyOrRent: "Buy or Rent Homes",
-    buyOrRentDesc: "We sell your home at the best market price quickly and efficiently.",
+    buyOrRentDesc:
+      "We sell your home at the best market price quickly and efficiently.",
     trustedTitle: "Trusted by Thousands",
-    trustedDesc: "We offer free consultancy to help you secure financing for your new home.",
+    trustedDesc:
+      "We offer free consultancy to help you secure financing for your new home.",
     learnMore: "Learn More",
     newsletter: "Subscribe To Our Newsletter",
-    newsletterDesc: "Get the latest updates on new properties and exclusive offers",
+    newsletterDesc:
+      "Get the latest updates on new properties and exclusive offers",
     emailPlaceholder: "Your Email Address",
     subscribe: "Subscribe",
   },
@@ -244,4 +261,3 @@ export const en = {
 } as const;
 
 export type Translations = typeof en;
-

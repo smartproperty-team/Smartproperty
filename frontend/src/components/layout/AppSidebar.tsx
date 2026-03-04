@@ -15,7 +15,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ReadAloudWidget from "../accessibility/ReadAloudWidget";
-import HomeNavbar from "./HomeNavbar";
+import Navbar from "./Navbar";
 
 type SidebarLink = {
   label: string;
@@ -77,7 +77,7 @@ export default function AppSidebar() {
   return (
     <>
       <div className="hidden lg:block">
-        <HomeNavbar />
+        <Navbar />
       </div>
 
       <header className="fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 lg:hidden">

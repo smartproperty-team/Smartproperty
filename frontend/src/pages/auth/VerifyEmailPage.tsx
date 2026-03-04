@@ -5,7 +5,7 @@
 import { Building2, CheckCircle, Loader2, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { HomeFooter, HomeNavbar } from "../../components/layout";
+import { HomeFooter, Navbar } from "../../components/layout";
 import { Button, Card, CardContent } from "../../components/ui";
 import { authService } from "../../services";
 import { useAuthStore } from "../../store";
@@ -57,7 +57,7 @@ export default function VerifyEmailPage() {
 
   return (
     <>
-      <HomeNavbar />
+      <Navbar />
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-100 via-white to-purple-100 px-4 py-12 pt-28">
         <div className="w-full max-w-md">
           {/* Logo */}
