@@ -34,10 +34,10 @@ export default function HomeNavbar() {
 
   const navLinks = [
     { to: "/", label: t.nav.home, hasDropdown: true },
-    { to: "/properties", label: "Property", hasDropdown: true },
+    { to: "/properties", label: t.nav.listings, hasDropdown: true },
     { to: "/pages", label: t.nav.pages, hasDropdown: true },
-    { to: "/blog", label: "News", hasDropdown: true },
-    { to: "/contact", label: "Contact Us", hasDropdown: false },
+    { to: "/blog", label: t.nav.news, hasDropdown: true },
+    { to: "/contact", label: t.nav.contact, hasDropdown: false },
   ];
 
   const fetchNotifications = async () => {
