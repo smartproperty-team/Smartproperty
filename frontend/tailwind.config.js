@@ -17,6 +17,12 @@ export default {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        palette: {
+          primary: "#1A3263",
+          secondary: "#547792",
+          accent: "#FFC570",
+          background: "#EFD2B0",
+        },
         home: {
           primary: "var(--color-primary)",
           "primary-dark": "var(--color-primary-dark)",
@@ -78,6 +84,13 @@ export default {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+      },
+      boxShadow: {
+        "palette-sm": "0 6px 16px rgba(26, 50, 99, 0.12)",
+        "palette-md": "0 18px 40px rgba(26, 50, 99, 0.18)",
+      },
+      transitionTimingFunction: {
+        smooth: "cubic-bezier(0.22, 1, 0.36, 1)",
       },
     },
   },

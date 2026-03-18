@@ -1,8 +1,10 @@
-# verifimaSmartProperty Features Roadmap
+# SmartProperty Features Roadmap
 
 ## Project Implementation Phases
 
 This document outlines all features to be implemented in the SmartProperty platform, organized by development phases.
+
+SmartProperty aims to modernize property management through AI-first automation, enabling real estate teams to value assets faster, reduce time-to-market and time-to-rent, improve tenant/owner experience, reduce non-payment risk, and maximize portfolio profitability. The target architecture is secure, scalable, and multi-tenant SaaS-ready for thousands of managed assets.
 
 ## Strategic Objectives Alignment (Spec v1.0)
 
@@ -13,6 +15,110 @@ This document outlines all features to be implemented in the SmartProperty platf
 - [ ] Reduce administrative workload by 50% via process automation
 - [ ] Reach 90% reliability target for AI non-payment risk scoring
 - [ ] Support multi-owner and multi-asset management in one SaaS platform
+
+## 5.1 Actors Alignment (Canonical Roles)
+
+1. Super Administrator: Global multi-tenant platform management, system configuration, client agency management, global analytics and BI.
+2. Branch Manager: Portfolio oversight, real estate agent management, validation of rates and conditions, strategic dashboards.
+3. Real Estate Agent / Manager: Daily property management, prospecting and acquisition, visits and negotiations, customer relations.
+4. Rental Manager: Monitoring active rentals, rent collection, unpaid-rent handling, tenant relations.
+5. Accountant / Administrative Assistant: Accounting entries, invoicing, bank reconciliation, tax declarations.
+6. Owner: Asset portfolio consultation, decision validation, document access, financial monitoring.
+7. Tenant / Candidate Tenant: Property search, application file preparation, visit requests, electronic lease signature, rent payment.
+8. Service Provider: Receive intervention requests, intervention planning, upload photos/reports, invoicing.
+9. AI System (Technical Actor): Automatic valuation, content generation, document analysis, intelligent matching, predictions, recommendations.
+
+### Role Implementation Track
+
+- [ ] Align backend authorization matrix and scoped permissions to all 9 canonical actors
+- [ ] Align frontend navigation and dashboards per actor profile
+- [ ] Add actor-based KPI visibility rules (global, agency, branch, portfolio)
+- [ ] Publish actor-to-feature traceability per release (who can do what)
+
+## Product Vision & SaaS Positioning Alignment
+
+- [ ] Automate and optimize property valuation
+- [ ] Drastically reduce time-to-market and time-to-rent
+- [ ] Improve tenant and owner experience
+- [ ] Minimize non-payment risk through predictive analytics
+- [ ] Maximize portfolio profitability
+- [ ] Guarantee multi-tenant SaaS scalability, security, and performance for thousands of assets without upfront infra investment
+
+## Actor-to-Roadmap Coverage Matrix
+
+| Actor                                 | Primary Roadmap Phases | Required Capability Coverage                                                                   |
+| ------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------- |
+| Super Administrator                   | 3, 12, 13, 15, 16      | Multi-tenant governance, agency onboarding, global BI/analytics, platform configuration        |
+| Branch Manager                        | 3, 4, 12, 13           | Portfolio oversight, team management, pricing/condition validation, strategic dashboards       |
+| Real Estate Agent / Manager           | 4, 5, 6, 9, 12, 14     | Prospecting, listing creation, visits/negotiation workflows, customer relationship workflows   |
+| Rental Manager                        | 6, 7, 8, 10, 12, 14    | Active lease tracking, rent collection, arrears handling, tenant operations                    |
+| Accountant / Administrative Assistant | 3, 7, 12, 13           | Invoicing, accounting entries, bank reconciliation, tax reporting exports                      |
+| Owner                                 | 4, 6, 7, 12, 13        | Portfolio visibility, decision validation, financial monitoring, document access               |
+| Tenant / Candidate Tenant             | 5, 6, 7, 8, 9, 10, 12  | Property search, application dossier, e-signature, rent payment, support requests              |
+| Service Provider                      | 8, 12                  | Intervention intake, scheduling, photo/report uploads, invoicing                               |
+| AI System (Technical Actor)           | 14, 16                 | Valuation, content generation, document analysis, matching, recommendation/prediction services |
+
+### Actor Delivery Gaps to Close
+
+- [ ] Super Administrator console (tenant onboarding, platform settings, global KPI/BI)
+- [ ] Branch Manager cockpit (portfolio supervision, agent performance, pricing/conditions validation)
+- [ ] Rental Manager workspace (arrears prioritization, lease health, tenant retention)
+- [ ] Accountant/Admin workspace (journal exports, bank reconciliation, tax declaration support)
+- [ ] Owner portal (asset-level ROI, approvals, contract/document hub)
+- [ ] Tenant portal (application tracking, e-signature, payment self-service)
+- [ ] Service Provider portal hardening (SLA tracking, intervention invoicing)
+- [ ] AI actor governance (service-to-service permissions, auditability, explainability)
+
+## User Story Traceability (Modules 1-3)
+
+Source alignment: Product Spec Modules 1-3 (US-1.1.1, US-1.1.2, US-2.1.1, US-3.1.2, US-3.2.2).
+
+### Module 1: Real Estate Asset Management
+
+US-1.1.1 Creation of a property listing (Actor: Real Estate Agent / Manager)
+
+- [x] Multi-step form wizard
+- [x] Automatic geolocation with interactive map
+- [x] Multiple photo upload (drag & drop)
+- [ ] Automatic feature detection from photos (AI)
+- [ ] Generation of a unique property identifier
+
+US-1.1.2 Automatic generation of attractive descriptions (Actor: Real Estate Agent / Manager + AI System)
+
+- [ ] "Generate AI Description" button in listing workflow
+- [ ] Analysis of property characteristics and uploaded photos
+- [ ] Generation of 3 variants (short/medium/long)
+- [ ] Customizable tone (professional/warm/luxury)
+- [ ] Multilingual machine translation
+
+### Module 2: Smart Valuation
+
+US-2.1.1 Automatic price estimation (Actor: Real Estate Agent)
+
+- [ ] AI valuation model using surface, location, condition, equipment, and recent prices
+- [ ] Min-max price range with confidence interval
+- [ ] Comparison with similar recently sold/rented properties
+- [ ] District-level price trend graph
+- [ ] Valuation report export (PDF)
+
+### Module 3: Matching Intelligent
+
+US-3.1.2 Intelligent candidate/property matching (Actor: AI System)
+
+- [ ] Hybrid recommendation algorithm (collaborative + content-based)
+- [ ] Compatibility score (0-100) for each property
+- [ ] Explicit + implicit criteria handling
+- [ ] Daily top-3 notifications by push/email
+- [ ] Score explainability ("why this match")
+
+US-3.2.2 Automatic analysis of the candidate file (Actor: AI System)
+
+- [ ] Document authenticity verification (forgery detection)
+- [ ] Automatic extraction of income amounts
+- [ ] Debt ratio calculation (rent/income)
+- [ ] Risk score (0-100)
+- [ ] Recommendation output (Accept / Ask for guarantees / Refuse)
+- [ ] GDPR non-discrimination compliance controls
 
 ---
 
@@ -95,8 +201,14 @@ This document outlines all features to be implemented in the SmartProperty platf
 ### User Entity
 
 - [x] User entity with TypeORM/MongoDB
-- [x] User roles (admin, owner, tenant, manager, agent)
-- [ ] Extended roles from product spec (super_admin, branch_manager, rental_manager, accountant_assistant, service_provider)
+- [x] Baseline roles (admin, owner, tenant, manager, agent)
+- [ ] Super Administrator role (global multi-tenant governance)
+- [ ] Branch Manager role (branch-level supervision and validation)
+- [ ] Real Estate Agent / Manager role alignment (prospecting + portfolio operations)
+- [ ] Rental Manager role (leases, arrears, tenant relations)
+- [ ] Accountant / Administrative Assistant role (finance and reporting)
+- [ ] Service Provider role (interventions and vendor billing)
+- [ ] AI system actor identity and service authorization boundaries
 - [x] User status (active, inactive, suspended, pending_verification)
 - [x] Full user profile fields (firstName, lastName, phone, avatar, etc.)
 - [ ] Avatar upload and storage
@@ -161,8 +273,8 @@ This document outlines all features to be implemented in the SmartProperty platf
 - [x] Delete property (soft delete)
 - [x] Get property by ID
 - [x] List owner's properties
-- [ ] Multi-step property creation wizard
-- [ ] Automatic geolocation with interactive map on listing form
+- [x] Multi-step property creation wizard
+- [x] Automatic geolocation with interactive map on listing form
 - [ ] Unique property identifier generation
 
 ### Portfolio Management & Data Exchange
@@ -198,13 +310,14 @@ This document outlines all features to be implemented in the SmartProperty platf
 
 - [x] Virtual tour URL
 - [x] Amenities list
-- [ ] Availability calendar
-- [ ] Property comparison
-- [ ] Share property link
-- [ ] QR code generation
+- [x] Availability calendar
+- [x] Property comparison
+- [x] Share property link
+- [x] QR code generation
 
 ### Marketing & Distribution
 
+- [ ] "Generate AI Description" CTA in property form and detail workflows
 - [ ] AI-generated marketing descriptions (short/medium/long)
 - [ ] Tone presets (professional, warm, luxury)
 - [ ] Multilingual translation for generated descriptions
@@ -282,6 +395,7 @@ This document outlines all features to be implemented in the SmartProperty platf
 - [ ] Lease expiration reports
 - [ ] Occupancy reports
 - [ ] Revenue projections
+- [ ] Owner decision validation workflow on lease terms and renewals
 
 ---
 
@@ -320,6 +434,9 @@ This document outlines all features to be implemented in the SmartProperty platf
 - [ ] Payment analytics
 - [ ] Export to CSV/Excel
 - [ ] Tax documentation
+- [ ] Accounting journal exports for accountant/admin assistant role
+- [ ] Bank reconciliation workflow
+- [ ] Fiscal declaration support package
 
 ---
 
@@ -487,6 +604,11 @@ This document outlines all features to be implemented in the SmartProperty platf
 - [ ] Recent activity
 - [x] Notifications dropdown
 - [x] User profile card
+- [ ] Super Administrator global BI dashboard
+- [ ] Branch Manager strategic dashboard
+- [ ] Owner financial dashboard
+- [ ] Rental Manager arrears dashboard
+- [ ] Accountant/admin assistant finance dashboard
 
 ### Property Pages
 
@@ -504,6 +626,9 @@ This document outlines all features to be implemented in the SmartProperty platf
 - [ ] Document upload
 - [ ] Preferences settings
 - [ ] Password change
+- [ ] Owner document center
+- [ ] Tenant self-service portal pages
+- [ ] Service provider workspace pages
 
 ### Application Pages
 

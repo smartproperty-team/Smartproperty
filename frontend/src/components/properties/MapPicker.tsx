@@ -8,6 +8,7 @@
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "../../i18n";
 import type { AddressData } from "./AddressInputOSM";
 
 // Fix Leaflet default icon issue
@@ -54,6 +55,7 @@ export default function MapPicker({
   onSelectAddress,
   initialPosition = { lat: 36.8065, lng: 10.1816 }, // Tunis par défaut
 }: MapPickerProps) {
+  const t = useTranslation();
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -93,7 +95,7 @@ export default function MapPicker({
 
       // Reverse geocode
       setLoading(true);
-      setAddressPreview("🔍 Recherche de l'adresse...");
+      setAddressPreview(`🔍 ${t.properties.form.mapPicker.searchingAddress}`);
       setParsedAddress(null);
 
       const result = await reverseGeocode(lat, lng);
@@ -159,11 +161,12 @@ export default function MapPicker({
 
         // Create address object
         const parsedAddr: AddressData = {
-          street: street || "Adresse sélectionnée sur la carte",
-          city: city || "Ville non spécifiée",
+          street: street || t.properties.form.mapPicker.fallback.streetFromMap,
+          city: city || t.properties.form.mapPicker.fallback.cityUnspecified,
           state: state || "",
           zipCode: zipCode || "",
-          country: country || "Pays non spécifié",
+          country:
+            country || t.properties.form.mapPicker.fallback.countryUnspecified,
           coordinates: { lat, lng },
         };
 
@@ -174,7 +177,7 @@ export default function MapPicker({
         console.log("✅ Auto-filling form with address:", parsedAddr);
         onSelectAddress(parsedAddr);
       } else {
-        setAddressPreview("❌ Adresse non trouvée");
+        setAddressPreview(`❌ ${t.properties.form.mapPicker.addressNotFound}`);
         setParsedAddress(null);
       }
     });
@@ -187,7 +190,16 @@ export default function MapPicker({
         mapRef.current = null;
       }
     };
-  }, [isOpen, initialPosition, onSelectAddress]);
+  }, [
+    isOpen,
+    initialPosition,
+    onSelectAddress,
+    t.properties.form.mapPicker.addressNotFound,
+    t.properties.form.mapPicker.fallback.cityUnspecified,
+    t.properties.form.mapPicker.fallback.countryUnspecified,
+    t.properties.form.mapPicker.fallback.streetFromMap,
+    t.properties.form.mapPicker.searchingAddress,
+  ]);
 
   // Handle close (address already sent to form on click)
   const handleClose = () => {
@@ -240,7 +252,7 @@ export default function MapPicker({
         >
           <div>
             <h2 style={{ margin: 0, fontSize: "1.5rem", color: "#1f2937" }}>
-              🗺️ Sélectionner l'adresse sur la carte
+              🗺️ {t.properties.form.mapPicker.headerTitle}
             </h2>
             <p
               style={{
@@ -249,7 +261,7 @@ export default function MapPicker({
                 fontSize: "0.9rem",
               }}
             >
-              Cliquez sur la carte → L'adresse se remplit automatiquement ✨
+              {t.properties.form.mapPicker.headerSubtitle}
             </p>
           </div>
           <button
@@ -308,7 +320,7 @@ export default function MapPicker({
                   }}
                 >
                   <span style={{ fontSize: "1.3rem" }}>✅</span>
-                  Adresse mise à jour dans le formulaire !
+                  {t.properties.form.mapPicker.successBanner}
                 </div>
 
                 <div
@@ -320,7 +332,7 @@ export default function MapPicker({
                     marginTop: "0.75rem",
                   }}
                 >
-                  📋 Informations enregistrées :
+                  📋 {t.properties.form.mapPicker.savedInfoTitle}
                 </div>
 
                 {/* Address Fields Grid */}
@@ -341,7 +353,7 @@ export default function MapPicker({
                       gap: "0.25rem",
                     }}
                   >
-                    🏠 Rue :
+                    🏠 {t.properties.form.mapPicker.labels.street}
                   </div>
                   <div style={{ color: "#1f2937", fontWeight: 500 }}>
                     {parsedAddress.street}
@@ -356,7 +368,7 @@ export default function MapPicker({
                       gap: "0.25rem",
                     }}
                   >
-                    🌆 Ville :
+                    🌆 {t.properties.form.mapPicker.labels.city}
                   </div>
                   <div style={{ color: "#1f2937", fontWeight: 500 }}>
                     {parsedAddress.city}
@@ -373,7 +385,7 @@ export default function MapPicker({
                           gap: "0.25rem",
                         }}
                       >
-                        📍 État/Région :
+                        📍 {t.properties.form.mapPicker.labels.state}
                       </div>
                       <div style={{ color: "#1f2937", fontWeight: 500 }}>
                         {parsedAddress.state}
@@ -392,7 +404,7 @@ export default function MapPicker({
                           gap: "0.25rem",
                         }}
                       >
-                        📮 Code postal :
+                        📮 {t.properties.form.mapPicker.labels.zipCode}
                       </div>
                       <div style={{ color: "#1f2937", fontWeight: 500 }}>
                         {parsedAddress.zipCode}
@@ -409,7 +421,7 @@ export default function MapPicker({
                       gap: "0.25rem",
                     }}
                   >
-                    🌍 Pays :
+                    🌍 {t.properties.form.mapPicker.labels.country}
                   </div>
                   <div style={{ color: "#1f2937", fontWeight: 500 }}>
                     {parsedAddress.country}
@@ -424,7 +436,7 @@ export default function MapPicker({
                       gap: "0.25rem",
                     }}
                   >
-                    🧭 Coordonnées :
+                    🧭 {t.properties.form.mapPicker.labels.coordinates}
                   </div>
                   <div
                     style={{
@@ -450,9 +462,8 @@ export default function MapPicker({
                     color: "#92400e",
                   }}
                 >
-                  💡 <strong>Astuce :</strong> Vous pouvez cliquer ailleurs sur
-                  la carte pour changer l'adresse. Le formulaire sera mis à jour
-                  automatiquement.
+                  💡 <strong>{t.properties.form.mapPicker.tip.title}</strong>{" "}
+                  {t.properties.form.mapPicker.tip.description}
                 </div>
               </div>
             ) : (
@@ -464,7 +475,7 @@ export default function MapPicker({
                     marginBottom: "0.25rem",
                   }}
                 >
-                  Adresse en cours de recherche :
+                  {t.properties.form.mapPicker.searchingLabel}
                 </div>
                 <div
                   style={{
@@ -503,7 +514,7 @@ export default function MapPicker({
                   gap: "0.5rem",
                 }}
               >
-                ✅ Adresse enregistrée • Cliquez ailleurs pour modifier
+                ✅ {t.properties.form.mapPicker.footer.savedHint}
               </div>
             ) : (
               <div
@@ -513,7 +524,7 @@ export default function MapPicker({
                   fontStyle: "italic",
                 }}
               >
-                👆 Cliquez sur la carte pour sélectionner une adresse
+                👆 {t.properties.form.mapPicker.footer.clickHint}
               </div>
             )}
           </div>
@@ -547,10 +558,10 @@ export default function MapPicker({
               }}
             >
               {loading
-                ? "⏳ Chargement..."
+                ? `⏳ ${t.properties.form.mapPicker.button.loading}`
                 : parsedAddress
-                  ? "✓ Terminer"
-                  : "Fermer"}
+                  ? `✓ ${t.properties.form.mapPicker.button.done}`
+                  : t.properties.form.mapPicker.button.close}
             </button>
           </div>
         </div>

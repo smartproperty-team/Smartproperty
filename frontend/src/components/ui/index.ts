@@ -10,4 +10,5 @@ export {
 } from "./Card";
 export { Input } from "./Input";
 export { default as LanguageToggle } from "./LanguageToggle";
-
+export { Stepper } from "./Stepper";
+export type { StepperStep } from "./Stepper";

@@ -12,6 +12,11 @@ import type {
 } from "../types/property";
 import { api } from "./api";
 
+export interface PropertyShareData {
+  shareUrl: string;
+  qrCode: string;
+}
+
 // ===========================================
 // Property CRUD Operations
 // ===========================================
@@ -49,6 +54,16 @@ export const propertyService = {
    */
   async getProperty(id: string): Promise<Property> {
     const response = await api.get<Property>(`/properties/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Get share link and QR code for a property
+   */
+  async getPropertyShareData(id: string): Promise<PropertyShareData> {
+    const response = await api.get<PropertyShareData>(
+      `/properties/${id}/share`,
+    );
     return response.data;
   },
 

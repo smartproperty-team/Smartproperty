@@ -4,7 +4,10 @@
 
 import { HomeFooter, Navbar } from "@/components/layout";
 import { useTranslation } from "@/i18n";
-import { propertyService } from "@/services/property.service";
+import {
+  propertyService,
+  type PropertyShareData,
+} from "@/services/property.service";
 import { useAuthStore } from "@/store";
 import type { Property, PropertyImage } from "@/types/property";
 import { canManageProperties } from "@/utils";
@@ -104,7 +107,11 @@ interface PropertyMapProps {
   title: string;
 }
 
-type AccuracyLevel = "exactSaved" | "exactStreet" | "streetLevel" | "approximate";
+type AccuracyLevel =
+  | "exactSaved"
+  | "exactStreet"
+  | "streetLevel"
+  | "approximate";
 
 function PropertyMap({ address, title }: PropertyMapProps) {
   const t = useTranslation();
@@ -112,7 +119,10 @@ function PropertyMap({ address, title }: PropertyMapProps) {
   const mapInstanceRef = useRef<L.Map | null>(null);
   const [mapError, setMapError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [resolvedCoords, setResolvedCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [resolvedCoords, setResolvedCoords] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
   const [accuracyKey, setAccuracyKey] = useState<AccuracyLevel | null>(null);
 
   useEffect(() => {
@@ -166,9 +176,10 @@ function PropertyMap({ address, title }: PropertyMapProps) {
               ${address.city}${address.state ? `, ${address.state}` : ""}<br>
               ${address.country}
             </div>
-            ${zoom >= 16
-              ? `<div style="margin-top:6px;font-size:0.72rem;color:#10b981;font-weight:600">📍 ${t.propertyDetail.map.accuracy.exactStreet}</div>`
-              : `<div style="margin-top:6px;font-size:0.72rem;color:#f59e0b;font-weight:600">📍 ${t.propertyDetail.map.accuracy.approximate}</div>`
+            ${
+              zoom >= 16
+                ? `<div style="margin-top:6px;font-size:0.72rem;color:#10b981;font-weight:600">📍 ${t.propertyDetail.map.accuracy.exactStreet}</div>`
+                : `<div style="margin-top:6px;font-size:0.72rem;color:#f59e0b;font-weight:600">📍 ${t.propertyDetail.map.accuracy.approximate}</div>`
             }
           </div>`,
           { maxWidth: 240 },
@@ -183,7 +194,12 @@ function PropertyMap({ address, title }: PropertyMapProps) {
     const run = async () => {
       // Priority 1 — use stored coordinates (exact, zoom 17)
       if (address.coordinates?.lat && address.coordinates?.lng) {
-        initMap(address.coordinates.lat, address.coordinates.lng, 17, "exactSaved");
+        initMap(
+          address.coordinates.lat,
+          address.coordinates.lng,
+          17,
+          "exactSaved",
+        );
         return;
       }
 
@@ -191,7 +207,11 @@ function PropertyMap({ address, title }: PropertyMapProps) {
       const result = await geocodeAddress(address);
       if (result) {
         const accuracy: AccuracyLevel =
-          result.zoom >= 17 ? "exactStreet" : result.zoom >= 16 ? "streetLevel" : "approximate";
+          result.zoom >= 17
+            ? "exactStreet"
+            : result.zoom >= 16
+              ? "streetLevel"
+              : "approximate";
         initMap(result.lat, result.lng, result.zoom, accuracy);
       } else {
         setMapError(true);
@@ -252,24 +272,42 @@ function PropertyMap({ address, title }: PropertyMapProps) {
     }
   };
 
-  const accuracyColor =
-    accuracyKey === "approximate" ? "#f59e0b" : "#10b981";
-
-
+  const accuracyColor = accuracyKey === "approximate" ? "#f59e0b" : "#10b981";
 
   return (
     <div className="property-description" style={{ marginTop: "1.5rem" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem", flexWrap: "wrap", gap: "0.5rem" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: "0.75rem",
+          flexWrap: "wrap",
+          gap: "0.5rem",
+        }}
+      >
         <div>
           <h3 style={{ margin: 0 }}>{t.propertyDetail.location}</h3>
           {accuracyKey && (
-            <span style={{
-              fontSize: "0.75rem", fontWeight: 500,
-              color: accuracyColor,
-              display: "flex", alignItems: "center", gap: "0.25rem", marginTop: "2px",
-            }}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
+            <span
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 500,
+                color: accuracyColor,
+                display: "flex",
+                alignItems: "center",
+                gap: "0.25rem",
+                marginTop: "2px",
+              }}
+            >
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" />
               </svg>
               {t.propertyDetail.map.accuracy[accuracyKey]}
             </span>
@@ -357,11 +395,15 @@ function PropertyMap({ address, title }: PropertyMapProps) {
           </button>
         </div>
       </div>
-      <div style={{
-        position: "relative", borderRadius: "14px", overflow: "hidden",
-        border: "1px solid var(--color-border, #e2e8f0)",
-        boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
-      }}>
+      <div
+        style={{
+          position: "relative",
+          borderRadius: "14px",
+          overflow: "hidden",
+          border: "1px solid var(--color-border, #e2e8f0)",
+          boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
+        }}
+      >
         {isLoading && (
           <div
             style={{
@@ -377,7 +419,9 @@ function PropertyMap({ address, title }: PropertyMapProps) {
             }}
           >
             <div className="loading-spinner" />
-            <p style={{ fontSize: "0.85rem", color: "#64748b", margin: 0 }}>{t.propertyDetail.map.locating}</p>
+            <p style={{ fontSize: "0.85rem", color: "#64748b", margin: 0 }}>
+              {t.propertyDetail.map.locating}
+            </p>
           </div>
         )}
         {mapError ? (
@@ -406,32 +450,77 @@ function PropertyMap({ address, title }: PropertyMapProps) {
               <circle cx="12" cy="10" r="3" />
             </svg>
             <div style={{ textAlign: "center" }}>
-              <p style={{ margin: "0 0 0.25rem", fontWeight: 600, color: "#374151" }}>{t.propertyDetail.map.notFoundTitle}</p>
-              <p style={{ margin: 0, fontSize: "0.82rem" }}>{t.propertyDetail.map.notFoundSubtitle}</p>
+              <p
+                style={{
+                  margin: "0 0 0.25rem",
+                  fontWeight: 600,
+                  color: "#374151",
+                }}
+              >
+                {t.propertyDetail.map.notFoundTitle}
+              </p>
+              <p style={{ margin: 0, fontSize: "0.82rem" }}>
+                {t.propertyDetail.map.notFoundSubtitle}
+              </p>
             </div>
             <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button onClick={openInMaps} style={{
-                padding: "0.45rem 1rem", borderRadius: "8px",
-                background: "var(--color-primary, #10b981)", color: "#fff",
-                border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.82rem",
-              }}>{t.propertyDetail.openStreetMap}</button>
-              <button onClick={openInGoogleMaps} style={{
-                padding: "0.45rem 1rem", borderRadius: "8px",
-                background: "#4285F4", color: "#fff",
-                border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.82rem",
-              }}>{t.propertyDetail.googleMaps}</button>
+              <button
+                onClick={openInMaps}
+                style={{
+                  padding: "0.45rem 1rem",
+                  borderRadius: "8px",
+                  background: "var(--color-primary, #10b981)",
+                  color: "#fff",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  fontSize: "0.82rem",
+                }}
+              >
+                {t.propertyDetail.openStreetMap}
+              </button>
+              <button
+                onClick={openInGoogleMaps}
+                style={{
+                  padding: "0.45rem 1rem",
+                  borderRadius: "8px",
+                  background: "#4285F4",
+                  color: "#fff",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  fontSize: "0.82rem",
+                }}
+              >
+                {t.propertyDetail.googleMaps}
+              </button>
             </div>
           </div>
         ) : (
           <div ref={mapRef} style={{ height: "380px", width: "100%" }} />
         )}
       </div>
-      <p style={{
-        fontSize: "0.79rem", color: "var(--color-text-muted, #94a3b8)",
-        marginTop: "0.5rem", display: "flex", alignItems: "flex-start", gap: "0.3rem",
-        lineHeight: 1.5,
-      }}>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginTop: "2px", flexShrink: 0 }} aria-hidden="true">
+      <p
+        style={{
+          fontSize: "0.79rem",
+          color: "var(--color-text-muted, #94a3b8)",
+          marginTop: "0.5rem",
+          display: "flex",
+          alignItems: "flex-start",
+          gap: "0.3rem",
+          lineHeight: 1.5,
+        }}
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          style={{ marginTop: "2px", flexShrink: 0 }}
+          aria-hidden="true"
+        >
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
           <circle cx="12" cy="10" r="3" />
         </svg>
@@ -558,6 +647,20 @@ const PetIcon = () => (
   </svg>
 );
 
+const CalendarIcon = () => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
+    <rect x="3" y="4" width="18" height="18" rx="2" />
+    <path d="M16 2v4M8 2v4M3 10h18" />
+  </svg>
+);
+
 const BackIcon = () => (
   <svg
     width="20"
@@ -623,7 +726,10 @@ function ImageGallery({ images }: ImageGalleryProps) {
     return (
       <div className="property-gallery">
         <div className="gallery-main">
-          <img src="/placeholder-property.svg" alt={t.propertyDetail.galleryPlaceholder} />
+          <img
+            src="/placeholder-property.svg"
+            alt={t.propertyDetail.galleryPlaceholder}
+          />
         </div>
       </div>
     );
@@ -660,7 +766,10 @@ function ImageGallery({ images }: ImageGalleryProps) {
               />
               {index === 1 && images.length > 3 && (
                 <div className="gallery-more">
-                  {t.propertyDetail.morePhotos.replace("{{count}}", String(images.length - 3))}
+                  {t.propertyDetail.morePhotos.replace(
+                    "{{count}}",
+                    String(images.length - 3),
+                  )}
                 </div>
               )}
             </button>
@@ -684,6 +793,9 @@ export default function PropertyDetailPage() {
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<"load" | null>(null);
+  const [shareData, setShareData] = useState<PropertyShareData | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
 
   const loadProperty = useCallback(async () => {
     if (!id) return;
@@ -712,9 +824,7 @@ export default function PropertyDetailPage() {
     const propertyId = property.id || property._id;
     if (!propertyId) return;
 
-    if (
-      window.confirm(t.propertyDetail.deleteConfirm)
-    ) {
+    if (window.confirm(t.propertyDetail.deleteConfirm)) {
       try {
         await propertyService.deleteProperty(propertyId);
         navigate("/properties");
@@ -726,14 +836,127 @@ export default function PropertyDetailPage() {
   };
 
   const getStatusLabel = (status: string) =>
-    t.propertyDetail.status[
-      status as keyof typeof t.propertyDetail.status
-    ] || status;
+    t.propertyDetail.status[status as keyof typeof t.propertyDetail.status] ||
+    status;
 
   const getTypeLabel = (type: string) =>
-    t.propertyDetail.type[
-      type as keyof typeof t.propertyDetail.type
-    ] || type;
+    t.propertyDetail.type[type as keyof typeof t.propertyDetail.type] || type;
+
+  const formatDate = (value?: string) => {
+    if (!value) return t.propertyDetail.availability.notSpecified;
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+
+    return parsed.toLocaleDateString();
+  };
+
+  const getFallbackShareUrl = () => {
+    const propertyId = property?.id || property?._id || id;
+
+    if (!propertyId) {
+      return window.location.href;
+    }
+
+    return `${window.location.origin}/properties/${propertyId}`;
+  };
+
+  const copyToClipboard = async (text: string): Promise<boolean> => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+
+      const copied = document.execCommand("copy");
+      document.body.removeChild(textarea);
+      return copied;
+    } catch {
+      return false;
+    }
+  };
+
+  const ensureShareData = async (
+    withQr = false,
+  ): Promise<PropertyShareData> => {
+    if (shareData && (!withQr || shareData.qrCode)) {
+      return shareData;
+    }
+
+    if (!id) {
+      return {
+        shareUrl: getFallbackShareUrl(),
+        qrCode: "",
+      };
+    }
+
+    const data = await propertyService.getPropertyShareData(id);
+    setShareData(data);
+    return data;
+  };
+
+  const handleCopyLink = async () => {
+    setShareMessage(null);
+
+    try {
+      const data = await ensureShareData(false);
+      const copied = await copyToClipboard(
+        data.shareUrl || getFallbackShareUrl(),
+      );
+
+      setShareMessage(
+        copied ? t.propertyDetail.copySuccess : t.propertyDetail.copyError,
+      );
+    } catch {
+      const copied = await copyToClipboard(getFallbackShareUrl());
+      setShareMessage(
+        copied ? t.propertyDetail.copySuccess : t.propertyDetail.copyError,
+      );
+    }
+  };
+
+  const handleNativeShare = async () => {
+    setShareMessage(null);
+
+    if (!navigator.share) {
+      setShareMessage(t.propertyDetail.shareNotSupported);
+      return;
+    }
+
+    try {
+      const data = await ensureShareData(false);
+      await navigator.share({
+        title: property?.title,
+        text: property?.title,
+        url: data.shareUrl || getFallbackShareUrl(),
+      });
+    } catch (error) {
+      if ((error as { name?: string }).name !== "AbortError") {
+        setShareMessage(t.propertyDetail.shareError);
+      }
+    }
+  };
+
+  const handleGenerateQr = async () => {
+    setShareMessage(null);
+    setShareLoading(true);
+
+    try {
+      await ensureShareData(true);
+    } catch {
+      setShareMessage(t.propertyDetail.qrError);
+    } finally {
+      setShareLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -757,7 +980,11 @@ export default function PropertyDetailPage() {
         <main className="property-detail-container">
           <div className="empty-state">
             <h3>{t.propertyDetail.notFoundTitle}</h3>
-            <p>{error ? t.propertyDetail.loadError : t.propertyDetail.notFoundDescription}</p>
+            <p>
+              {error
+                ? t.propertyDetail.loadError
+                : t.propertyDetail.notFoundDescription}
+            </p>
             <Link to="/properties" className="btn-filter primary">
               {t.propertyDetail.returnToList}
             </Link>
@@ -830,7 +1057,9 @@ export default function PropertyDetailPage() {
                 <div className="feature-item">
                   <BedIcon />
                   <div>
-                    <span className="label">{t.propertyDetail.features.bedrooms}</span>
+                    <span className="label">
+                      {t.propertyDetail.features.bedrooms}
+                    </span>
                     <span className="value">{property.features.bedrooms}</span>
                   </div>
                 </div>
@@ -839,7 +1068,9 @@ export default function PropertyDetailPage() {
                 <div className="feature-item">
                   <BathIcon />
                   <div>
-                    <span className="label">{t.propertyDetail.features.bathrooms}</span>
+                    <span className="label">
+                      {t.propertyDetail.features.bathrooms}
+                    </span>
                     <span className="value">{property.features.bathrooms}</span>
                   </div>
                 </div>
@@ -848,7 +1079,9 @@ export default function PropertyDetailPage() {
                 <div className="feature-item">
                   <AreaIcon />
                   <div>
-                    <span className="label">{t.propertyDetail.features.area}</span>
+                    <span className="label">
+                      {t.propertyDetail.features.area}
+                    </span>
                     <span className="value">{property.features.area} m²</span>
                   </div>
                 </div>
@@ -857,13 +1090,17 @@ export default function PropertyDetailPage() {
                 <div className="feature-item">
                   <CarIcon />
                   <div>
-                    <span className="label">{t.propertyDetail.features.parking}</span>
+                    <span className="label">
+                      {t.propertyDetail.features.parking}
+                    </span>
                     <span className="value">
                       {(() => {
                         const spaces = property.features?.parkingSpaces ?? 0;
-                        return (spaces > 1
-                          ? t.propertyDetail.parkingPlural
-                          : t.propertyDetail.parkingSingle).replace("{{count}}", String(spaces));
+                        return (
+                          spaces > 1
+                            ? t.propertyDetail.parkingPlural
+                            : t.propertyDetail.parkingSingle
+                        ).replace("{{count}}", String(spaces));
                       })()}
                     </span>
                   </div>
@@ -873,9 +1110,13 @@ export default function PropertyDetailPage() {
                 <div className="feature-item">
                   <FurnitureIcon />
                   <div>
-                    <span className="label">{t.propertyDetail.features.furnished}</span>
+                    <span className="label">
+                      {t.propertyDetail.features.furnished}
+                    </span>
                     <span className="value">
-                      {property.features.furnished ? t.propertyDetail.yes : t.propertyDetail.no}
+                      {property.features.furnished
+                        ? t.propertyDetail.yes
+                        : t.propertyDetail.no}
                     </span>
                   </div>
                 </div>
@@ -884,14 +1125,54 @@ export default function PropertyDetailPage() {
                 <div className="feature-item">
                   <PetIcon />
                   <div>
-                    <span className="label">{t.propertyDetail.features.petFriendly}</span>
+                    <span className="label">
+                      {t.propertyDetail.features.petFriendly}
+                    </span>
                     <span className="value">
-                      {property.features.petFriendly ? t.propertyDetail.yes : t.propertyDetail.no}
+                      {property.features.petFriendly
+                        ? t.propertyDetail.yes
+                        : t.propertyDetail.no}
                     </span>
                   </div>
                 </div>
               )}
             </div>
+
+            {(property.features?.availabilityCalendar?.availableFrom ||
+              property.features?.availabilityCalendar?.availableTo) && (
+              <div className="property-description">
+                <h3>{t.propertyDetail.availability.title}</h3>
+                <div className="features-grid">
+                  <div className="feature-item">
+                    <CalendarIcon />
+                    <div>
+                      <span className="label">
+                        {t.propertyDetail.availability.availableFrom}
+                      </span>
+                      <span className="value">
+                        {formatDate(
+                          property.features?.availabilityCalendar
+                            ?.availableFrom,
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="feature-item">
+                    <CalendarIcon />
+                    <div>
+                      <span className="label">
+                        {t.propertyDetail.availability.availableTo}
+                      </span>
+                      <span className="value">
+                        {formatDate(
+                          property.features?.availabilityCalendar?.availableTo,
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {property.description && (
               <div className="property-description">
@@ -926,6 +1207,59 @@ export default function PropertyDetailPage() {
           </div>
 
           <div className="property-sidebar">
+            <div className="sidebar-card">
+              <h3>{t.propertyDetail.shareTitle}</h3>
+              <p className="share-description">
+                {t.propertyDetail.shareDescription}
+              </p>
+              <div className="share-actions">
+                <button className="btn-view" onClick={handleCopyLink}>
+                  {t.propertyDetail.copyLink}
+                </button>
+                <button className="btn-edit" onClick={handleNativeShare}>
+                  {t.propertyDetail.shareProperty}
+                </button>
+                <button
+                  className="btn-contact"
+                  onClick={handleGenerateQr}
+                  disabled={shareLoading}
+                >
+                  {shareLoading
+                    ? t.common.loading
+                    : t.propertyDetail.generateQrCode}
+                </button>
+              </div>
+
+              {shareMessage && <p className="share-feedback">{shareMessage}</p>}
+
+              {shareData?.qrCode && (
+                <div className="share-qr-wrapper">
+                  <img
+                    src={shareData.qrCode}
+                    alt={t.propertyDetail.qrCodeAlt}
+                    className="share-qr-image"
+                  />
+                  <div className="share-qr-actions">
+                    <a
+                      href={shareData.qrCode}
+                      download={`property-${property.id || property._id}-qr.png`}
+                      className="btn-view"
+                    >
+                      {t.propertyDetail.downloadQrCode}
+                    </a>
+                    <a
+                      href={shareData.shareUrl || getFallbackShareUrl()}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-edit"
+                    >
+                      {t.propertyDetail.openSharedLink}
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {canManage && (
               <div className="sidebar-card">
                 <h3>{t.propertyDetail.actions}</h3>
@@ -968,14 +1302,19 @@ export default function PropertyDetailPage() {
                 <h3>{t.propertyDetail.owner}</h3>
                 <div className="owner-info">
                   <div className="owner-avatar">
-                    {property.owner.name?.charAt(0) || t.propertyDetail.ownerFallback.charAt(0)}
+                    {property.owner.name?.charAt(0) ||
+                      t.propertyDetail.ownerFallback.charAt(0)}
                   </div>
                   <div className="owner-details">
-                    <h4>{property.owner.name || t.propertyDetail.ownerFallback}</h4>
+                    <h4>
+                      {property.owner.name || t.propertyDetail.ownerFallback}
+                    </h4>
                     <p>{property.owner.email}</p>
                   </div>
                 </div>
-                <button className="btn-contact">{t.propertyDetail.contactOwner}</button>
+                <button className="btn-contact">
+                  {t.propertyDetail.contactOwner}
+                </button>
               </div>
             )}
 
@@ -989,16 +1328,15 @@ export default function PropertyDetailPage() {
                   }}
                 >
                   <p>
-                    <strong>{t.propertyDetail.propertyId}:</strong> {property.id || property._id}
+                    <strong>{t.propertyDetail.propertyId}:</strong>{" "}
+                    {property.id || property._id}
                   </p>
                   <p>
-                    <strong>{t.propertyDetail.createdAt}:</strong>
-                    {" "}
+                    <strong>{t.propertyDetail.createdAt}:</strong>{" "}
                     {new Date(property.createdAt).toLocaleDateString()}
                   </p>
                   <p>
-                    <strong>{t.propertyDetail.updatedAt}:</strong>
-                    {" "}
+                    <strong>{t.propertyDetail.updatedAt}:</strong>{" "}
                     {new Date(property.updatedAt).toLocaleDateString()}
                   </p>
                 </div>

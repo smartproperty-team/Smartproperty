@@ -35,6 +35,10 @@ export interface PropertyFeatures {
   furnished?: boolean;
   petFriendly?: boolean;
   amenities?: string[];
+  availabilityCalendar?: {
+    availableFrom?: string;
+    availableTo?: string;
+  };
 }
 
 export interface PropertyImage {

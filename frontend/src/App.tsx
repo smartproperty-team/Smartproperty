@@ -23,7 +23,7 @@ import {
   SessionsPage,
   VerificationPage,
 } from "./pages/dashboard";
-import { HomePage } from "./pages/home";
+import { HomePage, PaletteDemoPage } from "./pages/home";
 import { PreferencesOnboardingModal } from "./pages/onboarding";
 import { ProfilePage } from "./pages/profile";
 import {
@@ -102,6 +102,7 @@ function App() {
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<HomePage />} />
+        <Route path="/design/palette" element={<PaletteDemoPage />} />
         <Route
           path="/login"
           element={

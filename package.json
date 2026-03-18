@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@jridgewell/resolve-uri": "^3.1.2",
+    "motion": "^12.38.0",
     "promise": "^8.3.0"
   }
 }

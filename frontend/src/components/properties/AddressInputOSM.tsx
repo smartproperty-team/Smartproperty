@@ -6,6 +6,7 @@
 // ESLint disable for external API types
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "../../i18n";
 import MapPicker from "./MapPicker";
 
 export interface AddressData {
@@ -69,6 +70,7 @@ export default function AddressInput({
   errors,
   disabled = false,
 }: AddressInputProps) {
+  const t = useTranslation();
   const [searchQuery, setSearchQuery] = useState(addressToSearchString(value));
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -161,11 +163,13 @@ export default function AddressInput({
     }
 
     const newAddress: AddressData = {
-      street: street || "Adresse complète non disponible",
-      city: city || "Ville non spécifiée",
+      street:
+        street || t.properties.form.addressHelper.fallback.streetUnavailable,
+      city: city || t.properties.form.addressHelper.fallback.cityUnspecified,
       state: state || "",
       zipCode: zipCode || "",
-      country: country || "Pays non spécifié",
+      country:
+        country || t.properties.form.addressHelper.fallback.countryUnspecified,
       coordinates: {
         lat: parseFloat(result.lat),
         lng: parseFloat(result.lon),
@@ -273,7 +277,7 @@ export default function AddressInput({
           }}
         >
           <span style={{ fontSize: "1.2rem" }}>🗺️</span>
-          <span>Choisir l'adresse sur la carte interactive</span>
+          <span>{t.properties.form.addressHelper.mapButton}</span>
         </button>
         <div style={{ position: "relative" }}>
           <input
@@ -282,7 +286,7 @@ export default function AddressInput({
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
             onFocus={() => searchResults.length > 0 && setShowResults(true)}
-            placeholder="Tapez une adresse (rue, ville, code postal...)"
+            placeholder={t.properties.form.addressHelper.searchPlaceholder}
             disabled={disabled}
             style={{
               width: "100%",
@@ -303,7 +307,7 @@ export default function AddressInput({
                 fontSize: "0.8rem",
               }}
             >
-              ⏳ Recherche...
+              ⏳ {t.properties.form.addressHelper.searching}
             </div>
           )}
 
@@ -388,8 +392,7 @@ export default function AddressInput({
               fontSize: "0.9rem",
             }}
           >
-            ✅ Adresse sélectionnée ! Vérifiez les champs ci-dessous et modifiez
-            si nécessaire.
+            {t.properties.form.addressHelper.successMessage}
           </div>
         )}
       </div>
@@ -398,7 +401,8 @@ export default function AddressInput({
       <div className="form-grid" style={{ marginTop: "1.5rem" }}>
         <div className="form-group full-width">
           <label htmlFor="street">
-            Rue <span className="required">*</span>
+            {t.properties.form.addressHelper.fields.street}{" "}
+            <span className="required">*</span>
           </label>
           <input
             id="street"
@@ -406,7 +410,7 @@ export default function AddressInput({
             type="text"
             value={value.street}
             onChange={(e) => handleManualChange("street", e.target.value)}
-            placeholder="Numéro et nom de rue"
+            placeholder={t.properties.form.addressHelper.placeholders.street}
             disabled={disabled}
             className={errors?.street ? "error" : ""}
           />
@@ -417,7 +421,8 @@ export default function AddressInput({
 
         <div className="form-group">
           <label htmlFor="city">
-            Ville <span className="required">*</span>
+            {t.properties.form.addressHelper.fields.city}{" "}
+            <span className="required">*</span>
           </label>
           <input
             id="city"
@@ -425,7 +430,7 @@ export default function AddressInput({
             type="text"
             value={value.city}
             onChange={(e) => handleManualChange("city", e.target.value)}
-            placeholder="Ville"
+            placeholder={t.properties.form.addressHelper.placeholders.city}
             disabled={disabled}
             className={errors?.city ? "error" : ""}
           />
@@ -433,34 +438,39 @@ export default function AddressInput({
         </div>
 
         <div className="form-group">
-          <label htmlFor="state">Région / État</label>
+          <label htmlFor="state">
+            {t.properties.form.addressHelper.fields.state}
+          </label>
           <input
             id="state"
             name="state"
             type="text"
             value={value.state}
             onChange={(e) => handleManualChange("state", e.target.value)}
-            placeholder="Région ou état"
+            placeholder={t.properties.form.addressHelper.placeholders.state}
             disabled={disabled}
           />
         </div>
 
         <div className="form-group">
-          <label htmlFor="zipCode">Code postal</label>
+          <label htmlFor="zipCode">
+            {t.properties.form.addressHelper.fields.zipCode}
+          </label>
           <input
             id="zipCode"
             name="zipCode"
             type="text"
             value={value.zipCode}
             onChange={(e) => handleManualChange("zipCode", e.target.value)}
-            placeholder="Code postal"
+            placeholder={t.properties.form.addressHelper.placeholders.zipCode}
             disabled={disabled}
           />
         </div>
 
         <div className="form-group full-width">
           <label htmlFor="country">
-            Pays <span className="required">*</span>
+            {t.properties.form.addressHelper.fields.country}{" "}
+            <span className="required">*</span>
           </label>
           <input
             id="country"
@@ -468,7 +478,7 @@ export default function AddressInput({
             type="text"
             value={value.country}
             onChange={(e) => handleManualChange("country", e.target.value)}
-            placeholder="Pays"
+            placeholder={t.properties.form.addressHelper.placeholders.country}
             disabled={disabled}
             className={errors?.country ? "error" : ""}
           />
@@ -489,50 +499,57 @@ export default function AddressInput({
         }}
       >
         <summary style={{ fontWeight: "bold", color: "#333" }}>
-          📍 Coordonnées GPS (optionnel)
+          📍 {t.properties.form.addressHelper.coordinates.summary}
         </summary>
         <div className="form-grid" style={{ marginTop: "1rem" }}>
           <div className="form-group">
-            <label htmlFor="lat">Latitude</label>
+            <label htmlFor="lat">
+              {t.properties.form.addressHelper.fields.latitude}
+            </label>
             <input
               id="lat"
               type="number"
               step="0.0001"
               value={value.coordinates?.lat || ""}
               onChange={(e) => handleCoordinateChange("lat", e.target.value)}
-              placeholder="ex: 36.8065"
+              placeholder={
+                t.properties.form.addressHelper.placeholders.latitudeExample
+              }
               disabled={disabled}
             />
             <small style={{ color: "#666" }}>
               {value.coordinates?.lat
                 ? `✅ ${value.coordinates.lat}`
-                : "Auto-rempli"}
+                : t.properties.form.addressHelper.coordinates.autoFilled}
             </small>
           </div>
 
           <div className="form-group">
-            <label htmlFor="lng">Longitude</label>
+            <label htmlFor="lng">
+              {t.properties.form.addressHelper.fields.longitude}
+            </label>
             <input
               id="lng"
               type="number"
               step="0.0001"
               value={value.coordinates?.lng || ""}
               onChange={(e) => handleCoordinateChange("lng", e.target.value)}
-              placeholder="ex: 10.1616"
+              placeholder={
+                t.properties.form.addressHelper.placeholders.longitudeExample
+              }
               disabled={disabled}
             />
             <small style={{ color: "#666" }}>
               {value.coordinates?.lng
                 ? `✅ ${value.coordinates.lng}`
-                : "Auto-rempli"}
+                : t.properties.form.addressHelper.coordinates.autoFilled}
             </small>
           </div>
         </div>
         <small
           style={{ color: "#666", display: "block", marginTop: "0.75rem" }}
         >
-          Les coordonnées sont automatiquement remplies lors de la sélection
-          d'une adresse
+          {t.properties.form.addressHelper.coordinates.help}
         </small>
       </details>
 

@@ -1,4 +1,4 @@
-/* ===========================================
+﻿/* ===========================================
    SmartProperty - Home Page Styles
    Accessible & Modern Real Estate Template
    WCAG 2.1 AA Compliant
@@ -6,22 +6,22 @@
 
 /* CSS Custom Properties for consistent theming */
 :root {
-  --color-primary: #e8941e;
-  --color-primary-dark: #d4851a;
-  --color-primary-light: #dbeafe;
-  --color-secondary: #1e293b;
-  --color-secondary-dark: #0f172a;
-  --color-accent: #f59e0b;
+  --color-primary: #1a3263;
+  --color-primary-dark: #14284f;
+  --color-primary-light: #d6e2eb;
+  --color-secondary: #547792;
+  --color-secondary-dark: #3f6077;
+  --color-accent: #ffc570;
   --color-success: #10b981;
-  --color-text: #1e293b;
-  --color-text-muted: #64748b;
-  --color-border: #e2e8f0;
-  --color-background: #ffffff;
-  --color-background-alt: #f8fafc;
+  --color-text: #1a3263;
+  --color-text-muted: #547792;
+  --color-border: #b9c6d3;
+  --color-background: #eee0d0;
+  --color-background-alt: #f5efe7;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
   --shadow-md: 0 4px 24px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.15);
-  --shadow-primary: 0 8px 24px rgba(59, 130, 246, 0.4);
+  --shadow-primary: 0 8px 24px rgba(26, 50, 99, 0.35);
   --radius-sm: 8px;
   --radius-md: 16px;
   --radius-lg: 20px;
@@ -29,7 +29,7 @@
   --transition-fast: 0.15s ease;
   --transition-normal: 0.2s ease;
   --transition-slow: 0.3s ease;
-  --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.5);
+  --focus-ring: 0 0 0 3px rgba(84, 119, 146, 0.45);
 }
 
 /* Reset and Base Styles */
@@ -169,7 +169,7 @@ select:focus-visible {
 
 .nav-link {
   text-decoration: none;
-  color: #0f172a;
+  color: var(--color-primary);
   font-weight: 600;
   font-size: 1rem;
   transition: color var(--transition-fast);
@@ -187,7 +187,7 @@ select:focus-visible {
   left: 0;
   width: 0;
   height: 2px;
-  background: #f3a746;
+  background: var(--color-accent);
   transition: width var(--transition-normal);
   border-radius: 1px;
 }
@@ -199,7 +199,7 @@ select:focus-visible {
 
 .nav-link:hover,
 .nav-link.active {
-  color: #0f172a;
+  color: var(--color-primary);
 }
 
 .nav-link:focus-visible {
@@ -238,8 +238,8 @@ select:focus-visible {
 
 .navbar-user-btn {
   border-radius: 100px;
-  border: 1px solid #f3a746;
-  background: #f3a746;
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -268,8 +268,8 @@ select:focus-visible {
 }
 
 .navbar-user-btn:hover {
-  border-color: #e8941e;
-  background: #e8941e;
+  border-color: var(--color-primary);
+  background: var(--color-primary);
 }
 
 .navbar-user-btn:focus-visible {
@@ -327,7 +327,7 @@ select:focus-visible {
   outline-offset: 2px;
 }
 
-/* ─── Notification Bell ─────────────────────── */
+/* â”€â”€â”€ Notification Bell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .navbar-notif-wrapper {
   position: relative;
 }
@@ -336,8 +336,8 @@ select:focus-visible {
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  border: 1px solid #f3a746;
-  background: #f3a746;
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -347,8 +347,8 @@ select:focus-visible {
 }
 
 .navbar-notif-btn:hover {
-  border-color: #e8941e;
-  background: #e8941e;
+  border-color: var(--color-primary);
+  background: var(--color-primary);
 }
 
 .navbar-notif-btn svg {
@@ -384,7 +384,7 @@ select:focus-visible {
   line-height: 1;
 }
 
-/* ─── Notification Panel ────────────────────── */
+/* â”€â”€â”€ Notification Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .notif-panel {
   position: absolute;
   top: calc(100% + 10px);
@@ -540,9 +540,9 @@ select:focus-visible {
 
 .navbar .btn-add-property {
   text-decoration: none;
-  background: #f3a746;
+  background: var(--color-accent);
   color: #fff;
-  border: 1px solid #f3a746;
+  border: 1px solid var(--color-accent);
   font-weight: 700;
   font-size: 1rem;
   letter-spacing: 0.01em;
@@ -557,8 +557,8 @@ select:focus-visible {
 }
 
 .navbar .btn-add-property:hover {
-  background: #e8941e;
-  border-color: #e8941e;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .navbar .btn-add-property:focus-visible {
@@ -578,15 +578,15 @@ select:focus-visible {
 }
 
 .navbar-language-btn {
-  border-color: #f3a746 !important;
+  border-color: var(--color-accent) !important;
   color: #fff !important;
-  background: #f3a746 !important;
+  background: var(--color-accent) !important;
 }
 
 .navbar-language-btn:hover {
-  border-color: #e8941e !important;
+  border-color: var(--color-primary) !important;
   color: #fff !important;
-  background: #e8941e !important;
+  background: var(--color-primary) !important;
 }
 
 .navbar-readaloud > div {
@@ -597,14 +597,14 @@ select:focus-visible {
 
 .navbar-readaloud button {
   color: #fff !important;
-  background: #f3a746 !important;
-  border: 1px solid #f3a746 !important;
+  background: var(--color-accent) !important;
+  border: 1px solid var(--color-accent) !important;
 }
 
 .navbar-readaloud button:hover {
   color: #fff !important;
-  background: #e8941e !important;
-  border-color: #e8941e !important;
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
 }
 
 @media (max-width: 1360px) {
@@ -766,7 +766,7 @@ select:focus-visible {
 .hero-title {
   font-size: clamp(2.75rem, 6vw, 5.25rem);
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-primary);
   line-height: 1.03;
   margin: 0 auto 2.25rem;
   letter-spacing: -0.02em;
@@ -790,13 +790,13 @@ select:focus-visible {
 }
 
 .search-tab-btn {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-background-alt);
+  border: 1px solid var(--color-border);
   border-bottom: none;
   padding: 0.95rem 2.5rem;
   font-size: 1.375rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--color-primary);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
@@ -909,12 +909,12 @@ select:focus-visible {
 }
 
 .search-button:hover {
-  background: #e58900;
+  background: var(--color-primary-dark);
   transform: translateY(-1px);
 }
 
 .search-button:focus-visible {
-  outline: 2px solid #e58900;
+  outline: 2px solid var(--color-primary-dark);
   outline-offset: 2px;
 }
 
@@ -1003,7 +1003,7 @@ select:focus-visible {
    Categories Section
    ============================================ */
 .categories-section {
-  background: #f8fafc;
+  background: var(--color-background-alt);
 }
 
 .categories-grid {
@@ -1037,12 +1037,12 @@ select:focus-visible {
 .category-card h3 {
   font-size: 1.125rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--color-primary);
   margin-bottom: 0.5rem;
 }
 
 .category-count {
-  color: #64748b;
+  color: var(--color-secondary);
   font-size: 0.875rem;
 }
 
@@ -1050,7 +1050,11 @@ select:focus-visible {
    Stats Section
    ============================================ */
 .stats-section {
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    var(--color-primary) 100%
+  );
   padding: 4rem 2rem;
 }
 
@@ -1680,8 +1684,8 @@ select:focus-visible {
    Footer
    ============================================ */
 .footer {
-  background: #edf1f6;
-  border-top: 1px solid #d7dce4;
+  background: var(--color-background-alt);
+  border-top: 1px solid var(--color-border);
   padding: 4rem 2rem 2.2rem;
 }
 
@@ -1707,13 +1711,13 @@ select:focus-visible {
 .footer-follow span {
   font-size: 1rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--color-primary);
   letter-spacing: 0.02em;
 }
 
 .footer-divider {
   height: 1px;
-  background: #d7dce4;
+  background: var(--color-border);
   margin-bottom: 2.4rem;
 }
 
@@ -1735,12 +1739,12 @@ select:focus-visible {
 .footer-logo .logo-icon-svg {
   width: 28px;
   height: 28px;
-  color: #f3a746;
+  color: var(--color-accent);
 }
 
 .footer-logo .logo-text {
-  color: #f3a746;
-  -webkit-text-fill-color: #f3a746;
+  color: var(--color-accent);
+  -webkit-text-fill-color: var(--color-accent);
 }
 
 .footer-section p {
@@ -1751,7 +1755,7 @@ select:focus-visible {
 }
 
 .footer-about h4 {
-  color: #0f172a;
+  color: var(--color-primary);
 }
 
 /* Social Links */
@@ -1764,18 +1768,18 @@ select:focus-visible {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #f7f8fa;
+  background: var(--color-background-alt);
   border: 1px solid #f3d8b4;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #f3a746;
+  color: var(--color-accent);
   text-decoration: none;
   transition: all var(--transition-fast);
 }
 
 .social-link:hover {
-  background: #f3a746;
+  background: var(--color-accent);
   color: white;
   transform: translateY(-2px);
 }
@@ -1786,7 +1790,7 @@ select:focus-visible {
 }
 
 .footer-section h4 {
-  color: #0f172a;
+  color: var(--color-primary);
   font-size: 1.9rem;
   font-weight: 700;
   margin-bottom: 1.3rem;
@@ -1806,7 +1810,7 @@ select:focus-visible {
 }
 
 .footer-section ul li svg {
-  color: #f3a746;
+  color: var(--color-accent);
   flex-shrink: 0;
 }
 
@@ -1824,7 +1828,7 @@ select:focus-visible {
 }
 
 .footer-section ul li a:hover {
-  color: #f3a746;
+  color: var(--color-accent);
 }
 
 .footer-section ul li a:focus-visible {
@@ -1843,9 +1847,9 @@ select:focus-visible {
 .footer-subscribe-form input {
   width: 100%;
   height: 58px;
-  border: 1px solid #cfd5df;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: #f7f8fa;
+  background: var(--color-background-alt);
   padding: 0 1rem;
   font-size: 1rem;
   color: #334155;
@@ -1853,15 +1857,15 @@ select:focus-visible {
 
 .footer-subscribe-form input:focus {
   outline: none;
-  border-color: #f3a746;
+  border-color: var(--color-accent);
   box-shadow: 0 0 0 3px rgba(243, 167, 70, 0.18);
 }
 
 .footer-subscribe-form button {
   height: 58px;
-  border: 1px solid #f3a746;
+  border: 1px solid var(--color-accent);
   border-radius: 6px;
-  background: #f3a746;
+  background: var(--color-accent);
   color: #fff;
   font-size: 1rem;
   font-weight: 700;
@@ -1870,14 +1874,14 @@ select:focus-visible {
 }
 
 .footer-subscribe-form button:hover {
-  background: #e8941e;
-  border-color: #e8941e;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .footer-bottom {
   margin: 2.6rem auto 0;
   padding-top: 2rem;
-  border-top: 1px solid #d7dce4;
+  border-top: 1px solid var(--color-border);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1904,7 +1908,7 @@ select:focus-visible {
 }
 
 .footer-legal a:hover {
-  color: #f3a746;
+  color: var(--color-accent);
 }
 
 .footer-legal a:focus-visible {

@@ -87,6 +87,10 @@ export class Property {
     furnished?: boolean;
     petFriendly?: boolean;
     amenities?: string[];
+    availabilityCalendar?: {
+      availableFrom?: string;
+      availableTo?: string;
+    };
   };
 
   @Column('simple-json', { nullable: true })

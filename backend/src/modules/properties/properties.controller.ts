@@ -15,6 +15,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -43,7 +44,10 @@ import { PropertiesService } from './properties.service';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class PropertiesController {
-  constructor(private readonly propertiesService: PropertiesService) {}
+  constructor(
+    private readonly propertiesService: PropertiesService,
+    private readonly configService: ConfigService,
+  ) {}
 
   // ===========================================
   // List Properties (Public)
@@ -70,6 +74,31 @@ export class PropertiesController {
   // ===========================================
   // Get Property (Public)
   // ===========================================
+
+  @Public()
+  @Get(':id/share')
+  @ApiOperation({ summary: 'Get property share link and QR code' })
+  @ApiResponse({ status: 200, description: 'Property share payload' })
+  @ApiResponse({ status: 404, description: 'Property not found' })
+  async getShareData(@Param('id') id: string) {
+    const property = await this.propertiesService.findById(id);
+
+    const corsOrigin = this.configService.get<string>('app.corsOrigin') || '';
+    const frontendBaseUrl =
+      corsOrigin
+        .split(',')
+        .map((value) => value.trim())
+        .find((value) => value && value !== '*')
+        ?.replace(/\/$/, '') || 'http://localhost:5173';
+
+    const shareUrl = `${frontendBaseUrl}/properties/${property.id}`;
+    const qrCode = await this.propertiesService.generateShareQRCode(shareUrl);
+
+    return {
+      shareUrl,
+      qrCode,
+    };
+  }
 
   @Public()
   @Get(':id')

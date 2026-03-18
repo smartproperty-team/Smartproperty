@@ -139,29 +139,27 @@ const MyPropertiesIcon = () => (
 
 interface PropertyCardProps {
   property: Property;
-  onDelete?: (id: string) => void;
-  canManage?: boolean;
+  onToggleCompare?: (property: Property) => void;
+  onQuickShare?: (property: Property) => void;
+  isCompared?: boolean;
+  compareDisabled?: boolean;
+  isSharing?: boolean;
   t: ReturnType<typeof import("@/i18n").useTranslation>;
 }
 
 function PropertyCard({
   property,
-  onDelete,
-  canManage = true,
+  onToggleCompare,
+  onQuickShare,
+  isCompared = false,
+  compareDisabled = false,
+  isSharing = false,
   t,
 }: PropertyCardProps) {
   const propertyId = property.id || property._id || "";
   const primaryImage =
     property.images?.find((img) => img.isPrimary) || property.images?.[0];
   const imageUrl = primaryImage?.url || "/placeholder-property.svg";
-
-  const handleDelete = () => {
-    if (window.confirm(t.properties.deleteConfirm)) {
-      if (propertyId) {
-        onDelete?.(propertyId);
-      }
-    }
-  };
 
   const statusLabel =
     property.status === "available"
@@ -214,13 +212,17 @@ function PropertyCard({
           {property.features?.bedrooms !== undefined && (
             <div className="meta-item">
               <BedIcon />
-              <dd>{property.features.bedrooms} {t.properties.beds}</dd>
+              <dd>
+                {property.features.bedrooms} {t.properties.beds}
+              </dd>
             </div>
           )}
           {property.features?.bathrooms !== undefined && (
             <div className="meta-item">
               <BathIcon />
-              <dd>{property.features.bathrooms} {t.properties.baths}</dd>
+              <dd>
+                {property.features.bathrooms} {t.properties.baths}
+              </dd>
             </div>
           )}
           {property.features?.area !== undefined && (
@@ -236,20 +238,29 @@ function PropertyCard({
           <span className="currency">{property.currency}</span>
         </div>
 
+        <button
+          type="button"
+          className={`btn-compare-toggle ${isCompared ? "active" : ""}`}
+          disabled={compareDisabled && !isCompared}
+          onClick={() => onToggleCompare?.(property)}
+        >
+          {isCompared
+            ? t.properties.removeFromCompare
+            : t.properties.addToCompare}
+        </button>
+
         <div className="property-card-actions">
           <Link to={`/properties/${propertyId}`} className="btn-view">
             {t.properties.viewBtn}
           </Link>
-          {canManage && (
-            <>
-              <Link to={`/properties/${propertyId}/edit`} className="btn-edit">
-                {t.properties.editBtn}
-              </Link>
-              <button className="btn-delete" onClick={handleDelete}>
-                {t.properties.deleteBtn}
-              </button>
-            </>
-          )}
+          <button
+            type="button"
+            className="btn-share"
+            onClick={() => onQuickShare?.(property)}
+            disabled={isSharing}
+          >
+            {isSharing ? t.common.loading : t.properties.shareBtn}
+          </button>
         </div>
       </div>
     </article>
@@ -267,6 +278,15 @@ export default function PropertiesPage() {
   const canManage = canManageProperties(user);
   const [searchParams, setSearchParams] = useSearchParams();
   const [properties, setProperties] = useState<Property[]>([]);
+  const [comparisonIds, setComparisonIds] = useState<string[]>([]);
+  const [comparisonError, setComparisonError] = useState<string | null>(null);
+  const [shareNotice, setShareNotice] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+  const [sharingPropertyId, setSharingPropertyId] = useState<string | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<"load" | null>(null);
   const [total, setTotal] = useState(0);
@@ -283,6 +303,56 @@ export default function PropertiesPage() {
   // Local state for text inputs (not linked to API calls until form submit)
   const [searchText, setSearchText] = useState(filters.search || "");
   const [cityText, setCityText] = useState(filters.city || "");
+
+  const getPropertyId = (property: Property): string =>
+    property.id || property._id || "";
+
+  const getStatusLabel = (status: PropertyStatus): string =>
+    status === "available"
+      ? t.properties.available
+      : status === "rented"
+        ? t.properties.rented
+        : status === "maintenance"
+          ? t.properties.maintenance
+          : t.properties.unlisted;
+
+  const getTypeLabel = (type: PropertyType): string =>
+    type === "apartment"
+      ? t.properties.typeApartment
+      : type === "house"
+        ? t.properties.typeHouse
+        : type === "villa"
+          ? t.properties.typeVilla
+          : type === "studio"
+            ? t.properties.typeStudio
+            : type === "condo"
+              ? t.properties.typeCondo
+              : t.properties.typeLand;
+
+  const comparedProperties = properties.filter((property) =>
+    comparisonIds.includes(getPropertyId(property)),
+  );
+
+  const formatAvailability = (property: Property): string => {
+    const from = property.features?.availabilityCalendar?.availableFrom;
+    const to = property.features?.availabilityCalendar?.availableTo;
+
+    if (from && to) {
+      return t.properties.comparisonFromTo
+        .replace("{{from}}", from)
+        .replace("{{to}}", to);
+    }
+
+    if (from) {
+      return t.properties.comparisonFrom.replace("{{from}}", from);
+    }
+
+    if (to) {
+      return t.properties.comparisonUntil.replace("{{to}}", to);
+    }
+
+    return t.properties.comparisonNotSpecified;
+  };
 
   // Load properties
   const loadProperties = useCallback(async () => {
@@ -306,31 +376,26 @@ export default function PropertiesPage() {
     loadProperties();
   }, [loadProperties]);
 
-  const canManageProperty = useCallback(
-    (property: Property) => {
-      if (!user) return false;
-
-      if (user.role === "admin") return true;
-      if (user.role === "owner") return property.ownerId === user.id;
-      if (user.role === "manager") {
-        return property.managerId === user.id || property.ownerId === user.id;
-      }
-
-      return false;
-    },
-    [user],
-  );
-
+  useEffect(() => {
+    setComparisonIds((prev) =>
+      prev.filter((id) =>
+        properties.some((property) => getPropertyId(property) === id),
+      ),
+    );
+  }, [properties]);
 
   // Sync URL params with current filters
-  const updateUrlParams = useCallback((f: PropertyFilters) => {
-    const params = new URLSearchParams();
-    if (f.type) params.set("type", f.type);
-    if (f.status) params.set("status", f.status);
-    if (f.city) params.set("city", f.city);
-    if (f.search) params.set("search", f.search);
-    setSearchParams(params);
-  }, [setSearchParams]);
+  const updateUrlParams = useCallback(
+    (f: PropertyFilters) => {
+      const params = new URLSearchParams();
+      if (f.type) params.set("type", f.type);
+      if (f.status) params.set("status", f.status);
+      if (f.city) params.set("city", f.city);
+      if (f.search) params.set("search", f.search);
+      setSearchParams(params);
+    },
+    [setSearchParams],
+  );
 
   // Handle dropdown filter changes (triggers API immediately)
   const handleFilterChange = (key: keyof PropertyFilters, value: string) => {
@@ -360,15 +425,100 @@ export default function PropertiesPage() {
     setSearchParams({});
   };
 
-  // Handle delete
-  const handleDelete = async (id: string) => {
+  const handleToggleCompare = (property: Property) => {
+    const id = getPropertyId(property);
+    if (!id) return;
+
+    setComparisonError(null);
+
+    setComparisonIds((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((comparedId) => comparedId !== id);
+      }
+
+      if (prev.length >= 3) {
+        setComparisonError(t.properties.compareLimitReached);
+        return prev;
+      }
+
+      return [...prev, id];
+    });
+  };
+
+  const handleCompareNow = () => {
+    if (comparedProperties.length < 2) {
+      setComparisonError(t.properties.compareNeedTwo);
+      return;
+    }
+
+    const section = document.getElementById("comparison-panel");
+    section?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const copyToClipboard = async (text: string): Promise<boolean> => {
     try {
-      await propertyService.deleteProperty(id);
-      setProperties(properties.filter((p) => (p.id || p._id) !== id));
-      setTotal(total - 1);
-    } catch (err) {
-      console.error("Failed to delete property:", err);
-      alert(t.properties.deleteError);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+
+      const copied = document.execCommand("copy");
+      document.body.removeChild(textarea);
+      return copied;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleQuickShare = async (property: Property) => {
+    const propertyId = getPropertyId(property);
+    if (!propertyId) return;
+
+    setSharingPropertyId(propertyId);
+    setShareNotice(null);
+
+    const fallbackUrl = `${window.location.origin}/properties/${propertyId}`;
+
+    try {
+      const shareData = await propertyService.getPropertyShareData(propertyId);
+      const shareUrl = shareData.shareUrl || fallbackUrl;
+
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: property.title,
+            text: property.title,
+            url: shareUrl,
+          });
+          return;
+        } catch (error) {
+          if ((error as { name?: string }).name === "AbortError") {
+            return;
+          }
+        }
+      }
+
+      const copied = await copyToClipboard(shareUrl);
+      setShareNotice({
+        type: copied ? "success" : "error",
+        message: copied ? t.properties.shareCopied : t.properties.shareError,
+      });
+    } catch {
+      const copied = await copyToClipboard(fallbackUrl);
+      setShareNotice({
+        type: copied ? "success" : "error",
+        message: copied ? t.properties.shareCopied : t.properties.shareError,
+      });
+    } finally {
+      setSharingPropertyId(null);
     }
   };
 
@@ -393,18 +543,20 @@ export default function PropertiesPage() {
                 {total} {t.properties.title.toLowerCase()} {t.properties.found}
               </p>
             </div>
-            {canAddProperty && (
-              <Link to="/properties/new" className="btn-add-property">
-                <PlusIcon />
-                {t.properties.addProperty}
-              </Link>
-            )}
-            {canManage && (
-              <Link to="/properties/mine" className="btn-my-properties">
-                <MyPropertiesIcon />
-                {t.properties.showMyProperties}
-              </Link>
-            )}
+            <div className="header-cta-group">
+              {canAddProperty && (
+                <Link to="/properties/new" className="btn-add-property">
+                  <PlusIcon />
+                  {t.properties.addProperty}
+                </Link>
+              )}
+              {canManage && (
+                <Link to="/properties/mine" className="btn-my-properties">
+                  <MyPropertiesIcon />
+                  {t.properties.showMyProperties}
+                </Link>
+              )}
+            </div>
             {/* Filters */}
             <form className="properties-filters" onSubmit={handleSearch}>
               <div className="filters-row">
@@ -427,7 +579,9 @@ export default function PropertiesPage() {
                     onChange={(e) => handleFilterChange("type", e.target.value)}
                   >
                     <option value="">{t.properties.allTypes}</option>
-                    <option value="apartment">{t.properties.typeApartment}</option>
+                    <option value="apartment">
+                      {t.properties.typeApartment}
+                    </option>
                     <option value="house">{t.properties.typeHouse}</option>
                     <option value="villa">{t.properties.typeVilla}</option>
                     <option value="studio">{t.properties.typeStudio}</option>
@@ -437,16 +591,22 @@ export default function PropertiesPage() {
                 </div>
 
                 <div className="filter-group">
-                  <label htmlFor="filter-status">{t.properties.statusLabel}</label>
+                  <label htmlFor="filter-status">
+                    {t.properties.statusLabel}
+                  </label>
                   <select
                     id="filter-status"
                     value={filters.status || ""}
-                    onChange={(e) => handleFilterChange("status", e.target.value)}
+                    onChange={(e) =>
+                      handleFilterChange("status", e.target.value)
+                    }
                   >
                     <option value="">{t.properties.allStatuses}</option>
                     <option value="available">{t.properties.available}</option>
                     <option value="rented">{t.properties.rented}</option>
-                    <option value="maintenance">{t.properties.maintenance}</option>
+                    <option value="maintenance">
+                      {t.properties.maintenance}
+                    </option>
                     <option value="unlisted">{t.properties.unlisted}</option>
                   </select>
                 </div>
@@ -479,6 +639,188 @@ export default function PropertiesPage() {
             </form>
           </div>
         </div>
+
+        {/* Compare Toolbar */}
+        {comparisonIds.length > 0 && (
+          <div className="compare-toolbar">
+            <p>
+              {comparisonIds.length} {t.properties.selectedForCompare}
+            </p>
+            <div className="compare-toolbar-actions">
+              <button
+                type="button"
+                className="btn-filter primary"
+                onClick={handleCompareNow}
+              >
+                {t.properties.compareNow}
+              </button>
+              <button
+                type="button"
+                className="btn-filter secondary"
+                onClick={() => {
+                  setComparisonIds([]);
+                  setComparisonError(null);
+                }}
+              >
+                {t.properties.clearCompare}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {comparisonError && <p className="compare-error">{comparisonError}</p>}
+        {shareNotice && (
+          <p className={`share-notice ${shareNotice.type}`}>
+            {shareNotice.message}
+          </p>
+        )}
+
+        {/* Comparison Panel */}
+        {comparedProperties.length >= 2 && (
+          <section id="comparison-panel" className="comparison-panel">
+            <h2>{t.properties.comparisonTitle}</h2>
+            <p>{t.properties.comparisonSubtitle}</p>
+
+            <div className="comparison-table-wrapper">
+              <table className="comparison-table">
+                <thead>
+                  <tr>
+                    <th>{t.properties.comparisonField}</th>
+                    {comparedProperties.map((property) => (
+                      <th key={getPropertyId(property)}>
+                        <div className="comparison-property-heading">
+                          <Link to={`/properties/${getPropertyId(property)}`}>
+                            {property.title}
+                          </Link>
+                          <button
+                            type="button"
+                            className="comparison-remove"
+                            onClick={() => handleToggleCompare(property)}
+                          >
+                            {t.properties.removeFromCompare}
+                          </button>
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>{t.properties.comparisonPrice}</td>
+                    {comparedProperties.map((property) => (
+                      <td key={`price-${getPropertyId(property)}`}>
+                        {property.price.toLocaleString()} {property.currency}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td>{t.properties.comparisonStatus}</td>
+                    {comparedProperties.map((property) => (
+                      <td key={`status-${getPropertyId(property)}`}>
+                        {getStatusLabel(property.status)}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td>{t.properties.comparisonType}</td>
+                    {comparedProperties.map((property) => (
+                      <td key={`type-${getPropertyId(property)}`}>
+                        {getTypeLabel(property.type)}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td>{t.properties.comparisonLocation}</td>
+                    {comparedProperties.map((property) => (
+                      <td key={`location-${getPropertyId(property)}`}>
+                        {property.address.city}, {property.address.country}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td>{t.properties.comparisonBedrooms}</td>
+                    {comparedProperties.map((property) => (
+                      <td key={`bedrooms-${getPropertyId(property)}`}>
+                        {property.features?.bedrooms ??
+                          t.properties.comparisonNotSpecified}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td>{t.properties.comparisonBathrooms}</td>
+                    {comparedProperties.map((property) => (
+                      <td key={`bathrooms-${getPropertyId(property)}`}>
+                        {property.features?.bathrooms ??
+                          t.properties.comparisonNotSpecified}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td>{t.properties.comparisonArea}</td>
+                    {comparedProperties.map((property) => (
+                      <td key={`area-${getPropertyId(property)}`}>
+                        {property.features?.area
+                          ? `${property.features.area} m²`
+                          : t.properties.comparisonNotSpecified}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td>{t.properties.comparisonParking}</td>
+                    {comparedProperties.map((property) => (
+                      <td key={`parking-${getPropertyId(property)}`}>
+                        {property.features?.parkingSpaces ??
+                          t.properties.comparisonNotSpecified}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td>{t.properties.comparisonFurnished}</td>
+                    {comparedProperties.map((property) => (
+                      <td key={`furnished-${getPropertyId(property)}`}>
+                        {property.features?.furnished === undefined
+                          ? t.properties.comparisonNotSpecified
+                          : property.features.furnished
+                            ? t.propertyDetail.yes
+                            : t.propertyDetail.no}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td>{t.properties.comparisonPetFriendly}</td>
+                    {comparedProperties.map((property) => (
+                      <td key={`pets-${getPropertyId(property)}`}>
+                        {property.features?.petFriendly === undefined
+                          ? t.properties.comparisonNotSpecified
+                          : property.features.petFriendly
+                            ? t.propertyDetail.yes
+                            : t.propertyDetail.no}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td>{t.properties.comparisonAmenities}</td>
+                    {comparedProperties.map((property) => (
+                      <td key={`amenities-${getPropertyId(property)}`}>
+                        {property.features?.amenities?.length
+                          ? property.features.amenities.join(", ")
+                          : t.properties.comparisonNone}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td>{t.properties.comparisonAvailability}</td>
+                    {comparedProperties.map((property) => (
+                      <td key={`availability-${getPropertyId(property)}`}>
+                        {formatAvailability(property)}
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
 
         {/* Content */}
         {loading ? (
@@ -519,10 +861,11 @@ export default function PropertiesPage() {
                 <PropertyCard
                   key={property.id || property._id}
                   property={property}
-                  onDelete={
-                    canManageProperty(property) ? handleDelete : undefined
-                  }
-                  canManage={canManageProperty(property)}
+                  onToggleCompare={handleToggleCompare}
+                  onQuickShare={handleQuickShare}
+                  isCompared={comparisonIds.includes(getPropertyId(property))}
+                  compareDisabled={comparisonIds.length >= 3}
+                  isSharing={sharingPropertyId === getPropertyId(property)}
                   t={t}
                 />
               ))}

@@ -10,6 +10,7 @@ import { propertyService } from "@/services/property.service";
 import type { Property as BackendProperty } from "@/types/property";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import "./home3.css";
 
 // City data - Famous cities in Tunisia
 const cities = [
@@ -416,7 +417,7 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="hero-section" aria-labelledby="hero-title">
         <div className="hero-content">
-          <p className="hero-kicker">{t.home.heroKicker}</p>
+          <p className="hero-kicker">{t.home.featured}</p>
           <h1 id="hero-title" className="hero-title">
             <span className="hero-title-line">{t.home.heroTitle}</span>
             <span className="hero-title-secondary">{t.home.heroSubtitle}</span>

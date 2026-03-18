@@ -8,13 +8,14 @@ import {
   BellRing,
   ChevronDown,
   LogOut,
+  Menu,
   Monitor,
   Settings,
   User,
+  X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import "../../pages/home/home3.css";
 import ReadAloudWidget from "../accessibility/ReadAloudWidget";
 
 export default function HomeNavbar() {
@@ -36,11 +37,11 @@ export default function HomeNavbar() {
     { to: "/", label: t.nav.home, hasDropdown: true },
     { to: "/properties", label: t.nav.listings, hasDropdown: true },
     { to: "/pages", label: t.nav.pages, hasDropdown: true },
-    { to: "/blog", label: t.nav.news, hasDropdown: true },
+    { to: "/blog", label: t.nav.blog, hasDropdown: true },
     { to: "/contact", label: t.nav.contact, hasDropdown: false },
   ];
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!user) return;
     try {
       const [allNotifs, count] = await Promise.all([
@@ -52,13 +53,19 @@ export default function HomeNavbar() {
     } catch {
       // silently fail
     }
-  };
+  }, [user]);
 
   useEffect(() => {
-    fetchNotifications();
+    const initialTimer = setTimeout(() => {
+      void fetchNotifications();
+    }, 0);
+
     const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, [user]);
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
+  }, [fetchNotifications]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -125,21 +132,24 @@ export default function HomeNavbar() {
         <button
           type="button"
           onClick={openOnboarding}
-          className="fixed right-6 top-20 z-90 flex animate-bounce items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-red-200 hover:bg-red-700"
+          className="fixed right-6 top-20 z-50 flex animate-bounce items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-red-200 hover:bg-red-700"
         >
           <BellRing className="h-4 w-4" />
           {t.nav.completeQuestions}
         </button>
       )}
-      <nav className="navbar" aria-label="Main navigation">
-        <div className="navbar-container">
+      <nav
+        className="fixed inset-x-0 top-0 z-40 border-b border-white/20 bg-[#1A3263] shadow-[0_10px_28px_rgba(20,40,79,0.38)] backdrop-blur"
+        aria-label="Main navigation"
+      >
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-3.5 sm:px-6 lg:px-8">
           <Link
             to="/"
-            className="navbar-logo"
+            className="inline-flex items-center gap-2 text-white transition-colors hover:text-[#FFC570]"
             aria-label="Smart Property - Home"
           >
             <svg
-              className="logo-icon-svg"
+              className="h-7 w-7"
               width="32"
               height="32"
               viewBox="0 0 24 24"
@@ -151,32 +161,34 @@ export default function HomeNavbar() {
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
               <polyline points="9 22 9 12 15 12 15 22" />
             </svg>
-            <span className="logo-text">Smart Property</span>
+            <span className="whitespace-nowrap text-xl font-extrabold tracking-[0.01em]">
+              Smart Property
+            </span>
           </Link>
 
           <button
             type="button"
-            className="mobile-menu-btn"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/20 text-white transition-colors hover:bg-white/10 md:hidden"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-menu"
             aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
           >
-            <span className={`hamburger ${mobileMenuOpen ? "active" : ""}`}>
-              <span></span>
-              <span></span>
-              <span></span>
-            </span>
+            {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
 
-          <div className="navbar-links" role="menubar">
+          <div className="hidden items-center gap-3 md:flex" role="menubar">
             {navLinks.map((link) => {
               const isActive = location.pathname === link.to;
               return (
                 <Link
                   key={link.to}
                   to={link.to}
-                  className={`nav-link ${isActive ? "active" : ""}`}
+                  className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-[15px] font-semibold tracking-[0.01em] transition-colors ${
+                    isActive
+                      ? "bg-[#FFC570] text-[#1A3263]"
+                      : "text-white/95 hover:bg-white/10 hover:text-white"
+                  }`}
                   role="menuitem"
                   aria-current={isActive ? "page" : undefined}
                 >
@@ -193,11 +205,11 @@ export default function HomeNavbar() {
             })}
           </div>
 
-          <div className="navbar-actions">
+          <div className="hidden items-center gap-2.5 md:flex">
             <ReadAloudWidget
               mode="inline"
               showLabel={false}
-              className="navbar-readaloud"
+              className="rounded-full border border-white/25 bg-white/10 px-1.5 text-white"
             />
 
             {user ? (
@@ -205,13 +217,13 @@ export default function HomeNavbar() {
                 <button
                   type="button"
                   onClick={() => setShowUserDropdown(!showUserDropdown)}
-                  className="navbar-user-btn flex items-center space-x-2"
+                  className="inline-flex items-center gap-2 rounded-full border border-[#FFC570] bg-[#FFC570] px-2.5 py-1.5 text-[#1A3263] transition-colors hover:bg-[#f2b75e]"
                   aria-label={`Account: ${user.fullName || user.firstName}`}
                   aria-expanded={showUserDropdown}
                   aria-haspopup="menu"
                   aria-controls="user-menu"
                 >
-                  <div className="navbar-avatar-shell flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-indigo-100 text-indigo-600">
+                  <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/75 text-[#1A3263]">
                     {user.avatar ? (
                       <img
                         src={user.avatar}
@@ -222,10 +234,10 @@ export default function HomeNavbar() {
                       <User className="h-4 w-4" />
                     )}
                   </div>
-                  <span className="user-name hidden sm:inline">
+                  <span className="hidden max-w-32 truncate text-[13px] font-bold text-[#1A3263] sm:inline">
                     {user.fullName || user.firstName}
                   </span>
-                  <ChevronDown className="navbar-user-chevron h-4 w-4 text-gray-500" />
+                  <ChevronDown className="h-4 w-4 text-[#1A3263]" />
                 </button>
 
                 {showUserDropdown && (
@@ -305,7 +317,7 @@ export default function HomeNavbar() {
             ) : (
               <Link
                 to="/login"
-                className="navbar-user-btn"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#FFC570] bg-[#FFC570] text-[#1A3263] transition-colors hover:bg-[#f2b75e]"
                 aria-label="User account"
               >
                 <svg
@@ -324,10 +336,10 @@ export default function HomeNavbar() {
             )}
 
             {user && (
-              <div className="navbar-notif-wrapper" ref={notifPanelRef}>
+              <div className="relative" ref={notifPanelRef}>
                 <button
                   type="button"
-                  className="navbar-notif-btn"
+                  className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/45 bg-white/15 text-white transition-colors hover:bg-white/25"
                   aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
                   title="Notifications"
                   onClick={() => setShowNotifPanel(!showNotifPanel)}
@@ -350,20 +362,25 @@ export default function HomeNavbar() {
                     <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                   </svg>
                   {unreadCount > 0 && (
-                    <span className="notif-badge">
+                    <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
                       {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   )}
                 </button>
 
                 {showNotifPanel && (
-                  <div id="notifications-panel" className="notif-panel">
-                    <div className="notif-panel-header">
-                      <h3>{t.nav.notifications}</h3>
+                  <div
+                    id="notifications-panel"
+                    className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-[#547792]/30 bg-white shadow-xl"
+                  >
+                    <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+                      <h3 className="text-sm font-semibold text-[#1A3263]">
+                        {t.nav.notifications}
+                      </h3>
                       {unreadCount > 0 && (
                         <button
                           type="button"
-                          className="notif-mark-all"
+                          className="text-xs font-semibold text-[#1A3263] hover:text-[#547792]"
                           onClick={async () => {
                             await notificationService.markAllAsRead();
                             await fetchNotifications();
@@ -373,9 +390,9 @@ export default function HomeNavbar() {
                         </button>
                       )}
                     </div>
-                    <div className="notif-panel-list">
+                    <div className="max-h-80 overflow-y-auto">
                       {notifications.length === 0 ? (
-                        <div className="notif-empty">
+                        <div className="flex flex-col items-center gap-2 p-5 text-[#547792]">
                           <svg
                             width="32"
                             height="32"
@@ -388,14 +405,16 @@ export default function HomeNavbar() {
                             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                             <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                           </svg>
-                          <p>{t.nav.noNotifications}</p>
+                          <p className="text-sm">{t.nav.noNotifications}</p>
                         </div>
                       ) : (
                         notifications.map((n) => (
                           <button
                             type="button"
                             key={n.id}
-                            className={`notif-item ${!n.isRead ? "notif-unread" : ""}`}
+                            className={`flex w-full items-start gap-3 border-b border-gray-100 px-4 py-3 text-left transition-colors hover:bg-palette-background ${
+                              !n.isRead ? "bg-[#EFD2B0]/45" : "bg-white"
+                            }`}
                             onClick={async () => {
                               if (!n.isRead) {
                                 await notificationService.markAsRead(n.id);
@@ -408,17 +427,21 @@ export default function HomeNavbar() {
                             }}
                             aria-label={`Notification: ${n.title}`}
                           >
-                            <div className="notif-icon">
+                            <div className="pt-0.5 text-base">
                               {n.type === "verification_approved"
                                 ? "✅"
                                 : n.type === "verification_rejected"
                                   ? "❌"
                                   : "🔔"}
                             </div>
-                            <div className="notif-content">
-                              <p className="notif-title">{n.title}</p>
-                              <p className="notif-message">{n.message}</p>
-                              <span className="notif-time">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold text-[#1A3263]">
+                                {n.title}
+                              </p>
+                              <p className="mt-0.5 line-clamp-2 text-xs text-[#547792]">
+                                {n.message}
+                              </p>
+                              <span className="mt-1 inline-block text-[11px] text-gray-500">
                                 {new Date(n.createdAt).toLocaleDateString(
                                   "en-US",
                                   {
@@ -440,30 +463,36 @@ export default function HomeNavbar() {
             )}
 
             {isOwner(user) && (
-              <Link to="/properties/new" className="btn-add-property">
-                <span className="btn-text">ADD LISTING</span>
-                <span className="btn-icon" aria-hidden="true">
-                  +
-                </span>
+              <Link
+                to="/properties/new"
+                className="inline-flex items-center gap-2 rounded-full bg-[#FFC570] px-4 py-2 text-xs font-bold uppercase tracking-wide text-[#1A3263] transition-colors hover:bg-[#f2b75e]"
+              >
+                <span>ADD LISTING</span>
+                <span aria-hidden="true">+</span>
               </Link>
             )}
 
-            <LanguageToggle variant="pill" className="navbar-language-btn" />
+            <LanguageToggle
+              variant="pill"
+              className="border-white/55 bg-white/10 text-white hover:border-[#FFC570] hover:bg-white/20 hover:text-[#FFC570]"
+            />
           </div>
         </div>
 
         <div
           id="mobile-menu"
           ref={mobileMenuRef}
-          className={`mobile-menu ${mobileMenuOpen ? "open" : ""}`}
+          className={`overflow-hidden border-t border-white/20 bg-[#1A3263] transition-all duration-300 md:hidden ${
+            mobileMenuOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
+          }`}
           aria-hidden={!mobileMenuOpen}
         >
-          <div className="mobile-menu-content">
+          <div className="space-y-1 px-4 py-3 sm:px-6">
             {navLinks.map((link) => (
               <Link
                 key={`mobile-${link.to}`}
                 to={link.to}
-                className="mobile-nav-link"
+                className="block rounded-lg px-3 py-2.5 text-base font-semibold text-white/95 transition-colors hover:bg-white/10 hover:text-[#FFC570]"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {link.label}

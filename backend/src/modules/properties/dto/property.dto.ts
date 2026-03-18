@@ -7,6 +7,7 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
+  IsDateString,
   IsEnum,
   IsNotEmpty,
   IsNumber,
@@ -77,6 +78,18 @@ export class PropertyAddressDto {
   coordinates?: PropertyCoordinatesDto;
 }
 
+export class PropertyAvailabilityCalendarDto {
+  @ApiPropertyOptional({ example: '2026-04-01' })
+  @IsOptional()
+  @IsDateString()
+  availableFrom?: string;
+
+  @ApiPropertyOptional({ example: '2026-12-31' })
+  @IsOptional()
+  @IsDateString()
+  availableTo?: string;
+}
+
 export class PropertyFeaturesDto {
   @ApiPropertyOptional({ example: 2 })
   @IsOptional()
@@ -117,6 +130,12 @@ export class PropertyFeaturesDto {
   @IsArray()
   @IsString({ each: true })
   amenities?: string[];
+
+  @ApiPropertyOptional({ type: PropertyAvailabilityCalendarDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PropertyAvailabilityCalendarDto)
+  availabilityCalendar?: PropertyAvailabilityCalendarDto;
 }
 
 export class PropertyImageDto {

@@ -8,6 +8,8 @@ import { HomeFooter, Navbar } from "../../components/layout";
 import AddressInput, {
   type AddressData,
 } from "../../components/properties/AddressInputOSM";
+import { Stepper, type StepperStep } from "../../components/ui";
+import { useTranslation } from "../../i18n";
 import { propertyService } from "../../services/property.service";
 import type {
   CreatePropertyDto,
@@ -110,6 +112,8 @@ interface FormData {
   furnished: boolean;
   petFriendly: boolean;
   amenities: string;
+  availableFrom: string;
+  availableTo: string;
 }
 
 const initialFormData: FormData = {
@@ -133,7 +137,17 @@ const initialFormData: FormData = {
   furnished: false,
   petFriendly: false,
   amenities: "",
+  availableFrom: "",
+  availableTo: "",
 };
+
+const WIZARD_STEP_IDS = [
+  "details",
+  "address",
+  "amenities",
+  "pricing",
+  "photos",
+] as const;
 
 // ===========================================
 // Main Property Form Page
@@ -142,6 +156,7 @@ const initialFormData: FormData = {
 export default function PropertyFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const t = useTranslation();
   const isEditing = Boolean(id);
 
   const [formData, setFormData] = useState<FormData>(initialFormData);
@@ -151,6 +166,7 @@ export default function PropertyFormPage() {
   >([]);
   const [loading, setLoading] = useState(false);
   const [loadingProperty, setLoadingProperty] = useState(isEditing);
+  const [currentStep, setCurrentStep] = useState(0);
   const [errors, setErrors] = useState<
     Partial<Record<keyof FormData, string>> & {
       street?: string;
@@ -158,6 +174,14 @@ export default function PropertyFormPage() {
       country?: string;
     }
   >({});
+
+  const wizardSteps: StepperStep[] = [
+    { id: "details", label: t.properties.form.steps.details },
+    { id: "address", label: t.properties.form.steps.address },
+    { id: "amenities", label: t.properties.form.steps.amenities },
+    { id: "pricing", label: t.properties.form.steps.pricing },
+    { id: "photos", label: t.properties.form.steps.photos },
+  ];
 
   // Load existing property for editing
   const loadProperty = useCallback(async () => {
@@ -188,6 +212,9 @@ export default function PropertyFormPage() {
         furnished: property.features?.furnished || false,
         petFriendly: property.features?.petFriendly || false,
         amenities: property.features?.amenities?.join(", ") || "",
+        availableFrom:
+          property.features?.availabilityCalendar?.availableFrom || "",
+        availableTo: property.features?.availabilityCalendar?.availableTo || "",
       });
       setExistingImages(
         (property.images || []).map((img) => ({
@@ -197,12 +224,12 @@ export default function PropertyFormPage() {
       );
     } catch (err) {
       console.error("Failed to load property:", err);
-      alert("Impossible de charger la propriété.");
+      alert(t.properties.form.messages.loadError);
       navigate("/properties");
     } finally {
       setLoadingProperty(false);
     }
-  }, [id, navigate]);
+  }, [id, navigate, t.properties.form.messages.loadError]);
 
   useEffect(() => {
     if (isEditing) {
@@ -255,7 +282,7 @@ export default function PropertyFormPage() {
       setExistingImages((prev) => prev.filter((img) => img.key !== key));
     } catch (err) {
       console.error("Failed to delete image:", err);
-      alert("Impossible de supprimer l'image.");
+      alert(t.properties.form.messages.deleteImageError);
     }
   };
 
@@ -289,28 +316,98 @@ export default function PropertyFormPage() {
     } = {};
 
     if (!formData.title.trim()) {
-      newErrors.title = "Le titre est requis";
+      newErrors.title = t.properties.form.validation.titleRequired;
     }
     if (!formData.price || parseFloat(formData.price) <= 0) {
-      newErrors.price = "Le prix doit être supérieur à 0";
+      newErrors.price = t.properties.form.validation.pricePositive;
     }
     if (!formData.address.street.trim()) {
-      newErrors.street = "La rue est requise";
+      newErrors.street = t.properties.form.validation.streetRequired;
     }
     if (!formData.address.city.trim()) {
-      newErrors.city = "La ville est requise";
+      newErrors.city = t.properties.form.validation.cityRequired;
     }
     if (!formData.address.country.trim()) {
-      newErrors.country = "Le pays est requis";
+      newErrors.country = t.properties.form.validation.countryRequired;
+    }
+    if (
+      formData.availableFrom &&
+      formData.availableTo &&
+      formData.availableTo < formData.availableFrom
+    ) {
+      newErrors.availableTo = t.properties.form.validation.availableToAfterFrom;
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  const validateCurrentStep = (): boolean => {
+    const nextErrors: Partial<Record<keyof FormData, string>> & {
+      street?: string;
+      city?: string;
+      country?: string;
+    } = {};
+
+    if (currentStep === 0) {
+      if (!formData.title.trim()) {
+        nextErrors.title = t.properties.form.validation.titleRequired;
+      }
+    }
+
+    if (currentStep === 1) {
+      if (!formData.address.street.trim()) {
+        nextErrors.street = t.properties.form.validation.streetRequired;
+      }
+      if (!formData.address.city.trim()) {
+        nextErrors.city = t.properties.form.validation.cityRequired;
+      }
+      if (!formData.address.country.trim()) {
+        nextErrors.country = t.properties.form.validation.countryRequired;
+      }
+    }
+
+    if (currentStep === 3) {
+      if (!formData.price || parseFloat(formData.price) <= 0) {
+        nextErrors.price = t.properties.form.validation.pricePositive;
+      }
+      if (
+        formData.availableFrom &&
+        formData.availableTo &&
+        formData.availableTo < formData.availableFrom
+      ) {
+        nextErrors.availableTo =
+          t.properties.form.validation.availableToAfterFrom;
+      }
+    }
+
+    setErrors((prev) => ({ ...prev, ...nextErrors }));
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handlePreviousStep = () => {
+    setCurrentStep((prev) => Math.max(prev - 1, 0));
+  };
+
+  const handleNextStep = () => {
+    if (!validateCurrentStep()) return;
+    setCurrentStep((prev) => Math.min(prev + 1, wizardSteps.length - 1));
+  };
+
+  const handleStepChange = (stepIndex: number) => {
+    if (stepIndex < currentStep) {
+      setCurrentStep(stepIndex);
+    }
+  };
+
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (currentStep < wizardSteps.length - 1) {
+      handleNextStep();
+      return;
+    }
 
     if (!validate()) return;
 
@@ -349,6 +446,10 @@ export default function PropertyFormPage() {
                 .map((a) => a.trim())
                 .filter(Boolean)
             : undefined,
+          availabilityCalendar: {
+            availableFrom: formData.availableFrom || undefined,
+            availableTo: formData.availableTo || undefined,
+          },
         },
       };
 
@@ -374,7 +475,7 @@ export default function PropertyFormPage() {
       navigate(`/properties/${propertyId}`);
     } catch (err) {
       console.error("Failed to save property:", err);
-      alert("Impossible de sauvegarder la propriété. Veuillez réessayer.");
+      alert(t.properties.form.messages.saveError);
     } finally {
       setLoading(false);
     }
@@ -387,7 +488,7 @@ export default function PropertyFormPage() {
         <main className="property-form-container">
           <div className="loading-state">
             <div className="loading-spinner" />
-            <p>Chargement de la propriété...</p>
+            <p>{t.properties.form.loadingProperty}</p>
           </div>
         </main>
         <HomeFooter />
@@ -395,35 +496,20 @@ export default function PropertyFormPage() {
     );
   }
 
-  return (
-    <div className="property-form-page">
-      <Navbar />
-
-      <main className="property-form-container">
-        {/* Header */}
-        <div className="property-form-header">
-          <h1>
-            {isEditing ? "Modifier la propriété" : "Ajouter une propriété"}
-          </h1>
-          <p>
-            {isEditing
-              ? "Modifiez les informations de votre propriété ci-dessous."
-              : "Remplissez les informations pour créer une nouvelle propriété."}
-          </p>
-        </div>
-
-        {/* Form */}
-        <form className="property-form" onSubmit={handleSubmit}>
-          {/* Basic Information */}
+  const renderStepContent = () => {
+    switch (WIZARD_STEP_IDS[currentStep]) {
+      case "details":
+        return (
           <div className="form-section">
             <h3 className="form-section-title">
               <InfoIcon />
-              Informations de base
+              {t.properties.form.sections.basicInfo}
             </h3>
             <div className="form-grid">
               <div className="form-group full-width">
                 <label htmlFor="title">
-                  Titre <span className="required">*</span>
+                  {t.properties.form.labels.title}{" "}
+                  <span className="required">*</span>
                 </label>
                 <input
                   id="title"
@@ -431,7 +517,7 @@ export default function PropertyFormPage() {
                   type="text"
                   value={formData.title}
                   onChange={handleChange}
-                  placeholder="Ex: Appartement moderne au centre-ville"
+                  placeholder={t.properties.form.placeholders.title}
                   className={errors.title ? "error" : ""}
                 />
                 {errors.title && (
@@ -440,90 +526,67 @@ export default function PropertyFormPage() {
               </div>
 
               <div className="form-group full-width">
-                <label htmlFor="description">Description</label>
+                <label htmlFor="description">
+                  {t.properties.form.labels.description}
+                </label>
                 <textarea
                   id="description"
                   name="description"
                   value={formData.description}
                   onChange={handleChange}
-                  placeholder="Décrivez votre propriété..."
+                  placeholder={t.properties.form.placeholders.description}
                 />
               </div>
 
               <div className="form-group">
-                <label htmlFor="type">Type de propriété</label>
+                <label htmlFor="type">{t.properties.form.labels.type}</label>
                 <select
                   id="type"
                   name="type"
                   value={formData.type}
                   onChange={handleChange}
                 >
-                  <option value="apartment">Appartement</option>
-                  <option value="house">Maison</option>
-                  <option value="villa">Villa</option>
-                  <option value="studio">Studio</option>
-                  <option value="condo">Condo</option>
-                  <option value="land">Terrain</option>
+                  <option value="apartment">
+                    {t.properties.typeApartment}
+                  </option>
+                  <option value="house">{t.properties.typeHouse}</option>
+                  <option value="villa">{t.properties.typeVilla}</option>
+                  <option value="studio">{t.properties.typeStudio}</option>
+                  <option value="condo">{t.properties.typeCondo}</option>
+                  <option value="land">{t.properties.typeLand}</option>
                 </select>
               </div>
 
               <div className="form-group">
-                <label htmlFor="status">Statut</label>
+                <label htmlFor="status">
+                  {t.properties.form.labels.status}
+                </label>
                 <select
                   id="status"
                   name="status"
                   value={formData.status}
                   onChange={handleChange}
                 >
-                  <option value="available">Disponible</option>
-                  <option value="rented">Loué</option>
-                  <option value="maintenance">En maintenance</option>
-                  <option value="unlisted">Non listé</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="price">
-                  Prix <span className="required">*</span>
-                </label>
-                <input
-                  id="price"
-                  name="price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.price}
-                  onChange={handleChange}
-                  placeholder="Prix"
-                  className={errors.price ? "error" : ""}
-                />
-                {errors.price && (
-                  <span className="error-message">{errors.price}</span>
-                )}
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="currency">Devise</label>
-                <select
-                  id="currency"
-                  name="currency"
-                  value={formData.currency}
-                  onChange={handleChange}
-                >
-                  <option value="TND">TND</option>
-                  <option value="EUR">EUR</option>
-                  <option value="USD">USD</option>
+                  <option value="available">{t.properties.available}</option>
+                  <option value="rented">{t.properties.rented}</option>
+                  <option value="maintenance">
+                    {t.properties.maintenance}
+                  </option>
+                  <option value="unlisted">{t.properties.unlisted}</option>
                 </select>
               </div>
             </div>
           </div>
+        );
 
-          {/* Address */}
+      case "address":
+        return (
           <div className="form-section">
             <h3 className="form-section-title">
               <LocationIcon />
-              Adresse
+              {t.properties.form.sections.address}
             </h3>
+
             <AddressInput
               value={formData.address}
               onChange={(address) => setFormData({ ...formData, address })}
@@ -535,16 +598,20 @@ export default function PropertyFormPage() {
               disabled={loading}
             />
           </div>
+        );
 
-          {/* Features */}
+      case "amenities":
+        return (
           <div className="form-section">
             <h3 className="form-section-title">
               <FeaturesIcon />
-              Caractéristiques
+              {t.properties.form.sections.featuresAmenities}
             </h3>
             <div className="form-grid">
               <div className="form-group">
-                <label htmlFor="bedrooms">Chambres</label>
+                <label htmlFor="bedrooms">
+                  {t.properties.form.labels.bedrooms}
+                </label>
                 <input
                   id="bedrooms"
                   name="bedrooms"
@@ -552,12 +619,14 @@ export default function PropertyFormPage() {
                   min="0"
                   value={formData.bedrooms}
                   onChange={handleChange}
-                  placeholder="Nombre de chambres"
+                  placeholder={t.properties.form.placeholders.bedrooms}
                 />
               </div>
 
               <div className="form-group">
-                <label htmlFor="bathrooms">Salles de bain</label>
+                <label htmlFor="bathrooms">
+                  {t.properties.form.labels.bathrooms}
+                </label>
                 <input
                   id="bathrooms"
                   name="bathrooms"
@@ -565,12 +634,12 @@ export default function PropertyFormPage() {
                   min="0"
                   value={formData.bathrooms}
                   onChange={handleChange}
-                  placeholder="Nombre de salles de bain"
+                  placeholder={t.properties.form.placeholders.bathrooms}
                 />
               </div>
 
               <div className="form-group">
-                <label htmlFor="area">Surface (m²)</label>
+                <label htmlFor="area">{t.properties.form.labels.area}</label>
                 <input
                   id="area"
                   name="area"
@@ -578,12 +647,14 @@ export default function PropertyFormPage() {
                   min="0"
                   value={formData.area}
                   onChange={handleChange}
-                  placeholder="Surface en m²"
+                  placeholder={t.properties.form.placeholders.area}
                 />
               </div>
 
               <div className="form-group">
-                <label htmlFor="parkingSpaces">Places de parking</label>
+                <label htmlFor="parkingSpaces">
+                  {t.properties.form.labels.parkingSpaces}
+                </label>
                 <input
                   id="parkingSpaces"
                   name="parkingSpaces"
@@ -591,7 +662,7 @@ export default function PropertyFormPage() {
                   min="0"
                   value={formData.parkingSpaces}
                   onChange={handleChange}
-                  placeholder="Nombre de places"
+                  placeholder={t.properties.form.placeholders.parkingSpaces}
                 />
               </div>
 
@@ -604,7 +675,9 @@ export default function PropertyFormPage() {
                     checked={formData.furnished}
                     onChange={handleChange}
                   />
-                  <label htmlFor="furnished">Meublé</label>
+                  <label htmlFor="furnished">
+                    {t.properties.form.labels.furnished}
+                  </label>
                 </div>
               </div>
 
@@ -617,13 +690,15 @@ export default function PropertyFormPage() {
                     checked={formData.petFriendly}
                     onChange={handleChange}
                   />
-                  <label htmlFor="petFriendly">Animaux acceptés</label>
+                  <label htmlFor="petFriendly">
+                    {t.properties.form.labels.petFriendly}
+                  </label>
                 </div>
               </div>
 
               <div className="form-group full-width">
                 <label htmlFor="amenities">
-                  Équipements (séparés par des virgules)
+                  {t.properties.form.labels.amenities}
                 </label>
                 <input
                   id="amenities"
@@ -631,20 +706,99 @@ export default function PropertyFormPage() {
                   type="text"
                   value={formData.amenities}
                   onChange={handleChange}
-                  placeholder="Ex: Piscine, Jardin, Climatisation, Terrasse"
+                  placeholder={t.properties.form.placeholders.amenities}
                 />
               </div>
             </div>
           </div>
+        );
 
-          {/* Images */}
+      case "pricing":
+        return (
+          <div className="form-section">
+            <h3 className="form-section-title">
+              <InfoIcon />
+              {t.properties.form.sections.pricingAvailability}
+            </h3>
+            <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="price">
+                  {t.properties.form.labels.price}{" "}
+                  <span className="required">*</span>
+                </label>
+                <input
+                  id="price"
+                  name="price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.price}
+                  onChange={handleChange}
+                  placeholder={t.properties.form.placeholders.price}
+                  className={errors.price ? "error" : ""}
+                />
+                {errors.price && (
+                  <span className="error-message">{errors.price}</span>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="currency">
+                  {t.properties.form.labels.currency}
+                </label>
+                <select
+                  id="currency"
+                  name="currency"
+                  value={formData.currency}
+                  onChange={handleChange}
+                >
+                  <option value="TND">TND</option>
+                  <option value="EUR">EUR</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="availableFrom">
+                  {t.properties.form.labels.availableFrom}
+                </label>
+                <input
+                  id="availableFrom"
+                  name="availableFrom"
+                  type="date"
+                  value={formData.availableFrom}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="availableTo">
+                  {t.properties.form.labels.availableTo}
+                </label>
+                <input
+                  id="availableTo"
+                  name="availableTo"
+                  type="date"
+                  value={formData.availableTo}
+                  onChange={handleChange}
+                  className={errors.availableTo ? "error" : ""}
+                />
+                {errors.availableTo && (
+                  <span className="error-message">{errors.availableTo}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      case "photos":
+        return (
           <div className="form-section">
             <h3 className="form-section-title">
               <ImageIcon />
-              Photos
+              {t.properties.form.sections.photos}
             </h3>
 
-            {/* Existing Images */}
             {existingImages.length > 0 && (
               <div
                 className="image-preview-grid"
@@ -652,7 +806,10 @@ export default function PropertyFormPage() {
               >
                 {existingImages.map((img, index) => (
                   <div key={img.key || index} className="image-preview-item">
-                    <img src={img.url} alt={`Image ${index + 1}`} />
+                    <img
+                      src={img.url}
+                      alt={`${t.properties.form.image.alt} ${index + 1}`}
+                    />
                     <button
                       type="button"
                       className="image-preview-remove"
@@ -661,14 +818,15 @@ export default function PropertyFormPage() {
                       <CloseIcon />
                     </button>
                     {index === 0 && (
-                      <span className="image-preview-primary">Principal</span>
+                      <span className="image-preview-primary">
+                        {t.properties.form.image.primary}
+                      </span>
                     )}
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Upload Zone */}
             <div
               className="image-upload-zone"
               onDragOver={handleDragOver}
@@ -677,7 +835,7 @@ export default function PropertyFormPage() {
               onClick={() => document.getElementById("image-input")?.click()}
               role="button"
               tabIndex={0}
-              aria-label="Upload property images"
+              aria-label={t.properties.form.image.uploadAriaLabel}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
@@ -686,8 +844,8 @@ export default function PropertyFormPage() {
               }}
             >
               <ImageIcon />
-              <h4>Glissez-déposez vos images ici</h4>
-              <p>ou cliquez pour sélectionner (JPEG, PNG, WebP - max 10MB)</p>
+              <h4>{t.properties.form.image.dropTitle}</h4>
+              <p>{t.properties.form.image.dropSubtitle}</p>
               <input
                 id="image-input"
                 type="file"
@@ -698,7 +856,6 @@ export default function PropertyFormPage() {
               />
             </div>
 
-            {/* New Images Preview */}
             {images.length > 0 && (
               <div className="image-preview-grid">
                 {images.map((file, index) => (
@@ -716,28 +873,90 @@ export default function PropertyFormPage() {
               </div>
             )}
           </div>
+        );
 
-          {/* Actions */}
-          <div className="form-actions">
-            <Link to="/properties" className="btn-cancel">
-              Annuler
-            </Link>
-            <button type="submit" className="btn-submit" disabled={loading}>
-              {loading ? (
-                <>
-                  <span
-                    className="loading-spinner"
-                    style={{ width: 18, height: 18 }}
-                  />
-                  Enregistrement...
-                </>
-              ) : isEditing ? (
-                "Mettre à jour"
-              ) : (
-                "Créer la propriété"
-              )}
-            </button>
-          </div>
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="property-form-page">
+      <Navbar />
+
+      <main className="property-form-container">
+        {/* Header */}
+        <div className="property-form-header">
+          <h1>
+            {isEditing
+              ? t.properties.form.page.editTitle
+              : t.properties.form.page.createTitle}
+          </h1>
+          <p>
+            {isEditing
+              ? t.properties.form.page.editDescription
+              : t.properties.form.page.createDescription}
+          </p>
+        </div>
+
+        {/* Form */}
+        <form className="property-form" onSubmit={handleSubmit}>
+          <Stepper
+            steps={wizardSteps}
+            currentStep={currentStep}
+            ariaLabel={t.properties.form.stepsAriaLabel}
+            allowStepNavigation
+            onStepChange={handleStepChange}
+            actions={
+              <div className="wizard-nav-actions">
+                <Link to="/properties" className="btn-cancel">
+                  {t.common.cancel}
+                </Link>
+                <div className="wizard-nav-primary">
+                  <button
+                    type="button"
+                    className="btn-cancel"
+                    onClick={handlePreviousStep}
+                    disabled={currentStep === 0}
+                  >
+                    {t.properties.previous}
+                  </button>
+
+                  {currentStep < wizardSteps.length - 1 ? (
+                    <button
+                      type="button"
+                      className="btn-submit"
+                      onClick={handleNextStep}
+                    >
+                      {t.properties.next}
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      className="btn-submit"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <>
+                          <span
+                            className="loading-spinner"
+                            style={{ width: 18, height: 18 }}
+                          />
+                          {t.properties.form.actions.saving}
+                        </>
+                      ) : isEditing ? (
+                        t.properties.form.actions.update
+                      ) : (
+                        t.properties.form.actions.create
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+            }
+          >
+            {renderStepContent()}
+          </Stepper>
         </form>
       </main>
 

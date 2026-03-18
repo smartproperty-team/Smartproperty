@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ObjectId } from 'mongodb';
+import * as QRCode from 'qrcode';
 import { Repository } from 'typeorm';
 import { UserRole } from '../users/entities/user.entity';
 import { CreatePropertyDto, UpdatePropertyDto } from './dto/property.dto';
@@ -278,5 +279,12 @@ export class PropertiesService {
     property.deletedAt = new Date();
 
     await this.propertyRepository.save(property);
+  }
+
+  async generateShareQRCode(shareUrl: string): Promise<string> {
+    return QRCode.toDataURL(shareUrl, {
+      margin: 1,
+      width: 280,
+    });
   }
 }
