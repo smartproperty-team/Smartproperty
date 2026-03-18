@@ -11,9 +11,10 @@ import {
 } from "../../components/ui";
 import { authService } from "../../services";
 import { useAuthStore, usePreferencesStore } from "../../store";
-import type {
-  UserLocationPreference,
-  UserNotificationPreferences,
+import {
+  UserRole,
+  type UserLocationPreference,
+  type UserNotificationPreferences,
 } from "../../types/auth";
 
 type OnboardingStep = 1 | 2 | 3 | 4;
@@ -83,7 +84,7 @@ export default function PreferencesOnboardingModal() {
   }, [existingPreferences, isOnboardingOpen]);
 
   useEffect(() => {
-    if (isOnboardingOpen && user && user.role !== "tenant") {
+    if (isOnboardingOpen && user && user.role !== UserRole.TENANT) {
       closeOnboarding();
     }
   }, [closeOnboarding, isOnboardingOpen, user]);
@@ -92,7 +93,7 @@ export default function PreferencesOnboardingModal() {
     !isAuthenticated ||
     !user ||
     !isOnboardingOpen ||
-    user.role !== "tenant"
+    user.role !== UserRole.TENANT
   ) {
     return null;
   }

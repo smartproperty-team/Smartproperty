@@ -12,7 +12,7 @@ import type {
   PropertyStatus,
   PropertyType,
 } from "@/types/property";
-import { canManageProperties } from "@/utils";
+import { canManageProperties, isPlatformAdmin } from "@/utils";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import "./properties.css";
@@ -361,7 +361,7 @@ export default function MyPropertiesPage() {
     try {
       // Admin sees all properties, owner/manager see only their own
       const queryFilters: PropertyFilters = { ...filters };
-      if (user.role === "admin") {
+      if (isPlatformAdmin(user)) {
         // Admin manages all — no ownerId filter
       } else {
         queryFilters.ownerId = user.id;

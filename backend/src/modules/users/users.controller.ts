@@ -27,6 +27,11 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserPreferencesDto } from './dto/preferences.dto';
 import { UserRole, UserStatus } from './entities/user.entity';
+import {
+  hasPlatformAdminRole,
+  PLATFORM_ADMIN_ROLES,
+  TENANT_ONLY_ROLES,
+} from './role-groups';
 import type { FindUsersOptions, UpdateUserDto } from './users.service';
 import { UsersService } from './users.service';
 
@@ -46,7 +51,7 @@ export class UsersController {
   // ===========================================
 
   @Get()
-  @Roles(UserRole.ADMIN)
+  @Roles(...PLATFORM_ADMIN_ROLES)
   @ApiOperation({ summary: 'Get all users (Admin only)' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -66,7 +71,7 @@ export class UsersController {
   // ===========================================
 
   @Get('stats')
-  @Roles(UserRole.ADMIN)
+  @Roles(...PLATFORM_ADMIN_ROLES)
   @ApiOperation({ summary: 'Get user statistics (Admin only)' })
   @ApiResponse({
     status: 200,
@@ -110,7 +115,7 @@ export class UsersController {
   }
 
   @Get('preferences')
-  @Roles(UserRole.TENANT)
+  @Roles(...TENANT_ONLY_ROLES)
   @ApiOperation({ summary: 'Get current user preferences' })
   @ApiResponse({
     status: 200,
@@ -121,7 +126,7 @@ export class UsersController {
   }
 
   @Put('preferences')
-  @Roles(UserRole.TENANT)
+  @Roles(...TENANT_ONLY_ROLES)
   @ApiOperation({ summary: 'Update current user preferences' })
   @ApiResponse({
     status: 200,
@@ -190,7 +195,7 @@ export class UsersController {
   async findOne(@Param('id') id: string, @CurrentUser() currentUser: any) {
     // Users can only view their own profile unless they're admin
     const currentUserId = currentUser.id as string;
-    if (currentUser.role !== UserRole.ADMIN && currentUserId !== id) {
+    if (!hasPlatformAdminRole(currentUser.role) && currentUserId !== id) {
       const user = await this.usersService.findById(currentUserId);
       return user.toJSON();
     }
@@ -204,7 +209,7 @@ export class UsersController {
   // ===========================================
 
   @Put(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(...PLATFORM_ADMIN_ROLES)
   @ApiOperation({ summary: 'Update user (Admin only)' })
   @ApiResponse({
     status: 200,
@@ -220,7 +225,7 @@ export class UsersController {
   // ===========================================
 
   @Put(':id/status')
-  @Roles(UserRole.ADMIN)
+  @Roles(...PLATFORM_ADMIN_ROLES)
   @ApiOperation({ summary: 'Update user status (Admin only)' })
   @ApiResponse({
     status: 200,
@@ -239,7 +244,7 @@ export class UsersController {
   // ===========================================
 
   @Put(':id/role')
-  @Roles(UserRole.ADMIN)
+  @Roles(...PLATFORM_ADMIN_ROLES)
   @ApiOperation({ summary: 'Update user role (Admin only)' })
   @ApiResponse({
     status: 200,
@@ -255,7 +260,7 @@ export class UsersController {
   // ===========================================
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(...PLATFORM_ADMIN_ROLES)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Soft delete user (Admin only)' })
   @ApiResponse({

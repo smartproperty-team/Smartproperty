@@ -1,4 +1,5 @@
 import { useAuthStore } from "@/store";
+import { canAccessAdminUsers, canReviewVerifications } from "@/utils";
 import {
   ArrowLeft,
   LayoutDashboard,
@@ -12,7 +13,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ReadAloudWidget from "../accessibility/ReadAloudWidget";
 import Navbar from "./Navbar";
@@ -29,7 +30,7 @@ export default function AppSidebar() {
   const { user, logout } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const links = useMemo<SidebarLink[]>(() => {
+  const links: SidebarLink[] = (() => {
     const baseLinks: SidebarLink[] = [
       { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
       { label: "Profile", to: "/profile", icon: User },
@@ -38,19 +39,20 @@ export default function AppSidebar() {
       { label: "Sessions", to: "/sessions", icon: Monitor },
     ];
 
-    if (user?.role === "admin") {
-      baseLinks.push(
-        {
-          label: "Admin Verifications",
-          to: "/admin/verifications",
-          icon: ShieldCheck,
-        },
-        { label: "Admin Users", to: "/admin/users", icon: Users },
-      );
+    if (canReviewVerifications(user)) {
+      baseLinks.push({
+        label: "Admin Verifications",
+        to: "/admin/verifications",
+        icon: ShieldCheck,
+      });
+    }
+
+    if (canAccessAdminUsers(user)) {
+      baseLinks.push({ label: "Admin Users", to: "/admin/users", icon: Users });
     }
 
     return baseLinks;
-  }, [user?.role]);
+  })();
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {

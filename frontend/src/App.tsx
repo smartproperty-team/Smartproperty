@@ -35,7 +35,12 @@ import {
 import TwoFactorPage from "./pages/security/TwoFactorPage";
 import { SettingsPage } from "./pages/settings";
 import { useAuthStore, usePreferencesStore } from "./store";
-import { canManageProperties, isOwner } from "./utils";
+import {
+  canAccessAdminUsers,
+  canCreateProperties,
+  canManageProperties,
+  canReviewVerifications,
+} from "./utils";
 
 function App() {
   const location = useLocation();
@@ -161,7 +166,11 @@ function App() {
           path="/admin/verifications"
           element={
             <ProtectedRoute>
-              <AdminVerificationPage />
+              {canReviewVerifications(user) ? (
+                <AdminVerificationPage />
+              ) : (
+                <Navigate to="/dashboard" replace />
+              )}
             </ProtectedRoute>
           }
         />
@@ -169,7 +178,7 @@ function App() {
           path="/admin/users"
           element={
             <ProtectedRoute>
-              {user?.role === "admin" ? (
+              {canAccessAdminUsers(user) ? (
                 <AdminUsersPage />
               ) : (
                 <Navigate to="/dashboard" replace />
@@ -220,7 +229,7 @@ function App() {
           path="/properties/new"
           element={
             <ProtectedRoute>
-              {isOwner(user) ? (
+              {canCreateProperties(user) ? (
                 <PropertyFormPage />
               ) : (
                 <Navigate to="/properties" replace />

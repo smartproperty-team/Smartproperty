@@ -7,6 +7,7 @@ import { Type } from 'class-transformer';
 import {
   IsEmail,
   IsEnum,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -15,6 +16,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { UserRole } from '../../users/entities/user.entity';
+import { SELF_REGISTRABLE_ROLES } from '../../users/role-groups';
 
 // ===========================================
 // Register DTO
@@ -85,11 +87,14 @@ export class RegisterDto {
 
   @ApiPropertyOptional({
     example: 'tenant',
-    description: 'User role',
-    enum: UserRole,
+    description: 'User role (self-service roles only)',
+    enum: SELF_REGISTRABLE_ROLES,
   })
   @IsOptional()
   @IsEnum(UserRole, { message: 'Invalid role' })
+  @IsIn(SELF_REGISTRABLE_ROLES, {
+    message: `Role is not allowed for self-registration. Allowed roles: ${SELF_REGISTRABLE_ROLES.join(', ')}`,
+  })
   role?: UserRole;
 
   @ApiPropertyOptional({

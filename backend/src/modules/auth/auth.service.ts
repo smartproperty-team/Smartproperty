@@ -7,6 +7,7 @@ import { MailerService } from '@nestjs-modules/mailer';
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -38,6 +39,10 @@ import {
   ResetPasswordDto,
   VerifyEmailDto,
 } from './dto/auth.dto';
+import {
+  DEFAULT_REGISTRATION_ROLE,
+  SELF_REGISTRABLE_ROLES,
+} from '../users/role-groups';
 import { Session } from './entities/session.entity';
 import { DeviceInfo, SessionService } from './session.service';
 import { FacebookProfile } from './strategies/facebook.strategy';
@@ -139,6 +144,12 @@ export class AuthService {
       role,
     } = registerDto;
 
+    if (role && !SELF_REGISTRABLE_ROLES.includes(role)) {
+      throw new ForbiddenException(
+        `Role is not allowed for self-registration. Allowed roles: ${SELF_REGISTRABLE_ROLES.join(', ')}`,
+      );
+    }
+
     // Validate password confirmation
     if (password !== confirmPassword) {
       throw new BadRequestException('Passwords do not match');
@@ -164,7 +175,7 @@ export class AuthService {
       firstName,
       lastName,
       phone,
-      role: role || UserRole.TENANT,
+      role: role || DEFAULT_REGISTRATION_ROLE,
       status: UserStatus.PENDING_VERIFICATION,
       isEmailVerified: false,
       emailVerificationToken,

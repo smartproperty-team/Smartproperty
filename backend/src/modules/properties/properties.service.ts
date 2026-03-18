@@ -12,6 +12,7 @@ import { ObjectId } from 'mongodb';
 import * as QRCode from 'qrcode';
 import { Repository } from 'typeorm';
 import { UserRole } from '../users/entities/user.entity';
+import { hasPlatformAdminRole } from '../users/role-groups';
 import { CreatePropertyDto, UpdatePropertyDto } from './dto/property.dto';
 import {
   Property,
@@ -61,7 +62,7 @@ export class PropertiesService {
     userId: string,
     role: UserRole,
   ): boolean {
-    if (role === UserRole.ADMIN) {
+    if (hasPlatformAdminRole(role)) {
       return true;
     }
 
@@ -85,7 +86,7 @@ export class PropertiesService {
     currentUserId: string,
     currentUserRole: UserRole,
   ): Promise<Property> {
-    if (createPropertyDto.ownerId && currentUserRole !== UserRole.ADMIN) {
+    if (createPropertyDto.ownerId && !hasPlatformAdminRole(currentUserRole)) {
       throw new ForbiddenException('Only admins can assign ownerId');
     }
 
@@ -231,7 +232,7 @@ export class PropertiesService {
       throw new ForbiddenException('You do not have access to this property');
     }
 
-    if (updatePropertyDto.ownerId && currentUserRole !== UserRole.ADMIN) {
+    if (updatePropertyDto.ownerId && !hasPlatformAdminRole(currentUserRole)) {
       throw new ForbiddenException('Only admins can change ownerId');
     }
 

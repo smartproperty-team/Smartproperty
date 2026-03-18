@@ -11,6 +11,7 @@ import {
 import { adminUsersService } from "@/services/admin-users.service";
 import { useAuthStore } from "@/store";
 import { UserRole, UserStatus, type User } from "@/types/auth";
+import { canAccessAdminUsers } from "@/utils";
 import {
   Activity,
   ArrowLeft,
@@ -28,7 +29,7 @@ import { useNavigate } from "react-router-dom";
 const ROLE_OPTIONS = Object.values(UserRole);
 const STATUS_OPTIONS = Object.values(UserStatus);
 
-const formatRole = (role?: string) => role?.replace("_", " ") || "unknown";
+const formatRole = (role?: string) => role?.replace(/_/g, " ") || "unknown";
 const formatStatus = (status?: string) =>
   status?.replace("_", " ") || "unknown";
 
@@ -196,7 +197,7 @@ export default function AdminUsersPage() {
     return () => document.removeEventListener("keydown", handleEscape);
   }, [selectedUser]);
 
-  if (user?.role !== UserRole.ADMIN) {
+  if (!canAccessAdminUsers(user)) {
     return null;
   }
 

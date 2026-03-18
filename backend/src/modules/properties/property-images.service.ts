@@ -14,8 +14,8 @@ import { ObjectId } from 'mongodb';
 import { Repository } from 'typeorm';
 import { MinioService, UploadedFile } from '../upload/minio.service';
 import { UserRole } from '../users/entities/user.entity';
+import { hasPlatformAdminRole } from '../users/role-groups';
 import { Property } from './entities/property.entity';
-
 // ===========================================
 // Interfaces
 // ===========================================
@@ -38,7 +38,6 @@ export interface AddImagesResult {
 // ===========================================
 // Property Images Service
 // ===========================================
-
 @Injectable()
 export class PropertyImagesService {
   private readonly logger = new Logger(PropertyImagesService.name);
@@ -351,7 +350,7 @@ export class PropertyImagesService {
     userId: string,
     userRole: UserRole,
   ): void {
-    if (userRole === UserRole.ADMIN) {
+    if (hasPlatformAdminRole(userRole)) {
       return;
     }
 

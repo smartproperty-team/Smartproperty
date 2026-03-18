@@ -32,7 +32,10 @@ import { memoryStorage } from 'multer';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { UserRole } from '../users/entities/user.entity';
+import {
+  TENANT_ONLY_ROLES,
+  VERIFICATION_REVIEW_ROLES,
+} from '../users/role-groups';
 import {
   DocumentType,
   VerificationStatus,
@@ -47,7 +50,7 @@ export class VerificationController {
   constructor(private readonly verificationService: VerificationService) {}
 
   @Get('status')
-  @Roles(UserRole.TENANT)
+  @Roles(...TENANT_ONLY_ROLES)
   @ApiOperation({ summary: 'Get tenant verification status' })
   @ApiResponse({ status: 200, description: 'Verification status retrieved' })
   async getVerificationStatus(@Req() req: any) {
@@ -55,7 +58,7 @@ export class VerificationController {
   }
 
   @Post('upload')
-  @Roles(UserRole.TENANT)
+  @Roles(...TENANT_ONLY_ROLES)
   @ApiOperation({ summary: 'Upload a verification document' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -109,7 +112,7 @@ export class VerificationController {
   }
 
   @Get('documents')
-  @Roles(UserRole.TENANT)
+  @Roles(...TENANT_ONLY_ROLES)
   @ApiOperation({ summary: 'Get all uploaded verification documents' })
   @ApiResponse({ status: 200, description: 'Documents list retrieved' })
   async getDocuments(@Req() req: any) {
@@ -117,7 +120,7 @@ export class VerificationController {
   }
 
   @Delete('documents/:id')
-  @Roles(UserRole.TENANT)
+  @Roles(...TENANT_ONLY_ROLES)
   @ApiOperation({ summary: 'Delete a verification document' })
   @ApiParam({ name: 'id', description: 'Document ID' })
   @ApiResponse({ status: 200, description: 'Document deleted' })
@@ -127,7 +130,7 @@ export class VerificationController {
   }
 
   @Post('submit')
-  @Roles(UserRole.TENANT)
+  @Roles(...TENANT_ONLY_ROLES)
   @ApiOperation({ summary: 'Submit documents for verification review' })
   @ApiResponse({
     status: 200,
@@ -140,7 +143,7 @@ export class VerificationController {
   // ─── ADMIN ENDPOINTS ─────────────────────────────────
 
   @Get('admin/all')
-  @Roles(UserRole.ADMIN)
+  @Roles(...VERIFICATION_REVIEW_ROLES)
   @ApiOperation({ summary: 'Get all verification requests (Admin)' })
   @ApiResponse({ status: 200, description: 'All verifications retrieved' })
   async getAllVerifications(@Query('status') status?: VerificationStatus) {
@@ -148,7 +151,7 @@ export class VerificationController {
   }
 
   @Post('admin/:id/approve')
-  @Roles(UserRole.ADMIN)
+  @Roles(...VERIFICATION_REVIEW_ROLES)
   @ApiOperation({ summary: 'Approve a tenant verification (Admin)' })
   @ApiParam({ name: 'id', description: 'Verification ID' })
   @ApiResponse({ status: 200, description: 'Verification approved' })
@@ -157,7 +160,7 @@ export class VerificationController {
   }
 
   @Post('admin/:id/reject')
-  @Roles(UserRole.ADMIN)
+  @Roles(...VERIFICATION_REVIEW_ROLES)
   @ApiOperation({ summary: 'Reject a tenant verification (Admin)' })
   @ApiParam({ name: 'id', description: 'Verification ID' })
   @ApiBody({

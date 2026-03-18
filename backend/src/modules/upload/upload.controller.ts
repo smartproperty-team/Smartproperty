@@ -32,7 +32,10 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { UserRole } from '../users/entities/user.entity';
+import {
+  PROPERTY_MANAGEMENT_ROLES,
+  STORAGE_FILE_DELETE_ROLES,
+} from '../users/role-groups';
 import {
   MinioService,
   UploadedFile as UploadedFileResult,
@@ -78,7 +81,7 @@ export class UploadController {
   // ===========================================
 
   @Post('property/:propertyId/images')
-  @Roles(UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER, UserRole.AGENT)
+  @Roles(...PROPERTY_MANAGEMENT_ROLES)
   @UseInterceptors(FilesInterceptor('images', 20)) // Max 20 images
   @ApiOperation({ summary: 'Upload images for a property' })
   @ApiConsumes('multipart/form-data')
@@ -146,7 +149,7 @@ export class UploadController {
   // ===========================================
 
   @Post('property/:propertyId/image')
-  @Roles(UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER, UserRole.AGENT)
+  @Roles(...PROPERTY_MANAGEMENT_ROLES)
   @UseInterceptors(FileInterceptor('image'))
   @ApiOperation({ summary: 'Upload a single image for a property' })
   @ApiConsumes('multipart/form-data')
@@ -259,7 +262,7 @@ export class UploadController {
 
   @Delete('file')
   @HttpCode(HttpStatus.OK)
-  @Roles(UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER)
+  @Roles(...STORAGE_FILE_DELETE_ROLES)
   @ApiOperation({ summary: 'Delete a file from storage' })
   @ApiQuery({ name: 'key', description: 'File key/path to delete' })
   @ApiResponse({ status: 200, description: 'File deleted successfully' })

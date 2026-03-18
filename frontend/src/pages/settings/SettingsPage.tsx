@@ -18,9 +18,10 @@ import {
 } from "../../components/ui";
 import { authService } from "../../services";
 import { useAuthStore, usePreferencesStore } from "../../store";
-import type {
-  UserLocationPreference,
-  UserNotificationPreferences,
+import {
+  UserRole,
+  type UserLocationPreference,
+  type UserNotificationPreferences,
 } from "../../types/auth";
 
 const PROPERTY_TYPE_OPTIONS = [
@@ -35,7 +36,7 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { getUserPreferences, setUserPreferences } = usePreferencesStore();
-  const isTenant = user?.role === "tenant";
+  const isTenant = user?.role === UserRole.TENANT;
 
   const [propertyTypes, setPropertyTypes] = useState<string[]>([]);
   const [minBudget, setMinBudget] = useState(500);

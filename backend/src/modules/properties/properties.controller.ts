@@ -30,6 +30,10 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../users/entities/user.entity';
+import {
+  PROPERTY_CREATOR_ROLES,
+  PROPERTY_MANAGEMENT_ROLES,
+} from '../users/role-groups';
 import { CreatePropertyDto, UpdatePropertyDto } from './dto/property.dto';
 import { PropertyStatus, PropertyType } from './entities/property.entity';
 import type { FindPropertiesOptions } from './properties.service';
@@ -115,7 +119,7 @@ export class PropertiesController {
   // ===========================================
 
   @Post()
-  @Roles(UserRole.OWNER)
+  @Roles(...PROPERTY_CREATOR_ROLES)
   @ApiOperation({ summary: 'Create a property' })
   @ApiResponse({ status: 201, description: 'Property created' })
   async create(
@@ -137,7 +141,7 @@ export class PropertiesController {
   // ===========================================
 
   @Put(':id')
-  @Roles(UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER, UserRole.AGENT)
+  @Roles(...PROPERTY_MANAGEMENT_ROLES)
   @ApiOperation({ summary: 'Update a property' })
   @ApiResponse({ status: 200, description: 'Property updated' })
   async update(
@@ -161,7 +165,7 @@ export class PropertiesController {
   // ===========================================
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER, UserRole.AGENT)
+  @Roles(...PROPERTY_MANAGEMENT_ROLES)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a property (soft delete)' })
   @ApiResponse({ status: 204, description: 'Property deleted' })

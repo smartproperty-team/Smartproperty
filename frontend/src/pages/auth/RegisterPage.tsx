@@ -59,7 +59,6 @@ const registerSchema = z
     lastName: z.string().min(2, "Last name must be at least 2 characters"),
     email: z.string().email("Please enter a valid email address"),
     phone: z.string().optional(),
-    role: z.enum(["tenant", "owner", "manager", "agent"]).default("tenant"),
     password: z
       .string()
       .min(8, "Password must be at least 8 characters")
@@ -112,7 +111,6 @@ export default function RegisterPage() {
         firstName: data.firstName,
         lastName: data.lastName,
         phone: data.phone,
-        role: data.role ?? "tenant",
         captchaToken,
       });
       // Registration successful - store sets isAuthenticated=true
@@ -197,30 +195,6 @@ export default function RegisterPage() {
                   error={errors.phone?.message}
                   {...register("phone")}
                 />
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Account Type
-                  </label>
-                  <select
-                    {...register("role")}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  >
-                    <option value="tenant">Tenant - Looking to rent</option>
-                    <option value="owner">Owner - I own properties</option>
-                    <option value="manager">
-                      Manager - I manage properties
-                    </option>
-                    <option value="agent">
-                      Agent - Real estate professional
-                    </option>
-                  </select>
-                  {errors.role?.message && (
-                    <p className="text-sm text-red-600">
-                      {errors.role.message}
-                    </p>
-                  )}
-                </div>
 
                 <Input
                   label="Password"

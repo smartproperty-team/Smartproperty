@@ -46,7 +46,8 @@ async function seedUsers() {
     const hashedPassword = await bcrypt.hash('Password123!', 10);
 
     // Sample users to seed
-    // Note: MongoDB schema validator only allows roles: admin, owner, manager, tenant
+    // Keep using baseline roles for dev bootstrap; additional canonical actor
+    // roles are available once the updated users schema validator is applied.
     const users: Partial<User>[] = [
       {
         _id: new ObjectId(),

@@ -13,9 +13,15 @@ import {
 } from "@/components/ui";
 import { authService, propertyService, verificationService } from "@/services";
 import { useAuthStore } from "@/store";
+import { UserRole } from "@/types/auth";
 import type { Property } from "@/types/property";
 import { VerificationStatus } from "@/types/verification";
-import { canManageProperties } from "@/utils";
+import {
+  canAccessAdminUsers,
+  canManageProperties,
+  canReviewVerifications,
+  isTenant,
+} from "@/utils";
 import {
   Bell,
   Building2,
@@ -46,7 +52,7 @@ export default function DashboardPage() {
 
   // Fetch verification status for tenants
   useEffect(() => {
-    if (user?.role === "tenant") {
+    if (isTenant(user)) {
       verificationService
         .getVerificationStatus()
         .then((data) => setVerificationStatus(data.overallStatus))
@@ -55,7 +61,7 @@ export default function DashboardPage() {
   }, [user?.role]);
 
   useEffect(() => {
-    if (user?.role !== "owner" || !user.id) {
+    if (user?.role !== UserRole.OWNER || !user.id) {
       setOwnerProperties([]);
       return;
     }
@@ -155,7 +161,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Verify Me CTA - Show for tenants (hide if verified or rejected) */}
-          {user?.role === "tenant" &&
+          {isTenant(user) &&
             verificationStatus !== VerificationStatus.VERIFIED &&
             verificationStatus !== VerificationStatus.REJECTED && (
               <div className="mb-8">
@@ -191,7 +197,7 @@ export default function DashboardPage() {
             )}
 
           {/* Admin: Review Verifications CTA */}
-          {user?.role === "admin" && (
+          {canReviewVerifications(user) && (
             <div className="mb-8">
               <div className="relative overflow-hidden rounded-xl border border-amber-200 bg-linear-to-r from-amber-500 via-orange-500 to-red-500 p-6 shadow-lg">
                 <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white/10" />
@@ -219,14 +225,16 @@ export default function DashboardPage() {
                       <Shield className="mr-2 h-5 w-5" />
                       Review Verifications
                     </Button>
-                    <Button
-                      onClick={() => navigate("/admin/users")}
-                      className="bg-white text-amber-700 shadow-md hover:bg-amber-50 focus-visible:ring-white"
-                      size="lg"
-                    >
-                      <Users className="mr-2 h-5 w-5" />
-                      Manage Users
-                    </Button>
+                    {canAccessAdminUsers(user) && (
+                      <Button
+                        onClick={() => navigate("/admin/users")}
+                        className="bg-white text-amber-700 shadow-md hover:bg-amber-50 focus-visible:ring-white"
+                        size="lg"
+                      >
+                        <Users className="mr-2 h-5 w-5" />
+                        Manage Users
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -288,7 +296,7 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          {user?.role === "owner" && (
+          {user?.role === UserRole.OWNER && (
             <Card className="mb-8">
               <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle className="flex items-center">

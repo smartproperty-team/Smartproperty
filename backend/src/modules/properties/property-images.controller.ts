@@ -32,6 +32,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../users/entities/user.entity';
+import { PROPERTY_MANAGEMENT_ROLES } from '../users/role-groups';
 import {
   PropertyImage,
   PropertyImagesService,
@@ -69,7 +70,7 @@ export class PropertyImagesController {
   // ===========================================
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER, UserRole.AGENT)
+  @Roles(...PROPERTY_MANAGEMENT_ROLES)
   @UseInterceptors(FilesInterceptor('images', 20))
   @ApiOperation({ summary: 'Upload images for a property' })
   @ApiConsumes('multipart/form-data')
@@ -154,7 +155,7 @@ export class PropertyImagesController {
   // ===========================================
 
   @Patch('primary')
-  @Roles(UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER)
+  @Roles(...PROPERTY_MANAGEMENT_ROLES)
   @ApiOperation({ summary: 'Set primary image for a property' })
   @ApiParam({ name: 'propertyId', description: 'Property ID' })
   @ApiBody({ type: SetPrimaryImageDto })
@@ -183,7 +184,7 @@ export class PropertyImagesController {
   // ===========================================
 
   @Patch(':imageKey/caption')
-  @Roles(UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER)
+  @Roles(...PROPERTY_MANAGEMENT_ROLES)
   @ApiOperation({ summary: 'Update image caption' })
   @ApiParam({ name: 'propertyId', description: 'Property ID' })
   @ApiParam({ name: 'imageKey', description: 'Image key (URL-encoded)' })
@@ -215,7 +216,7 @@ export class PropertyImagesController {
   // ===========================================
 
   @Patch('reorder')
-  @Roles(UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER)
+  @Roles(...PROPERTY_MANAGEMENT_ROLES)
   @ApiOperation({ summary: 'Reorder property images' })
   @ApiParam({ name: 'propertyId', description: 'Property ID' })
   @ApiBody({ type: ReorderImagesDto })
@@ -245,7 +246,7 @@ export class PropertyImagesController {
 
   @Delete(':imageKey')
   @HttpCode(HttpStatus.OK)
-  @Roles(UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER)
+  @Roles(...PROPERTY_MANAGEMENT_ROLES)
   @ApiOperation({ summary: 'Delete a specific image' })
   @ApiParam({ name: 'propertyId', description: 'Property ID' })
   @ApiParam({ name: 'imageKey', description: 'Image key (URL-encoded)' })
@@ -275,7 +276,7 @@ export class PropertyImagesController {
 
   @Delete()
   @HttpCode(HttpStatus.OK)
-  @Roles(UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER)
+  @Roles(...PROPERTY_MANAGEMENT_ROLES)
   @ApiOperation({ summary: 'Delete all images' })
   @ApiParam({ name: 'propertyId', description: 'Property ID' })
   @ApiResponse({

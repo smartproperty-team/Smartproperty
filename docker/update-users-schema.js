@@ -43,7 +43,20 @@ db.runCommand({
           description: "Profile image URL",
         },
         role: {
-          enum: ["admin", "owner", "manager", "tenant", "agent"],
+          enum: [
+            "super_admin",
+            "admin",
+            "branch_manager",
+            "real_estate_agent",
+            "rental_manager",
+            "accountant_admin_assistant",
+            "owner",
+            "tenant",
+            "service_provider",
+            "ai_system",
+            "manager",
+            "agent",
+          ],
           description: "User role - required",
         },
         status: {
