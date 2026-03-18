@@ -47,7 +47,6 @@ db.createCollection("users", {
         role: {
           enum: [
             "super_admin",
-            "admin",
             "branch_manager",
             "real_estate_agent",
             "rental_manager",
@@ -55,9 +54,6 @@ db.createCollection("users", {
             "owner",
             "tenant",
             "service_provider",
-            "ai_system",
-            "manager",
-            "agent",
           ],
           description: "User role - required",
         },

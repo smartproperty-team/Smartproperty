@@ -41,14 +41,18 @@ export default function AppSidebar() {
 
     if (canReviewVerifications(user)) {
       baseLinks.push({
-        label: "Admin Verifications",
-        to: "/admin/verifications",
+        label: "Super Administrator Verifications",
+        to: "/super-administrator/verifications",
         icon: ShieldCheck,
       });
     }
 
     if (canAccessAdminUsers(user)) {
-      baseLinks.push({ label: "Admin Users", to: "/admin/users", icon: Users });
+      baseLinks.push({
+        label: "Super Administrator Users",
+        to: "/super-administrator/users",
+        icon: Users,
+      });
     }
 
     return baseLinks;

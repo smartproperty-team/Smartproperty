@@ -4,9 +4,9 @@
 
 import { DataSource } from 'typeorm';
 import {
-    Property,
-    PropertyStatus,
-    PropertyType,
+  Property,
+  PropertyStatus,
+  PropertyType,
 } from '../modules/properties/entities/property.entity';
 import { User, UserRole } from '../modules/users/entities/user.entity';
 
@@ -41,10 +41,10 @@ async function seedProperties() {
 
     const ownerUser =
       (await userRepository.findOne({ where: { role: UserRole.OWNER } })) ||
-      (await userRepository.findOne({ where: { role: UserRole.ADMIN } }));
+      (await userRepository.findOne({ where: { role: UserRole.SUPER_ADMIN } }));
 
     if (!ownerUser) {
-      console.log('No owner/admin user found. Run seed:users first.');
+      console.log('No owner/super_admin user found. Run seed:users first.');
       await dataSource.destroy();
       return;
     }

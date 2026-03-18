@@ -129,18 +129,13 @@ export const TOKEN_CONFIG = {
  */
 export const USER_ROLE_DESCRIPTIONS: Record<string, string> = {
   super_admin: "Super Administrator",
-  admin: "System Administrator",
   branch_manager: "Branch Manager",
-  real_estate_agent: "Real Estate Agent",
+  real_estate_agent: "Real Estate Agent / Manager",
   rental_manager: "Rental Manager",
   accountant_admin_assistant: "Accountant / Administrative Assistant",
   owner: "Property Owner",
   tenant: "Tenant",
   service_provider: "Service Provider",
-  ai_system: "AI System Actor",
-  // Legacy aliases
-  manager: "Property Manager",
-  agent: "Real Estate Agent",
 } as const;
 
 /**

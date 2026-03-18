@@ -196,7 +196,7 @@ export default function DashboardPage() {
               </div>
             )}
 
-          {/* Admin: Review Verifications CTA */}
+          {/* Super Administrator: Review Verifications CTA */}
           {canReviewVerifications(user) && (
             <div className="mb-8">
               <div className="relative overflow-hidden rounded-xl border border-amber-200 bg-linear-to-r from-amber-500 via-orange-500 to-red-500 p-6 shadow-lg">
@@ -218,7 +218,9 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-2">
                     <Button
-                      onClick={() => navigate("/admin/verifications")}
+                      onClick={() =>
+                        navigate("/super-administrator/verifications")
+                      }
                       className="bg-white text-amber-700 shadow-md hover:bg-amber-50 focus-visible:ring-white"
                       size="lg"
                     >
@@ -227,7 +229,7 @@ export default function DashboardPage() {
                     </Button>
                     {canAccessAdminUsers(user) && (
                       <Button
-                        onClick={() => navigate("/admin/users")}
+                        onClick={() => navigate("/super-administrator/users")}
                         className="bg-white text-amber-700 shadow-md hover:bg-amber-50 focus-visible:ring-white"
                         size="lg"
                       >
@@ -446,7 +448,9 @@ export default function DashboardPage() {
                   </div>
                   <div className="ml-3">
                     <p className="font-medium text-gray-900">Mongo Express</p>
-                    <p className="text-sm text-gray-500">Database admin</p>
+                    <p className="text-sm text-gray-500">
+                      Database super administrator
+                    </p>
                   </div>
                 </a>
               </div>
