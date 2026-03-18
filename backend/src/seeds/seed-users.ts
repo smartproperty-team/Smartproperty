@@ -6,9 +6,9 @@ import * as bcrypt from 'bcrypt';
 import { ObjectId } from 'mongodb';
 import { DataSource } from 'typeorm';
 import {
-    User,
-    UserRole,
-    UserStatus,
+  User,
+  UserRole,
+  UserStatus,
 } from '../modules/users/entities/user.entity';
 
 async function seedUsers() {
@@ -51,12 +51,12 @@ async function seedUsers() {
     const users: Partial<User>[] = [
       {
         _id: new ObjectId(),
-        email: 'admin@smartproperty.com',
+        email: 'superadmin@smartproperty.com',
         password: hashedPassword,
-        firstName: 'Admin',
+        firstName: 'Super',
         lastName: 'User',
         phone: '+1234567890',
-        role: UserRole.ADMIN,
+        role: UserRole.SUPER_ADMIN,
         status: UserStatus.ACTIVE,
         isEmailVerified: true,
         loginAttempts: 0,
@@ -93,12 +93,12 @@ async function seedUsers() {
       },
       {
         _id: new ObjectId(),
-        email: 'manager@smartproperty.com',
+        email: 'agent-manager@smartproperty.com',
         password: hashedPassword,
         firstName: 'Mike',
-        lastName: 'Manager',
+        lastName: 'AgentManager',
         phone: '+1234567893',
-        role: UserRole.MANAGER,
+        role: UserRole.REAL_ESTATE_AGENT,
         status: UserStatus.ACTIVE,
         isEmailVerified: true,
         loginAttempts: 0,

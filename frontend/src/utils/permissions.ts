@@ -7,8 +7,8 @@
 // across components.
 // ===========================================
 
-import type { User } from '@/types/auth';
-import { UserRole } from '@/types/auth';
+import type { User } from "@/types/auth";
+import { UserRole } from "@/types/auth";
 
 /**
  * Roles that can create, update, and delete properties.
@@ -16,12 +16,9 @@ import { UserRole } from '@/types/auth';
  */
 const PROPERTY_MANAGERS: UserRole[] = [
   UserRole.SUPER_ADMIN,
-  UserRole.ADMIN,
   UserRole.OWNER,
   UserRole.BRANCH_MANAGER,
-  UserRole.MANAGER,
   UserRole.REAL_ESTATE_AGENT,
-  UserRole.AGENT,
   UserRole.RENTAL_MANAGER,
 ];
 
@@ -30,25 +27,21 @@ const PROPERTY_MANAGERS: UserRole[] = [
  */
 const PROPERTY_CREATORS: UserRole[] = [
   UserRole.SUPER_ADMIN,
-  UserRole.ADMIN,
   UserRole.OWNER,
   UserRole.BRANCH_MANAGER,
-  UserRole.MANAGER,
   UserRole.REAL_ESTATE_AGENT,
-  UserRole.AGENT,
 ];
 
 /**
  * Roles that can access user administration.
  */
-const USER_ADMIN_ROLES: UserRole[] = [UserRole.SUPER_ADMIN, UserRole.ADMIN];
+const USER_ADMIN_ROLES: UserRole[] = [UserRole.SUPER_ADMIN];
 
 /**
  * Roles that can review verifications.
  */
 const VERIFICATION_REVIEW_ROLES: UserRole[] = [
   UserRole.SUPER_ADMIN,
-  UserRole.ADMIN,
   UserRole.BRANCH_MANAGER,
 ];
 
@@ -86,7 +79,7 @@ export function isTenant(user: User | null | undefined): boolean {
 }
 
 /**
- * Is the user a platform admin?
+ * Is the user a platform super administrator?
  */
 export function isPlatformAdmin(user: User | null | undefined): boolean {
   return hasRole(user, USER_ADMIN_ROLES);
@@ -100,7 +93,7 @@ export function isAdmin(user: User | null | undefined): boolean {
 }
 
 /**
- * Can access admin users page.
+ * Can access super administrator users page.
  */
 export function canAccessAdminUsers(user: User | null | undefined): boolean {
   return hasRole(user, USER_ADMIN_ROLES);
@@ -109,9 +102,7 @@ export function canAccessAdminUsers(user: User | null | undefined): boolean {
 /**
  * Can access verification review pages.
  */
-export function canReviewVerifications(
-  user: User | null | undefined,
-): boolean {
+export function canReviewVerifications(user: User | null | undefined): boolean {
   return hasRole(user, VERIFICATION_REVIEW_ROLES);
 }
 
@@ -127,9 +118,8 @@ export function isOwner(user: User | null | undefined): boolean {
  */
 export function isManager(user: User | null | undefined): boolean {
   return (
-    user?.role === UserRole.MANAGER ||
+    user?.role === UserRole.REAL_ESTATE_AGENT ||
     user?.role === UserRole.BRANCH_MANAGER ||
     user?.role === UserRole.RENTAL_MANAGER
   );
 }
-

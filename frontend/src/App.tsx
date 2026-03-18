@@ -163,7 +163,7 @@ function App() {
           }
         />
         <Route
-          path="/admin/verifications"
+          path="/super-administrator/verifications"
           element={
             <ProtectedRoute>
               {canReviewVerifications(user) ? (
@@ -175,7 +175,7 @@ function App() {
           }
         />
         <Route
-          path="/admin/users"
+          path="/super-administrator/users"
           element={
             <ProtectedRoute>
               {canAccessAdminUsers(user) ? (

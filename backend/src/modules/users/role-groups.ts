@@ -1,26 +1,19 @@
 import { UserRole } from './entities/user.entity';
 
-export const PLATFORM_ADMIN_ROLES: UserRole[] = [
-  UserRole.ADMIN,
-  UserRole.SUPER_ADMIN,
-];
+export const PLATFORM_ADMIN_ROLES: UserRole[] = [UserRole.SUPER_ADMIN];
 
 export const TENANT_ONLY_ROLES: UserRole[] = [UserRole.TENANT];
 
 export const PROPERTY_CREATOR_ROLES: UserRole[] = [
   UserRole.OWNER,
-  UserRole.MANAGER,
   UserRole.BRANCH_MANAGER,
-  UserRole.AGENT,
   UserRole.REAL_ESTATE_AGENT,
   ...PLATFORM_ADMIN_ROLES,
 ];
 
 export const PROPERTY_MANAGEMENT_ROLES: UserRole[] = [
   UserRole.OWNER,
-  UserRole.MANAGER,
   UserRole.BRANCH_MANAGER,
-  UserRole.AGENT,
   UserRole.REAL_ESTATE_AGENT,
   UserRole.RENTAL_MANAGER,
   ...PLATFORM_ADMIN_ROLES,
@@ -28,8 +21,8 @@ export const PROPERTY_MANAGEMENT_ROLES: UserRole[] = [
 
 export const STORAGE_FILE_DELETE_ROLES: UserRole[] = [
   UserRole.OWNER,
-  UserRole.MANAGER,
   UserRole.BRANCH_MANAGER,
+  UserRole.REAL_ESTATE_AGENT,
   UserRole.RENTAL_MANAGER,
   ...PLATFORM_ADMIN_ROLES,
 ];
@@ -42,8 +35,6 @@ export const VERIFICATION_REVIEW_ROLES: UserRole[] = [
 export const SELF_REGISTRABLE_ROLES: UserRole[] = [
   UserRole.TENANT,
   UserRole.OWNER,
-  UserRole.MANAGER,
-  UserRole.AGENT,
   UserRole.REAL_ESTATE_AGENT,
   UserRole.SERVICE_PROVIDER,
 ];

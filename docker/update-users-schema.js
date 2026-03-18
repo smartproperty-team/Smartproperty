@@ -45,7 +45,6 @@ db.runCommand({
         role: {
           enum: [
             "super_admin",
-            "admin",
             "branch_manager",
             "real_estate_agent",
             "rental_manager",
@@ -53,9 +52,6 @@ db.runCommand({
             "owner",
             "tenant",
             "service_provider",
-            "ai_system",
-            "manager",
-            "agent",
           ],
           description: "User role - required",
         },

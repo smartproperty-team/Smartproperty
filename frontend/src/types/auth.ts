@@ -4,7 +4,6 @@
 
 export enum UserRole {
   SUPER_ADMIN = "super_admin",
-  ADMIN = "admin",
   BRANCH_MANAGER = "branch_manager",
   REAL_ESTATE_AGENT = "real_estate_agent",
   RENTAL_MANAGER = "rental_manager",
@@ -12,10 +11,6 @@ export enum UserRole {
   OWNER = "owner",
   TENANT = "tenant",
   SERVICE_PROVIDER = "service_provider",
-  AI_SYSTEM = "ai_system",
-  // Legacy roles kept for backward compatibility.
-  MANAGER = "manager",
-  AGENT = "agent",
 }
 
 export enum UserStatus {

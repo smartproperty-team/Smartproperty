@@ -14,7 +14,7 @@ export const ROLES_KEY = 'roles';
  * @param roles - Array of UserRole values allowed to access the route
  *
  * @example
- * @Roles(UserRole.ADMIN, UserRole.OWNER)
+ * @Roles(UserRole.SUPER_ADMIN, UserRole.OWNER)
  * @Get('admin/users')
  * getAdminUsers() {
  *   return this.userService.findAll();
