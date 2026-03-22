@@ -350,20 +350,53 @@ export class PropertyImagesService {
     userId: string,
     userRole: UserRole,
   ): void {
+    const currentUserId = this.normalizeId(userId);
+    const ownerId = this.normalizeId(property.ownerId);
+    const managerId = this.normalizeId(property.managerId);
+
     if (hasPlatformAdminRole(userRole)) {
       return;
     }
 
-    if (property.ownerId === userId) {
+    if (ownerId && ownerId === currentUserId) {
       return;
     }
 
-    if (property.managerId === userId) {
+    if (managerId && managerId === currentUserId) {
       return;
     }
 
     throw new ForbiddenException(
       'You do not have permission to manage this property',
     );
+  }
+
+  private normalizeId(value: unknown): string {
+    if (!value) {
+      return '';
+    }
+
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    if (value instanceof ObjectId) {
+      return value.toHexString();
+    }
+
+    if (typeof value === 'object' && value !== null) {
+      const withHex = value as {
+        toHexString?: () => string;
+        toString: () => string;
+      };
+
+      if (typeof withHex.toHexString === 'function') {
+        return withHex.toHexString();
+      }
+
+      return withHex.toString();
+    }
+
+    return String(value);
   }
 }

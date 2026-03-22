@@ -400,12 +400,12 @@ export default function PropertyFormPage() {
     }
   };
 
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const isPhotosStep = WIZARD_STEP_IDS[currentStep] === "photos";
 
-    if (currentStep < wizardSteps.length - 1) {
-      handleNextStep();
+  // Save is triggered only from the explicit final-step button.
+  const handleSaveProperty = async () => {
+    if (!isPhotosStep) {
+      setCurrentStep(wizardSteps.length - 1);
       return;
     }
 
@@ -902,7 +902,7 @@ export default function PropertyFormPage() {
         </div>
 
         {/* Form */}
-        <form className="property-form" onSubmit={handleSubmit}>
+        <div className="property-form" role="form">
           <Stepper
             steps={wizardSteps}
             currentStep={currentStep}
@@ -924,7 +924,7 @@ export default function PropertyFormPage() {
                     {t.properties.previous}
                   </button>
 
-                  {currentStep < wizardSteps.length - 1 ? (
+                  {!isPhotosStep ? (
                     <button
                       type="button"
                       className="btn-submit"
@@ -934,8 +934,11 @@ export default function PropertyFormPage() {
                     </button>
                   ) : (
                     <button
-                      type="submit"
+                      type="button"
                       className="btn-submit"
+                      onClick={() => {
+                        void handleSaveProperty();
+                      }}
                       disabled={loading}
                     >
                       {loading ? (
@@ -959,7 +962,7 @@ export default function PropertyFormPage() {
           >
             {renderStepContent()}
           </Stepper>
-        </form>
+        </div>
       </main>
 
       <HomeFooter />
