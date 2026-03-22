@@ -330,7 +330,6 @@ export default function LoginPage() {
                 rel="noopener noreferrer"
                 aria-label="Open API docs (opens in new tab)"
                 className="text-home-primary hover:underline"
-                aria-label="Open API documentation in a new tab"
               >
                 localhost:3000/api/docs
                 <span className="sr-only"> (opens in a new tab)</span>
