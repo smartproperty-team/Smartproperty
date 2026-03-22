@@ -1257,8 +1257,10 @@ export default function PropertyDetailPage() {
                       rel="noreferrer"
                       aria-label={`${t.propertyDetail.openSharedLink} (opens in new tab)`}
                       className="btn-edit"
+                      aria-label="Open shared property link in a new tab"
                     >
                       {t.propertyDetail.openSharedLink}
+                      <span className="sr-only"> (opens in a new tab)</span>
                     </a>
                   </div>
                 </div>

@@ -128,8 +128,10 @@ export default function ForgotPasswordPage() {
                         rel="noopener noreferrer"
                         aria-label="Open MailHog (opens in new tab)"
                         className="text-indigo-600 hover:underline"
+                        aria-label="Open MailHog in a new tab"
                       >
                         MailHog (localhost:8025)
+                        <span className="sr-only"> (opens in a new tab)</span>
                       </a>
                     </p>
                   </div>

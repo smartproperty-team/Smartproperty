@@ -1,4 +1,5 @@
 import { AppSidebar, HomeFooter } from "@/components/layout";
+import { Alert } from "@/components/ui";
 import applicationService from "@/services/application.service";
 import type { Application, ApplicationStatus } from "@/types/application";
 import { useEffect, useMemo, useState } from "react";
@@ -144,6 +145,13 @@ export default function TenantApplicationsPage() {
   };
 
   const withdrawApplication = async (id: string) => {
+    const shouldWithdraw = window.confirm(
+      "Withdraw this application? You can submit a new one later if needed.",
+    );
+    if (!shouldWithdraw) {
+      return;
+    }
+
     try {
       setError(null);
       await applicationService.withdrawApplication(id);
@@ -184,19 +192,30 @@ export default function TenantApplicationsPage() {
             </div>
 
             {error && (
-              <p className="mt-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">
-                ❌ {error}
-              </p>
+              <div className="mt-4" aria-live="assertive">
+                <Alert
+                  type="error"
+                  message={error}
+                  onClose={() => setError(null)}
+                />
+              </div>
             )}
             {notice && (
-              <p className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">
-                ✅ {notice}
-              </p>
+              <div className="mt-4" aria-live="polite">
+                <Alert
+                  type="success"
+                  message={notice}
+                  onClose={() => setNotice(null)}
+                />
+              </div>
             )}
 
             <form className="mt-8 space-y-6" onSubmit={submitApplication}>
               {/* Property Selection */}
-              <div className="rounded-lg border-2 border-indigo-200 bg-indigo-50 p-4">
+              <fieldset className="rounded-lg border-2 border-indigo-200 bg-indigo-50 p-4">
+                <legend className="font-bold text-indigo-900">
+                  Property Selection
+                </legend>
                 <label className="grid gap-2 text-sm text-gray-700">
                   <span className="font-bold text-indigo-900">
                     🏘️ Which Property?
@@ -207,6 +226,7 @@ export default function TenantApplicationsPage() {
                       : "Enter the property ID you want to apply for"}
                   </span>
                   <input
+                    id="application-property-id"
                     className={`rounded-lg border-2 px-3 py-2 font-medium text-gray-900 ${
                       prefilledPropertyId
                         ? "border-emerald-300 bg-emerald-50"
@@ -218,6 +238,7 @@ export default function TenantApplicationsPage() {
                     readOnly={!!prefilledPropertyId}
                     disabled={!!prefilledPropertyId}
                     required
+                    aria-required="true"
                   />
                   {prefilledPropertyId && (
                     <p className="text-xs text-emerald-700">
@@ -225,13 +246,13 @@ export default function TenantApplicationsPage() {
                     </p>
                   )}
                 </label>
-              </div>
+              </fieldset>
 
               {/* Employment Information */}
-              <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
-                <p className="mb-4 font-bold text-blue-900">
+              <fieldset className="rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
+                <legend className="font-bold text-blue-900">
                   💼 Your Employment
-                </p>
+                </legend>
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="grid gap-1 text-sm text-gray-700">
                     <span className="font-semibold text-gray-900">
@@ -241,11 +262,13 @@ export default function TenantApplicationsPage() {
                       Where do you work?
                     </span>
                     <input
+                      id="application-company-name"
                       className="mt-1 rounded-lg border border-gray-300 px-3 py-2"
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
                       placeholder="e.g., Tech Corp, Acme Inc"
                       required
+                      aria-required="true"
                     />
                   </label>
                   <label className="grid gap-1 text-sm text-gray-700">
@@ -256,11 +279,13 @@ export default function TenantApplicationsPage() {
                       What's your position?
                     </span>
                     <input
+                      id="application-job-title"
                       className="mt-1 rounded-lg border border-gray-300 px-3 py-2"
                       value={jobTitle}
                       onChange={(e) => setJobTitle(e.target.value)}
                       placeholder="e.g., Software Engineer, Manager"
                       required
+                      aria-required="true"
                     />
                   </label>
                   <label className="col-span-2 grid gap-1 text-sm text-gray-700">
@@ -276,6 +301,7 @@ export default function TenantApplicationsPage() {
                         €
                       </span>
                       <input
+                        id="application-monthly-income"
                         type="number"
                         min="0"
                         className="mt-1 flex-1 rounded-lg border border-gray-300 px-3 py-2"
@@ -283,11 +309,12 @@ export default function TenantApplicationsPage() {
                         onChange={(e) => setMonthlyIncome(e.target.value)}
                         placeholder="e.g., 3500"
                         required
+                        aria-required="true"
                       />
                     </div>
                   </label>
                 </div>
-              </div>
+              </fieldset>
 
               {/* Optional Message */}
               <div className="rounded-lg border-2 border-purple-200 bg-purple-50 p-4">
@@ -426,6 +453,7 @@ export default function TenantApplicationsPage() {
                       <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border-2 border-blue-300 bg-blue-50 px-4 py-2 font-semibold text-blue-700 transition-colors hover:bg-blue-100">
                         <span>📎</span>
                         <input
+                          id={`upload-${application.id}`}
                           type="file"
                           className="hidden"
                           onChange={(event) => {

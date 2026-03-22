@@ -20,7 +20,11 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import { PropertyStatus, PropertyType } from '../entities/property.entity';
+import {
+  PropertyCategory,
+  PropertyStatus,
+  PropertyType,
+} from '../entities/property.entity';
 
 // ===========================================
 // Nested DTOs
@@ -182,6 +186,11 @@ export class CreatePropertyDto {
   @IsEnum(PropertyStatus)
   status?: PropertyStatus;
 
+  @ApiPropertyOptional({ enum: PropertyCategory })
+  @IsOptional()
+  @IsEnum(PropertyCategory)
+  category?: PropertyCategory;
+
   @ApiProperty({ example: 1800 })
   @IsNumber()
   @Min(0)
@@ -293,6 +302,11 @@ export class UpdatePropertyDto {
   @IsOptional()
   @IsEnum(PropertyStatus)
   status?: PropertyStatus;
+
+  @ApiPropertyOptional({ enum: PropertyCategory })
+  @IsOptional()
+  @IsEnum(PropertyCategory)
+  category?: PropertyCategory;
 
   @ApiPropertyOptional({ example: 1800 })
   @IsOptional()

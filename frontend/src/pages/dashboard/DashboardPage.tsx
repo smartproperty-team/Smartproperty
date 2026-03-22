@@ -20,7 +20,14 @@ import {
 } from "@/services";
 import { useAuthStore } from "@/store";
 import { UserRole } from "@/types/auth";
-import type { Property } from "@/types/property";
+import type {
+  PortfolioConnectorDefinition,
+  PortfolioConnectorId,
+  PortfolioConnectorSyncResult,
+  PortfolioImportPreview,
+  PortfolioSummary,
+  Property,
+} from "@/types/property";
 import { VerificationStatus } from "@/types/verification";
 import {
   canAccessAdminUsers,
@@ -32,6 +39,7 @@ import {
 import {
   Bell,
   Building2,
+  Download,
   FileText,
   Home,
   Mail,
@@ -62,6 +70,41 @@ export default function DashboardPage() {
     leases: 0,
     notifications: 0,
   });
+  const [portfolioSummary, setPortfolioSummary] =
+    useState<PortfolioSummary | null>(null);
+  const [isLoadingPortfolioSummary, setIsLoadingPortfolioSummary] =
+    useState(false);
+  const [isExportingPortfolio, setIsExportingPortfolio] = useState(false);
+  const [isExportingPortfolioExcel, setIsExportingPortfolioExcel] =
+    useState(false);
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
+  const [portfolioImportFile, setPortfolioImportFile] = useState<File | null>(
+    null,
+  );
+  const [portfolioImportPreview, setPortfolioImportPreview] =
+    useState<PortfolioImportPreview | null>(null);
+  const [isPreviewingImport, setIsPreviewingImport] = useState(false);
+  const [isCommittingImport, setIsCommittingImport] = useState(false);
+  const [portfolioImportMessage, setPortfolioImportMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [portfolioConnectors, setPortfolioConnectors] = useState<
+    PortfolioConnectorDefinition[]
+  >([]);
+  const [selectedConnectorId, setSelectedConnectorId] =
+    useState<PortfolioConnectorId>("seloger");
+  const [connectorEndpointUrl, setConnectorEndpointUrl] = useState("");
+  const [isSyncingConnector, setIsSyncingConnector] = useState(false);
+  const [connectorSyncResult, setConnectorSyncResult] =
+    useState<PortfolioConnectorSyncResult | null>(null);
+  const [connectorSyncMessage, setConnectorSyncMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const canAccessPortfolioDashboard =
+    canManageProperties(user) ||
+    user?.role === UserRole.ACCOUNTANT_ADMIN_ASSISTANT;
 
   // Fetch verification status for tenants
   useEffect(() => {
@@ -199,6 +242,261 @@ export default function DashboardPage() {
     void loadStats();
   }, [user]);
 
+  useEffect(() => {
+    if (!canAccessPortfolioDashboard) {
+      setPortfolioSummary(null);
+      return;
+    }
+
+    const loadPortfolioSummary = async () => {
+      setIsLoadingPortfolioSummary(true);
+      try {
+        const scope =
+          user?.role === UserRole.OWNER
+            ? "owner"
+            : user?.role === UserRole.SUPER_ADMIN
+              ? "all"
+              : "manager";
+
+        const summary = await propertyService.getPortfolioSummary({ scope });
+        setPortfolioSummary(summary);
+      } catch {
+        setPortfolioSummary(null);
+      } finally {
+        setIsLoadingPortfolioSummary(false);
+      }
+    };
+
+    void loadPortfolioSummary();
+  }, [canAccessPortfolioDashboard, user?.role]);
+
+  useEffect(() => {
+    if (!canManageProperties(user)) {
+      setPortfolioConnectors([]);
+      return;
+    }
+
+    const loadConnectors = async () => {
+      try {
+        const connectors = await propertyService.getPortfolioConnectors();
+        setPortfolioConnectors(connectors);
+
+        if (connectors.length > 0) {
+          setSelectedConnectorId(connectors[0].id);
+        }
+      } catch {
+        setPortfolioConnectors([]);
+      }
+    };
+
+    void loadConnectors();
+  }, [user]);
+
+  const handleExportPortfolio = async () => {
+    setIsExportingPortfolio(true);
+    try {
+      const scope =
+        user?.role === UserRole.OWNER
+          ? "owner"
+          : user?.role === UserRole.SUPER_ADMIN
+            ? "all"
+            : "manager";
+
+      const payload = await propertyService.exportPortfolioCsv({ scope });
+      const blob = new Blob([payload.csv], { type: payload.contentType });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = payload.fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsExportingPortfolio(false);
+    }
+  };
+
+  const downloadBase64File = (
+    base64: string,
+    contentType: string,
+    fileName: string,
+  ) => {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+
+    const blob = new Blob([bytes], { type: contentType });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportPortfolioExcel = async () => {
+    setIsExportingPortfolioExcel(true);
+    try {
+      const scope =
+        user?.role === UserRole.OWNER
+          ? "owner"
+          : user?.role === UserRole.SUPER_ADMIN
+            ? "all"
+            : "manager";
+
+      const payload = await propertyService.exportPortfolioExcel({ scope });
+      downloadBase64File(payload.base64, payload.contentType, payload.fileName);
+    } finally {
+      setIsExportingPortfolioExcel(false);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    setIsDownloadingTemplate(true);
+    try {
+      const payload = await propertyService.getPortfolioImportTemplateExcel();
+      downloadBase64File(payload.base64, payload.contentType, payload.fileName);
+    } finally {
+      setIsDownloadingTemplate(false);
+    }
+  };
+
+  const handlePreviewImport = async () => {
+    if (!portfolioImportFile) {
+      setPortfolioImportMessage({
+        type: "error",
+        text: "Please choose a CSV file first.",
+      });
+      return;
+    }
+
+    setIsPreviewingImport(true);
+    setPortfolioImportMessage(null);
+    try {
+      const preview =
+        await propertyService.previewPortfolioImport(portfolioImportFile);
+      setPortfolioImportPreview(preview);
+      setPortfolioImportMessage({
+        type: "success",
+        text: `Preview ready: ${preview.validRows} valid row(s), ${preview.invalidRows} invalid row(s).`,
+      });
+    } catch {
+      setPortfolioImportPreview(null);
+      setPortfolioImportMessage({
+        type: "error",
+        text: "Import preview failed. Please verify your CSV format and try again.",
+      });
+    } finally {
+      setIsPreviewingImport(false);
+    }
+  };
+
+  const handleCommitImport = async () => {
+    if (!portfolioImportPreview?.acceptedRows?.length) {
+      setPortfolioImportMessage({
+        type: "error",
+        text: "No valid rows to import. Run preview first.",
+      });
+      return;
+    }
+
+    const shouldCommit = window.confirm(
+      "Are you sure you want to import the validated rows? This will create new properties.",
+    );
+    if (!shouldCommit) {
+      return;
+    }
+
+    setIsCommittingImport(true);
+    setPortfolioImportMessage(null);
+    try {
+      const result = await propertyService.commitPortfolioImport(
+        portfolioImportPreview.acceptedRows,
+      );
+
+      setPortfolioImportMessage({
+        type: "success",
+        text: `Import completed: ${result.created} created, ${result.skipped} skipped, ${result.failed} failed.`,
+      });
+
+      const scope =
+        user?.role === UserRole.OWNER
+          ? "owner"
+          : user?.role === UserRole.SUPER_ADMIN
+            ? "all"
+            : "manager";
+      const summary = await propertyService.getPortfolioSummary({ scope });
+      setPortfolioSummary(summary);
+    } catch {
+      setPortfolioImportMessage({
+        type: "error",
+        text: "Import commit failed. Please review rows and try again.",
+      });
+    } finally {
+      setIsCommittingImport(false);
+    }
+  };
+
+  const handleSyncConnector = async () => {
+    if (!canManageProperties(user)) {
+      return;
+    }
+
+    const selectedConnector = portfolioConnectors.find(
+      (connector) => connector.id === selectedConnectorId,
+    );
+
+    const isWebhookConnector = selectedConnector?.id === "webhook";
+    const endpointUrl = connectorEndpointUrl.trim();
+
+    if (isWebhookConnector && !endpointUrl) {
+      setConnectorSyncMessage({
+        type: "error",
+        text: "Webhook connector requires an endpoint URL.",
+      });
+      return;
+    }
+
+    setIsSyncingConnector(true);
+    setConnectorSyncMessage(null);
+    setConnectorSyncResult(null);
+
+    try {
+      const scope =
+        user?.role === UserRole.OWNER
+          ? "owner"
+          : user?.role === UserRole.SUPER_ADMIN
+            ? "all"
+            : "manager";
+
+      const result = await propertyService.syncPortfolioConnector({
+        connectorId: selectedConnectorId,
+        scope,
+        dryRun: !isWebhookConnector,
+        endpointUrl: isWebhookConnector ? endpointUrl : undefined,
+      });
+
+      setConnectorSyncResult(result);
+      setConnectorSyncMessage({
+        type: "success",
+        text: `Connector sync completed: ${result.mappedRecords}/${result.totalRecords} mapped, ${result.failedRecords} failed.`,
+      });
+    } catch {
+      setConnectorSyncMessage({
+        type: "error",
+        text: "Connector sync failed. Check connector settings and try again.",
+      });
+    } finally {
+      setIsSyncingConnector(false);
+    }
+  };
+
   const handleResendVerification = async () => {
     if (!user?.email) return;
     setResendingEmail(true);
@@ -259,7 +557,8 @@ export default function DashboardPage() {
                   aria-label="Open MailHog (opens in new tab)"
                   className="text-sm text-indigo-600 hover:underline"
                 >
-                  Open MailHog →
+                  Open MailHog
+                  <span className="sr-only"> (opens in a new tab)</span>
                 </a>
               </div>
               {emailMessage && (
@@ -394,6 +693,28 @@ export default function DashboardPage() {
                   : ""
               }
               onClick={handleApplicationsCardClick}
+              onKeyDown={(event) => {
+                if (
+                  (event.key === "Enter" || event.key === " ") &&
+                  (canReviewApplications(user) || isTenant(user))
+                ) {
+                  event.preventDefault();
+                  handleApplicationsCardClick();
+                }
+              }}
+              role={
+                canReviewApplications(user) || isTenant(user)
+                  ? "button"
+                  : undefined
+              }
+              tabIndex={
+                canReviewApplications(user) || isTenant(user) ? 0 : undefined
+              }
+              aria-label={
+                canReviewApplications(user) || isTenant(user)
+                  ? "Open applications"
+                  : undefined
+              }
             >
               <CardContent className="flex items-center p-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-100">
@@ -537,6 +858,327 @@ export default function DashboardPage() {
             </Card>
           )}
 
+          {canAccessPortfolioDashboard && (
+            <Card className="mb-8">
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <CardTitle className="flex items-center">
+                  <Building2 className="mr-2 h-5 w-5 text-indigo-600" />
+                  Portfolio Management & Data Exchange
+                </CardTitle>
+                <Button
+                  size="sm"
+                  onClick={handleExportPortfolio}
+                  isLoading={isExportingPortfolio}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Export CSV
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {isLoadingPortfolioSummary ? (
+                  <p className="text-sm text-gray-600">
+                    Loading portfolio KPIs...
+                  </p>
+                ) : !portfolioSummary ? (
+                  <div className="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-600">
+                    Portfolio summary unavailable right now. Try again in a
+                    moment.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="rounded-lg border border-gray-200 p-4">
+                        <p className="text-sm text-gray-500">
+                          Total Properties
+                        </p>
+                        <p className="text-2xl font-semibold text-gray-900">
+                          {portfolioSummary.totals.properties}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-gray-200 p-4">
+                        <p className="text-sm text-gray-500">Listed</p>
+                        <p className="text-2xl font-semibold text-gray-900">
+                          {portfolioSummary.totals.listed}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-gray-200 p-4">
+                        <p className="text-sm text-gray-500">Rented</p>
+                        <p className="text-2xl font-semibold text-gray-900">
+                          {portfolioSummary.totals.rented}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-gray-200 p-4">
+                        <p className="text-sm text-gray-500">Avg Price</p>
+                        <p className="text-2xl font-semibold text-gray-900">
+                          {portfolioSummary.totals.avgPrice.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      <div className="rounded-lg border border-gray-200 p-4">
+                        <p className="mb-2 text-sm font-medium text-gray-700">
+                          Top Cities
+                        </p>
+                        {portfolioSummary.topCities.length === 0 ? (
+                          <p className="text-sm text-gray-500">
+                            No city data available yet.
+                          </p>
+                        ) : (
+                          <ul className="space-y-1 text-sm text-gray-700">
+                            {portfolioSummary.topCities.map((city) => (
+                              <li
+                                key={city.city}
+                                className="flex items-center justify-between"
+                              >
+                                <span>{city.city}</span>
+                                <span className="font-medium">
+                                  {city.count}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+
+                      <div className="rounded-lg border border-gray-200 p-4">
+                        <p className="mb-2 text-sm font-medium text-gray-700">
+                          Data Quality
+                        </p>
+                        <ul className="space-y-1 text-sm text-gray-700">
+                          <li>
+                            Completeness Score:{" "}
+                            <span className="font-medium">
+                              {
+                                portfolioSummary.dataQuality
+                                  .avgCompletenessScore
+                              }
+                              %
+                            </span>
+                          </li>
+                          <li>
+                            Missing Descriptions:{" "}
+                            <span className="font-medium">
+                              {portfolioSummary.dataQuality.missingDescription}
+                            </span>
+                          </li>
+                          <li>
+                            Missing Images:{" "}
+                            <span className="font-medium">
+                              {portfolioSummary.dataQuality.missingImages}
+                            </span>
+                          </li>
+                          <li>
+                            Missing Coordinates:{" "}
+                            <span className="font-medium">
+                              {portfolioSummary.dataQuality.missingCoordinates}
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    {canManageProperties(user) && (
+                      <div className="rounded-lg border border-gray-200 p-4">
+                        <p className="mb-2 text-sm font-medium text-gray-700">
+                          Import CSV/Excel (Preview then Commit)
+                        </p>
+                        <div className="mb-3 flex flex-wrap gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={handleExportPortfolioExcel}
+                            isLoading={isExportingPortfolioExcel}
+                          >
+                            <Download className="mr-2 h-4 w-4" />
+                            Export Excel
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={handleDownloadTemplate}
+                            isLoading={isDownloadingTemplate}
+                          >
+                            Download Import Template
+                          </Button>
+                        </div>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                          <input
+                            type="file"
+                            accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0] || null;
+                              setPortfolioImportFile(file);
+                              setPortfolioImportPreview(null);
+                              setPortfolioImportMessage(null);
+                            }}
+                            className="block w-full rounded-lg border border-gray-300 p-2 text-sm text-gray-700"
+                          />
+                          <Button
+                            variant="outline"
+                            onClick={handlePreviewImport}
+                            isLoading={isPreviewingImport}
+                          >
+                            Preview
+                          </Button>
+                          <Button
+                            onClick={handleCommitImport}
+                            isLoading={isCommittingImport}
+                            disabled={
+                              !portfolioImportPreview?.acceptedRows?.length
+                            }
+                          >
+                            Import Valid Rows
+                          </Button>
+                        </div>
+
+                        {portfolioImportPreview && (
+                          <div className="mt-3 rounded-md bg-gray-50 p-3 text-sm text-gray-700">
+                            <p>
+                              Rows: {portfolioImportPreview.totalRows} | Valid:{" "}
+                              {portfolioImportPreview.validRows} | Invalid:{" "}
+                              {portfolioImportPreview.invalidRows} | Warnings:{" "}
+                              {portfolioImportPreview.warnings}
+                            </p>
+                            {portfolioImportPreview.errors.length > 0 && (
+                              <p className="mt-1 text-red-600">
+                                First error: row{" "}
+                                {portfolioImportPreview.errors[0].rowNumber} -{" "}
+                                {portfolioImportPreview.errors[0].message}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {portfolioImportMessage && (
+                          <div className="mt-3">
+                            <Alert
+                              type={portfolioImportMessage.type}
+                              message={portfolioImportMessage.text}
+                              onClose={() => setPortfolioImportMessage(null)}
+                            />
+                          </div>
+                        )}
+
+                        <div className="mt-5 rounded-lg border border-dashed border-gray-300 p-4">
+                          <p className="mb-2 text-sm font-medium text-gray-700">
+                            Partner API Connectors (Listing Synchronization)
+                          </p>
+
+                          {portfolioConnectors.length === 0 ? (
+                            <p className="text-sm text-gray-500">
+                              No connectors available.
+                            </p>
+                          ) : (
+                            <>
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                <label className="text-sm text-gray-700">
+                                  <span className="mb-1 block font-medium">
+                                    Connector
+                                  </span>
+                                  <select
+                                    value={selectedConnectorId}
+                                    onChange={(event) => {
+                                      setSelectedConnectorId(
+                                        event.target
+                                          .value as PortfolioConnectorId,
+                                      );
+                                      setConnectorSyncResult(null);
+                                      setConnectorSyncMessage(null);
+                                    }}
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                                  >
+                                    {portfolioConnectors.map((connector) => (
+                                      <option
+                                        key={connector.id}
+                                        value={connector.id}
+                                      >
+                                        {connector.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+
+                                <label className="text-sm text-gray-700">
+                                  <span className="mb-1 block font-medium">
+                                    Endpoint URL (webhook only)
+                                  </span>
+                                  <input
+                                    type="url"
+                                    value={connectorEndpointUrl}
+                                    onChange={(event) =>
+                                      setConnectorEndpointUrl(
+                                        event.target.value,
+                                      )
+                                    }
+                                    placeholder="https://partner.example.com/webhook"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                                    disabled={selectedConnectorId !== "webhook"}
+                                  />
+                                </label>
+                              </div>
+
+                              <div className="mt-3 flex items-center justify-between gap-3">
+                                <p className="text-xs text-gray-500">
+                                  {portfolioConnectors.find(
+                                    (connector) =>
+                                      connector.id === selectedConnectorId,
+                                  )?.description || ""}
+                                </p>
+                                <Button
+                                  variant="outline"
+                                  onClick={handleSyncConnector}
+                                  isLoading={isSyncingConnector}
+                                >
+                                  Sync Connector
+                                </Button>
+                              </div>
+
+                              {connectorSyncMessage && (
+                                <div className="mt-3">
+                                  <Alert
+                                    type={connectorSyncMessage.type}
+                                    message={connectorSyncMessage.text}
+                                    onClose={() =>
+                                      setConnectorSyncMessage(null)
+                                    }
+                                  />
+                                </div>
+                              )}
+
+                              {connectorSyncResult && (
+                                <div className="mt-3 rounded-md bg-gray-50 p-3 text-sm text-gray-700">
+                                  <p>
+                                    Total: {connectorSyncResult.totalRecords} |
+                                    Mapped: {connectorSyncResult.mappedRecords}{" "}
+                                    | Failed:{" "}
+                                    {connectorSyncResult.failedRecords}
+                                    {connectorSyncResult.pushedRecords > 0 && (
+                                      <>
+                                        {" "}
+                                        | Pushed:{" "}
+                                        {connectorSyncResult.pushedRecords}
+                                      </>
+                                    )}
+                                  </p>
+                                  {connectorSyncResult.issues.length > 0 && (
+                                    <p className="mt-1 text-amber-700">
+                                      First issue: row{" "}
+                                      {connectorSyncResult.issues[0].rowNumber}{" "}
+                                      - {connectorSyncResult.issues[0].message}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* API Testing Info */}
           <Card>
             <CardHeader>
@@ -550,6 +1192,7 @@ export default function DashboardPage() {
                   rel="noopener noreferrer"
                   aria-label="Open Swagger API docs (opens in new tab)"
                   className="flex items-center rounded-lg border border-gray-200 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50"
+                  aria-label="Open Swagger API docs in a new tab"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100">
                     <FileText className="h-5 w-5 text-indigo-600" />
@@ -570,6 +1213,7 @@ export default function DashboardPage() {
                   rel="noopener noreferrer"
                   aria-label="Open MailHog (opens in new tab)"
                   className="flex items-center rounded-lg border border-gray-200 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50"
+                  aria-label="Open MailHog in a new tab"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
                     <Mail className="h-5 w-5 text-green-600" />
@@ -586,6 +1230,7 @@ export default function DashboardPage() {
                   rel="noopener noreferrer"
                   aria-label="Open Mongo Express (opens in new tab)"
                   className="flex items-center rounded-lg border border-gray-200 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50"
+                  aria-label="Open Mongo Express in a new tab"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
                     <Building2 className="h-5 w-5 text-purple-600" />

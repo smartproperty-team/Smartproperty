@@ -4,6 +4,16 @@
 
 import type {
   CreatePropertyDto,
+  PortfolioBinaryFileResponse,
+  PortfolioConnectorDefinition,
+  PortfolioConnectorSyncRequest,
+  PortfolioConnectorSyncResult,
+  PortfolioExportResponse,
+  PortfolioFilters,
+  PortfolioImportCommitResult,
+  PortfolioImportPreview,
+  PortfolioImportRow,
+  PortfolioSummary,
   Property,
   PropertyFilters,
   PropertyImage,
@@ -34,6 +44,7 @@ export const propertyService = {
     if (filters.limit) params.append("limit", filters.limit.toString());
     if (filters.type) params.append("type", filters.type);
     if (filters.status) params.append("status", filters.status);
+    if (filters.category) params.append("category", filters.category);
     if (filters.minPrice)
       params.append("minPrice", filters.minPrice.toString());
     if (filters.maxPrice)
@@ -88,6 +99,117 @@ export const propertyService = {
    */
   async deleteProperty(id: string): Promise<void> {
     await api.delete(`/properties/${id}`);
+  },
+
+  async getPortfolioSummary(
+    filters: PortfolioFilters = {},
+  ): Promise<PortfolioSummary> {
+    const params = new URLSearchParams();
+
+    if (filters.type) params.append("type", filters.type);
+    if (filters.status) params.append("status", filters.status);
+    if (filters.category) params.append("category", filters.category);
+    if (filters.city) params.append("city", filters.city);
+    if (filters.scope) params.append("scope", filters.scope);
+
+    const response = await api.get<PortfolioSummary>(
+      `/properties/portfolio/summary?${params.toString()}`,
+    );
+    return response.data;
+  },
+
+  async exportPortfolioCsv(
+    filters: PortfolioFilters = {},
+  ): Promise<PortfolioExportResponse> {
+    const params = new URLSearchParams();
+
+    if (filters.type) params.append("type", filters.type);
+    if (filters.status) params.append("status", filters.status);
+    if (filters.category) params.append("category", filters.category);
+    if (filters.city) params.append("city", filters.city);
+    if (filters.scope) params.append("scope", filters.scope);
+
+    const response = await api.get<PortfolioExportResponse>(
+      `/properties/portfolio/export?${params.toString()}`,
+    );
+    return response.data;
+  },
+
+  async exportPortfolioExcel(
+    filters: PortfolioFilters = {},
+  ): Promise<PortfolioBinaryFileResponse> {
+    const params = new URLSearchParams();
+
+    if (filters.type) params.append("type", filters.type);
+    if (filters.status) params.append("status", filters.status);
+    if (filters.category) params.append("category", filters.category);
+    if (filters.city) params.append("city", filters.city);
+    if (filters.scope) params.append("scope", filters.scope);
+
+    const response = await api.get<PortfolioBinaryFileResponse>(
+      `/properties/portfolio/export/excel?${params.toString()}`,
+    );
+
+    return response.data;
+  },
+
+  async getPortfolioImportTemplateExcel(): Promise<PortfolioBinaryFileResponse> {
+    const response = await api.get<PortfolioBinaryFileResponse>(
+      "/properties/portfolio/template/excel",
+    );
+
+    return response.data;
+  },
+
+  async previewPortfolioImport(file: File): Promise<PortfolioImportPreview> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await api.post<PortfolioImportPreview>(
+      "/properties/portfolio/import/preview",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
+    );
+
+    return response.data;
+  },
+
+  async commitPortfolioImport(
+    rows: PortfolioImportRow[],
+    skipDuplicates = true,
+  ): Promise<PortfolioImportCommitResult> {
+    const response = await api.post<PortfolioImportCommitResult>(
+      "/properties/portfolio/import/commit",
+      {
+        rows,
+        skipDuplicates,
+      },
+    );
+
+    return response.data;
+  },
+
+  async getPortfolioConnectors(): Promise<PortfolioConnectorDefinition[]> {
+    const response = await api.get<PortfolioConnectorDefinition[]>(
+      "/properties/portfolio/connectors",
+    );
+
+    return response.data;
+  },
+
+  async syncPortfolioConnector(
+    payload: PortfolioConnectorSyncRequest,
+  ): Promise<PortfolioConnectorSyncResult> {
+    const response = await api.post<PortfolioConnectorSyncResult>(
+      "/properties/portfolio/connectors/sync",
+      payload,
+    );
+
+    return response.data;
   },
 
   // ===========================================

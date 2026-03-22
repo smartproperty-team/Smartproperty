@@ -31,6 +31,12 @@ export enum PropertyStatus {
   UNLISTED = 'unlisted',
 }
 
+export enum PropertyCategory {
+  SALE = 'sale',
+  RENTAL = 'rental',
+  MANAGEMENT = 'management',
+}
+
 // ===========================================
 // Property Entity
 // ===========================================
@@ -58,6 +64,13 @@ export class Property {
     default: PropertyStatus.AVAILABLE,
   })
   status!: PropertyStatus;
+
+  @Column({
+    type: 'enum',
+    enum: PropertyCategory,
+    default: PropertyCategory.RENTAL,
+  })
+  category!: PropertyCategory;
 
   @Column()
   price!: number;
@@ -140,6 +153,7 @@ export class Property {
       description: this.description,
       type: this.type,
       status: this.status,
+      category: this.category,
       price: this.price,
       currency: this.currency,
       address: this.address,
