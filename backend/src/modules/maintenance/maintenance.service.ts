@@ -492,28 +492,47 @@ export class MaintenanceService {
 
     this.assertProviderCanMutate(request, providerUserId);
 
-    request.status = dto.status;
-    request.statusReason = dto.reason;
+    if (dto.status === MaintenanceStatus.CANCELED) {
+      request.assignment = this.omitUndefined({
+        ...(request.assignment || {}),
+        assigneeId: undefined,
+        dueDate: undefined,
+        scheduledAt: undefined,
+      });
+      request.status = MaintenanceStatus.TRIAGED;
+      request.statusReason = dto.reason
+        ? `Released by provider: ${dto.reason}`
+        : 'Released by service provider for reassignment';
+      request.closedAt = undefined;
+      request.closeReason = undefined;
+    } else {
+      request.status = dto.status;
+      request.statusReason = dto.reason;
+    }
 
     if (dto.status === MaintenanceStatus.COMPLETED) {
       request.closedAt = undefined;
     }
 
-    if (dto.status === MaintenanceStatus.CANCELED) {
-      request.closedAt = new Date();
-      request.closeReason = dto.reason;
-    }
-
     const saved = await this.maintenanceRepo.save(request);
 
-    await this.notifyRequester(
-      saved,
-      'Maintenance status updated',
-      `Your request "${saved.issueTitle || 'Untitled issue'}" is now ${saved.status.replace('_', ' ')}.`,
-      dto.status === MaintenanceStatus.COMPLETED
-        ? NotificationType.MAINTENANCE_COMPLETED
-        : NotificationType.MAINTENANCE_STATUS_CHANGED,
-    );
+    if (dto.status === MaintenanceStatus.CANCELED) {
+      await this.notifyRequester(
+        saved,
+        'Maintenance request reopened',
+        `Your request "${saved.issueTitle || 'Untitled issue'}" was released by the current provider and is open for reassignment.`,
+        NotificationType.MAINTENANCE_STATUS_CHANGED,
+      );
+    } else {
+      await this.notifyRequester(
+        saved,
+        'Maintenance status updated',
+        `Your request "${saved.issueTitle || 'Untitled issue'}" is now ${saved.status.replace('_', ' ')}.`,
+        dto.status === MaintenanceStatus.COMPLETED
+          ? NotificationType.MAINTENANCE_COMPLETED
+          : NotificationType.MAINTENANCE_STATUS_CHANGED,
+      );
+    }
 
     return this.toResponse(saved);
   }

@@ -28,7 +28,7 @@ const providerStatusOptions: Array<{
   { value: "in_progress", label: "In progress" },
   { value: "waiting_parts", label: "Waiting parts" },
   { value: "completed", label: "Completed" },
-  { value: "canceled", label: "Canceled" },
+  { value: "canceled", label: "Cancel & release" },
 ];
 
 export default function ServiceProviderMaintenancePage() {
@@ -96,7 +96,13 @@ export default function ServiceProviderMaintenancePage() {
         status,
         reason: reasonById[id] || undefined,
       });
-      setMessage({ type: "success", text: "Status updated successfully." });
+      setMessage({
+        type: "success",
+        text:
+          status === "canceled"
+            ? "Request released successfully. Other providers can now claim it."
+            : "Status updated successfully.",
+      });
       await loadAssigned();
     } catch {
       setMessage({ type: "error", text: "Failed to update status." });
