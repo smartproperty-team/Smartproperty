@@ -71,6 +71,15 @@ function formatDate(value: string): string {
   return date.toLocaleString();
 }
 
+function wasReopenedAfterProviderCancellation(
+  request: MaintenanceRequest,
+): boolean {
+  return (
+    request.status === "triaged" &&
+    (request.statusReason || "").toLowerCase().includes("released by provider")
+  );
+}
+
 export default function MyMaintenanceRequestsPage() {
   const [items, setItems] = useState<MaintenanceRequest[]>([]);
   const [loading, setLoading] = useState(false);
@@ -167,6 +176,7 @@ export default function MyMaintenanceRequestsPage() {
                 const statusMeta = STATUS_META[item.status];
                 const isHighlighted = highlightedRequestId === item.id;
                 const title = item.issueTitle || "Untitled issue";
+                const isReopened = wasReopenedAfterProviderCancellation(item);
 
                 return (
                   <Card
@@ -187,6 +197,12 @@ export default function MyMaintenanceRequestsPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
+                      {isReopened && (
+                        <div className="mb-3 inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                          Reopened after provider cancellation
+                        </div>
+                      )}
+
                       <div className="grid gap-3 text-sm text-gray-700 md:grid-cols-2">
                         <p>
                           <span className="font-semibold text-gray-800">
@@ -220,6 +236,16 @@ export default function MyMaintenanceRequestsPage() {
                             Status note
                           </p>
                           <p className="mt-1">{item.statusReason}</p>
+                        </div>
+                      )}
+
+                      {isReopened && (
+                        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                          <p className="font-semibold">History</p>
+                          <p className="mt-1">
+                            Reopened after provider cancellation on{" "}
+                            {formatDate(item.updatedAt)}.
+                          </p>
                         </div>
                       )}
                     </CardContent>
