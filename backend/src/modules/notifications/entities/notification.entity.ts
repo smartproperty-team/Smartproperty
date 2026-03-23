@@ -18,6 +18,10 @@ export enum NotificationType {
   APPLICATION_STATUS_CHANGED = 'application_status_changed',
   APPLICATION_DOCUMENT_REQUESTED = 'application_document_requested',
   APPLICATION_DEADLINE_REMINDER = 'application_deadline_reminder',
+  MAINTENANCE_REQUEST_SUBMITTED = 'maintenance_request_submitted',
+  MAINTENANCE_ASSIGNED = 'maintenance_assigned',
+  MAINTENANCE_STATUS_CHANGED = 'maintenance_status_changed',
+  MAINTENANCE_COMPLETED = 'maintenance_completed',
   SYSTEM = 'system',
   INFO = 'info',
 }

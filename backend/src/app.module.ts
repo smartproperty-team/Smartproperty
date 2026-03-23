@@ -35,6 +35,7 @@ import { validationSchema } from './config/validation.schema';
 // Feature Modules
 import { ApplicationsModule } from './modules/applications/applications.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PropertiesModule } from './modules/properties/properties.module';
 import { UploadModule } from './modules/upload/upload.module';
@@ -167,6 +168,7 @@ import { VerificationModule } from './modules/verification/verification.module';
     ApplicationsModule,
     UsersModule,
     PropertiesModule,
+    MaintenanceModule,
     UploadModule,
     VerificationModule,
     NotificationsModule,

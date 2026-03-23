@@ -29,6 +29,11 @@ import {
   VerificationPage,
 } from "./pages/dashboard";
 import { HomePage, PaletteDemoPage } from "./pages/home";
+import {
+  MaintenanceRequestFormPage,
+  MyMaintenanceRequestsPage,
+  ServiceProviderMaintenancePage,
+} from "./pages/maintenance";
 import { PreferencesOnboardingModal } from "./pages/onboarding";
 import { ProfilePage } from "./pages/profile";
 import {
@@ -42,10 +47,13 @@ import { SettingsPage } from "./pages/settings";
 import { useAuthStore, usePreferencesStore } from "./store";
 import {
   canAccessAdminUsers,
+  canCreateMaintenanceRequest,
   canCreateProperties,
+  canManageAssignedMaintenance,
   canManageProperties,
   canReviewApplications,
   canReviewVerifications,
+  canTrackMaintenanceRequests,
   isTenant,
 } from "./utils";
 
@@ -73,6 +81,9 @@ function getPageTitle(pathname: string): string {
     "/properties": "Properties",
     "/properties/mine": "My Properties",
     "/properties/new": "Create Property",
+    "/maintenance/requests/new": "Maintenance Request",
+    "/maintenance/requests/mine": "My Maintenance Status",
+    "/maintenance/requests/assigned": "Assigned Maintenance",
   };
 
   if (exactTitles[pathname]) {
@@ -125,6 +136,12 @@ function App() {
       pageTitle = "Verify Email | SmartProperty";
     } else if (path.startsWith("/properties/new")) {
       pageTitle = "Add Property | SmartProperty";
+    } else if (path.startsWith("/maintenance/requests/new")) {
+      pageTitle = "Maintenance Request | SmartProperty";
+    } else if (path.startsWith("/maintenance/requests/mine")) {
+      pageTitle = "My Maintenance Status | SmartProperty";
+    } else if (path.startsWith("/maintenance/requests/assigned")) {
+      pageTitle = "Assigned Maintenance | SmartProperty";
     } else if (path.startsWith("/properties/mine")) {
       pageTitle = "My Properties | SmartProperty";
     } else if (path.startsWith("/properties/") && path.endsWith("/edit")) {
@@ -384,6 +401,45 @@ function App() {
                 <PropertyFormPage />
               ) : (
                 <Navigate to="/properties" replace />
+              )}
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/maintenance/requests/new"
+          element={
+            <ProtectedRoute>
+              {canCreateMaintenanceRequest(user) ? (
+                <MaintenanceRequestFormPage />
+              ) : (
+                <Navigate to="/dashboard" replace />
+              )}
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/maintenance/requests/mine"
+          element={
+            <ProtectedRoute>
+              {canTrackMaintenanceRequests(user) ? (
+                <MyMaintenanceRequestsPage />
+              ) : (
+                <Navigate to="/dashboard" replace />
+              )}
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/maintenance/requests/assigned"
+          element={
+            <ProtectedRoute>
+              {canManageAssignedMaintenance(user) ? (
+                <ServiceProviderMaintenancePage />
+              ) : (
+                <Navigate to="/dashboard" replace />
               )}
             </ProtectedRoute>
           }

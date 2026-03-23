@@ -1,8 +1,11 @@
 import { useAuthStore } from "@/store";
 import {
   canAccessAdminUsers,
+  canCreateMaintenanceRequest,
+  canManageAssignedMaintenance,
   canReviewApplications,
   canReviewVerifications,
+  canTrackMaintenanceRequests,
   isTenant,
 } from "@/utils";
 import {
@@ -17,6 +20,7 @@ import {
   ShieldCheck,
   User,
   Users,
+  Wrench,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -54,6 +58,33 @@ export default function AppSidebar() {
               label: "Review Applications",
               to: "/applications/review",
               icon: ClipboardList,
+            },
+          ]
+        : []),
+      ...(canCreateMaintenanceRequest(user)
+        ? [
+            {
+              label: "Request Maintenance",
+              to: "/maintenance/requests/new",
+              icon: Wrench,
+            },
+          ]
+        : []),
+      ...(canTrackMaintenanceRequests(user)
+        ? [
+            {
+              label: "My Maintenance Status",
+              to: "/maintenance/requests/mine",
+              icon: Wrench,
+            },
+          ]
+        : []),
+      ...(canManageAssignedMaintenance(user)
+        ? [
+            {
+              label: "Manage Maintenance",
+              to: "/maintenance/requests/assigned",
+              icon: Wrench,
             },
           ]
         : []),

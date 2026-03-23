@@ -31,9 +31,12 @@ import type {
 import { VerificationStatus } from "@/types/verification";
 import {
   canAccessAdminUsers,
+  canCreateMaintenanceRequest,
+  canManageAssignedMaintenance,
   canManageProperties,
   canReviewApplications,
   canReviewVerifications,
+  canTrackMaintenanceRequests,
   isTenant,
 } from "@/utils";
 import {
@@ -46,6 +49,7 @@ import {
   Shield,
   ShieldCheck,
   Users,
+  Wrench,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -105,6 +109,9 @@ export default function DashboardPage() {
   const canAccessPortfolioDashboard =
     canManageProperties(user) ||
     user?.role === UserRole.ACCOUNTANT_ADMIN_ASSISTANT;
+  const canRequestMaintenance = canCreateMaintenanceRequest(user);
+  const canTrackOwnMaintenance = canTrackMaintenanceRequests(user);
+  const canManageMaintenanceAsProvider = canManageAssignedMaintenance(user);
 
   // Fetch verification status for tenants
   useEffect(() => {
@@ -583,6 +590,35 @@ export default function DashboardPage() {
                 ? "Here's what's happening with your properties today."
                 : "Browse available properties and manage your applications."}
             </p>
+            {canRequestMaintenance && (
+              <div className="mt-4">
+                <Button onClick={() => navigate("/maintenance/requests/new")}>
+                  <Wrench className="mr-2 h-4 w-4" />
+                  Request Maintenance
+                </Button>
+              </div>
+            )}
+            {canTrackOwnMaintenance && (
+              <div className="mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/maintenance/requests/mine")}
+                >
+                  <Wrench className="mr-2 h-4 w-4" />
+                  My Maintenance Status
+                </Button>
+              </div>
+            )}
+            {canManageMaintenanceAsProvider && (
+              <div className="mt-4">
+                <Button
+                  onClick={() => navigate("/maintenance/requests/assigned")}
+                >
+                  <Wrench className="mr-2 h-4 w-4" />
+                  Manage Maintenance Requests
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Verify Me CTA - Show for tenants (hide if verified or rejected) */}
