@@ -3,9 +3,12 @@
 // ===========================================
 
 import { HomeFooter, Navbar } from "@/components/layout";
+import AdvancedPropertySearchBar from "@/components/properties/AdvancedPropertySearchBar";
+import LocationPreferenceMap from "@/components/settings/LocationPreferenceMap";
 import { useTranslation } from "@/i18n";
 import { propertyService } from "@/services/property.service";
 import { useAuthStore } from "@/store";
+import type { UserLocationPreference } from "@/types/auth";
 import type {
   Property,
   PropertyFilters,
@@ -88,20 +91,6 @@ const PlusIcon = () => (
     strokeWidth="2"
   >
     <path d="M12 5v14M5 12h14" />
-  </svg>
-);
-
-const SearchIcon = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
-    <circle cx="11" cy="11" r="8" />
-    <path d="m21 21-4.35-4.35" />
   </svg>
 );
 
@@ -277,6 +266,24 @@ export default function PropertiesPage() {
   const canAddProperty = isOwner(user);
   const canManage = canManageProperties(user);
   const [searchParams, setSearchParams] = useSearchParams();
+  const parsePositiveIntegerParam = (
+    value: string | null,
+  ): number | undefined => {
+    if (!value) return undefined;
+    const parsed = Number.parseInt(value, 10);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+  };
+  const parseNumberParam = (value: string | null): number | undefined => {
+    if (!value) return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+  const parsePositiveNumberParam = (
+    value: string | null,
+  ): number | undefined => {
+    const parsed = parseNumberParam(value);
+    return parsed !== undefined && parsed > 0 ? parsed : undefined;
+  };
   const [properties, setProperties] = useState<Property[]>([]);
   const [comparisonIds, setComparisonIds] = useState<string[]>([]);
   const [comparisonError, setComparisonError] = useState<string | null>(null);
@@ -296,6 +303,11 @@ export default function PropertiesPage() {
     limit: 12,
     type: (searchParams.get("type") as PropertyType) || undefined,
     status: (searchParams.get("status") as PropertyStatus) || undefined,
+    bedrooms: parsePositiveIntegerParam(searchParams.get("bedrooms")),
+    bathrooms: parsePositiveIntegerParam(searchParams.get("bathrooms")),
+    nearLat: parseNumberParam(searchParams.get("nearLat")),
+    nearLng: parseNumberParam(searchParams.get("nearLng")),
+    radiusKm: parsePositiveNumberParam(searchParams.get("radiusKm")),
     city: searchParams.get("city") || undefined,
     search: searchParams.get("search") || undefined,
   });
@@ -303,6 +315,29 @@ export default function PropertiesPage() {
   // Local state for text inputs (not linked to API calls until form submit)
   const [searchText, setSearchText] = useState(filters.search || "");
   const [cityText, setCityText] = useState(filters.city || "");
+  const [bedroomsText, setBedroomsText] = useState(
+    filters.bedrooms?.toString() || "",
+  );
+  const [bathroomsText, setBathroomsText] = useState(
+    filters.bathrooms?.toString() || "",
+  );
+  const [showNearbyPanel, setShowNearbyPanel] = useState(
+    filters.nearLat !== undefined && filters.nearLng !== undefined,
+  );
+  const [nearbySelectionDraft, setNearbySelectionDraft] = useState<
+    UserLocationPreference | undefined
+  >(
+    filters.nearLat !== undefined && filters.nearLng !== undefined
+      ? {
+          coordinates: { lat: filters.nearLat, lng: filters.nearLng },
+          radiusKm: filters.radiusKm || 11,
+          label: `${filters.nearLat.toFixed(4)}, ${filters.nearLng.toFixed(4)}`,
+        }
+      : undefined,
+  );
+  const [nearbyLocationDraft, setNearbyLocationDraft] = useState(
+    nearbySelectionDraft?.label || "",
+  );
 
   const getPropertyId = (property: Property): string =>
     property.id || property._id || "";
@@ -390,6 +425,12 @@ export default function PropertiesPage() {
       const params = new URLSearchParams();
       if (f.type) params.set("type", f.type);
       if (f.status) params.set("status", f.status);
+      if (f.bedrooms !== undefined) params.set("bedrooms", String(f.bedrooms));
+      if (f.bathrooms !== undefined)
+        params.set("bathrooms", String(f.bathrooms));
+      if (f.nearLat !== undefined) params.set("nearLat", String(f.nearLat));
+      if (f.nearLng !== undefined) params.set("nearLng", String(f.nearLng));
+      if (f.radiusKm !== undefined) params.set("radiusKm", String(f.radiusKm));
       if (f.city) params.set("city", f.city);
       if (f.search) params.set("search", f.search);
       setSearchParams(params);
@@ -404,13 +445,14 @@ export default function PropertiesPage() {
     updateUrlParams(newFilters);
   };
 
-  // Handle search form submit (applies text inputs and triggers API)
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Apply current advanced search bar values to filters
+  const handleSearch = () => {
     const newFilters = {
       ...filters,
       search: searchText || undefined,
       city: cityText || undefined,
+      bedrooms: parsePositiveIntegerParam(bedroomsText),
+      bathrooms: parsePositiveIntegerParam(bathroomsText),
       page: 1,
     };
     setFilters(newFilters);
@@ -421,8 +463,67 @@ export default function PropertiesPage() {
   const handleResetFilters = () => {
     setSearchText("");
     setCityText("");
+    setBedroomsText("");
+    setBathroomsText("");
+    setShowNearbyPanel(false);
+    setNearbySelectionDraft(undefined);
+    setNearbyLocationDraft("");
     setFilters({ page: 1, limit: 12 });
     setSearchParams({});
+  };
+
+  const clearNearbyFilter = () => {
+    const clearedFilters: PropertyFilters = {
+      ...filters,
+      nearLat: undefined,
+      nearLng: undefined,
+      radiusKm: undefined,
+      page: 1,
+    };
+
+    setNearbySelectionDraft(undefined);
+    setNearbyLocationDraft("");
+    setShowNearbyPanel(false);
+    setFilters(clearedFilters);
+    updateUrlParams(clearedFilters);
+  };
+
+  const handleNearbyPrevious = () => {
+    if (filters.nearLat !== undefined && filters.nearLng !== undefined) {
+      const restored: UserLocationPreference = {
+        coordinates: { lat: filters.nearLat, lng: filters.nearLng },
+        radiusKm: filters.radiusKm || 11,
+        label:
+          nearbyLocationDraft ||
+          `${filters.nearLat.toFixed(4)}, ${filters.nearLng.toFixed(4)}`,
+      };
+      setNearbySelectionDraft(restored);
+      setNearbyLocationDraft(restored.label || "");
+    } else {
+      setNearbySelectionDraft(undefined);
+      setNearbyLocationDraft("");
+    }
+
+    setShowNearbyPanel(false);
+  };
+
+  const handleNearbyValidate = () => {
+    const coords = nearbySelectionDraft?.coordinates;
+    if (!coords) {
+      return;
+    }
+
+    const nextFilters: PropertyFilters = {
+      ...filters,
+      nearLat: coords.lat,
+      nearLng: coords.lng,
+      radiusKm: nearbySelectionDraft?.radiusKm || 11,
+      page: 1,
+    };
+
+    setFilters(nextFilters);
+    updateUrlParams(nextFilters);
+    setShowNearbyPanel(false);
   };
 
   const handleToggleCompare = (property: Property) => {
@@ -557,89 +658,105 @@ export default function PropertiesPage() {
                 </Link>
               )}
             </div>
-            {/* Filters */}
-            <form className="properties-filters" onSubmit={handleSearch}>
-              <fieldset className="filters-row">
-                <legend className="sr-only">Property filter controls</legend>
-                <div className="filter-group">
-                  <label htmlFor="filter-search">{t.properties.search}</label>
-                  <input
-                    id="filter-search"
-                    type="text"
-                    placeholder={t.properties.searchPlaceholder}
-                    value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
-                  />
-                </div>
-
-                <div className="filter-group">
-                  <label htmlFor="filter-type">{t.properties.typeLabel}</label>
-                  <select
-                    id="filter-type"
-                    value={filters.type || ""}
-                    onChange={(e) => handleFilterChange("type", e.target.value)}
-                  >
-                    <option value="">{t.properties.allTypes}</option>
-                    <option value="apartment">
-                      {t.properties.typeApartment}
-                    </option>
-                    <option value="house">{t.properties.typeHouse}</option>
-                    <option value="villa">{t.properties.typeVilla}</option>
-                    <option value="studio">{t.properties.typeStudio}</option>
-                    <option value="condo">{t.properties.typeCondo}</option>
-                    <option value="land">{t.properties.typeLand}</option>
-                  </select>
-                </div>
-
-                <div className="filter-group">
-                  <label htmlFor="filter-status">
-                    {t.properties.statusLabel}
-                  </label>
-                  <select
-                    id="filter-status"
-                    value={filters.status || ""}
-                    onChange={(e) =>
-                      handleFilterChange("status", e.target.value)
-                    }
-                  >
-                    <option value="">{t.properties.allStatuses}</option>
-                    <option value="available">{t.properties.available}</option>
-                    <option value="rented">{t.properties.rented}</option>
-                    <option value="maintenance">
-                      {t.properties.maintenance}
-                    </option>
-                    <option value="unlisted">{t.properties.unlisted}</option>
-                  </select>
-                </div>
-
-                <div className="filter-group">
-                  <label htmlFor="filter-city">{t.properties.cityLabel}</label>
-                  <input
-                    id="filter-city"
-                    type="text"
-                    placeholder={t.properties.cityPlaceholder}
-                    value={cityText}
-                    onChange={(e) => setCityText(e.target.value)}
-                  />
-                </div>
-
-                <div className="filter-actions">
-                  <button type="submit" className="btn-filter primary">
-                    <SearchIcon />
-                    {t.properties.searchBtn}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-filter secondary"
-                    onClick={handleResetFilters}
-                  >
-                    {t.properties.reset}
-                  </button>
-                </div>
-              </fieldset>
-            </form>
+            <AdvancedPropertySearchBar
+              searchQuery={searchText}
+              onSearchQueryChange={setSearchText}
+              cityValue={cityText}
+              onCityChange={setCityText}
+              typeValue={filters.type}
+              onTypeChange={(value) => handleFilterChange("type", value)}
+              statusValue={filters.status}
+              onStatusChange={(value) => handleFilterChange("status", value)}
+              bedroomsValue={bedroomsText}
+              onBedroomsChange={setBedroomsText}
+              bathroomsValue={bathroomsText}
+              onBathroomsChange={setBathroomsText}
+              onSearch={handleSearch}
+              onReset={handleResetFilters}
+              onOpenNearbyMap={() => setShowNearbyPanel(true)}
+              onClearNearby={clearNearbyFilter}
+              hasNearbySelection={
+                filters.nearLat !== undefined && filters.nearLng !== undefined
+              }
+              nearbySummary={
+                nearbyLocationDraft ||
+                (nearbySelectionDraft?.coordinates
+                  ? `${nearbySelectionDraft.coordinates.lat.toFixed(4)}, ${nearbySelectionDraft.coordinates.lng.toFixed(4)}`
+                  : "")
+              }
+              nearbyHint={t.properties.nearbyHint}
+              labels={{
+                searchPlaceholder: t.properties.searchShortPlaceholder,
+                filters: t.properties.filters,
+                search: t.properties.searchBtn,
+                type: t.properties.typeLabel,
+                status: t.properties.statusLabel,
+                city: t.properties.cityShortPlaceholder,
+                bedrooms: t.properties.form.labels.bedrooms,
+                bathrooms: t.properties.form.labels.bathrooms,
+                nearby: t.properties.nearbyLabel,
+                nearbyTrigger: t.properties.openNearbyMap,
+                nearbyPlaceholder: t.properties.nearbyPlaceholder,
+                any: t.properties.anyOption,
+                allTypes: t.properties.allTypes,
+                allStatuses: t.properties.allStatuses,
+                available: t.properties.available,
+                rented: t.properties.rented,
+                maintenance: t.properties.maintenance,
+                unlisted: t.properties.unlisted,
+                typeApartment: t.properties.typeApartment,
+                typeHouse: t.properties.typeHouse,
+                typeVilla: t.properties.typeVilla,
+                typeStudio: t.properties.typeStudio,
+                typeCondo: t.properties.typeCondo,
+                typeLand: t.properties.typeLand,
+                reset: t.properties.reset,
+                clearNearby: t.properties.clearNearby,
+              }}
+            />
           </div>
         </div>
+
+        {showNearbyPanel && (
+          <section
+            className="comparison-panel"
+            style={{ marginBottom: "1.5rem" }}
+          >
+            <LocationPreferenceMap
+              value={nearbyLocationDraft}
+              onChange={setNearbyLocationDraft}
+              selection={nearbySelectionDraft}
+              onSelectionChange={setNearbySelectionDraft}
+            />
+            <div
+              className="compare-toolbar-actions"
+              style={{ marginTop: "1rem" }}
+            >
+              <button
+                type="button"
+                className="btn-filter secondary"
+                onClick={clearNearbyFilter}
+              >
+                {t.properties.skipForNow}
+              </button>
+              <button
+                type="button"
+                className="btn-filter secondary"
+                onClick={handleNearbyPrevious}
+              >
+                {t.properties.previous}
+              </button>
+              <button
+                type="button"
+                className="btn-filter primary"
+                onClick={handleNearbyValidate}
+                disabled={!nearbySelectionDraft?.coordinates}
+              >
+                {t.properties.validateNext}
+              </button>
+            </div>
+          </section>
+        )}
 
         {/* Compare Toolbar */}
         {comparisonIds.length > 0 && (

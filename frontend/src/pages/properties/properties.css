@@ -36,7 +36,7 @@
 .properties-filters {
   background: white;
   border-radius: var(--radius-md, 16px);
-  padding: 1.5rem;
+  padding: 1.25rem;
   margin-bottom: 2rem;
   box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.1));
   width: 100%;
@@ -44,19 +44,30 @@
 }
 
 .filters-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1rem 1.25rem;
+  align-items: end;
   border: 0;
   margin: 0;
   padding: 0;
   min-width: 0;
 }
 
+@media (min-width: 992px) {
+  .filters-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .filters-row {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 .filter-group {
-  flex: 1;
-  min-width: 150px;
+  min-width: 0;
 }
 
 .filter-group label {
@@ -70,7 +81,8 @@
 .filter-group input,
 .filter-group select {
   width: 100%;
-  padding: 0.75rem 1rem;
+  height: 44px;
+  padding: 0.625rem 0.875rem;
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-sm, 8px);
   font-size: 0.9375rem;
@@ -90,7 +102,47 @@
 
 .filter-actions {
   display: flex;
+  justify-content: flex-end;
   gap: 0.75rem;
+  grid-column: 1 / -1;
+  margin-top: 0.25rem;
+}
+
+.filter-nearby-trigger {
+  height: 44px;
+  width: 100%;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm, 8px);
+  background: white;
+  color: var(--color-text, #1e293b);
+  padding: 0.625rem 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.filter-nearby-trigger:hover {
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.filter-nearby-trigger:focus {
+  outline: none;
+  border-color: var(--color-primary, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.filter-nearby-trigger svg {
+  color: var(--color-primary, #3b82f6);
+  flex-shrink: 0;
+}
+
+.filter-helper {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #64748b);
 }
 
 .btn-filter {
@@ -691,12 +743,8 @@
     padding: 5rem 1rem 2rem;
   }
 
-  .filters-row {
-    flex-direction: column;
-  }
-
-  .filter-group {
-    min-width: 100%;
+  .properties-filters {
+    padding: 1rem;
   }
 
   .properties-grid {
@@ -732,6 +780,15 @@
   }
 
   .compare-toolbar-actions .btn-filter {
+    flex: 1;
+  }
+
+  .filter-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .filter-actions .btn-filter {
     flex: 1;
   }
 }

@@ -137,6 +137,11 @@ export interface PropertyFilters {
   category?: PropertyCategory;
   minPrice?: number;
   maxPrice?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  nearLat?: number;
+  nearLng?: number;
+  radiusKm?: number;
   city?: string;
   search?: string;
   ownerId?: string;

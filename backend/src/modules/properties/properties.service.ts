@@ -39,6 +39,11 @@ export interface FindPropertiesOptions {
   category?: PropertyCategory;
   minPrice?: number;
   maxPrice?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  nearLat?: number;
+  nearLng?: number;
+  radiusKm?: number;
   city?: string;
   ownerId?: string;
   managerId?: string;
@@ -165,6 +170,26 @@ export class PropertiesService {
   /** Escape special regex characters in user input */
   private escapeRegex(str: string): string {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  private calculateDistanceKm(
+    from: { lat: number; lng: number },
+    to: { lat: number; lng: number },
+  ): number {
+    const earthRadiusKm = 6371;
+    const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+
+    const dLat = toRadians(to.lat - from.lat);
+    const dLng = toRadians(to.lng - from.lng);
+    const lat1 = toRadians(from.lat);
+    const lat2 = toRadians(to.lat);
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return earthRadiusKm * c;
   }
 
   private canManage(
@@ -797,6 +822,11 @@ export class PropertiesService {
 
     const minPrice = parseNumber(options.minPrice);
     const maxPrice = parseNumber(options.maxPrice);
+    const bedrooms = parseNumber(options.bedrooms);
+    const bathrooms = parseNumber(options.bathrooms);
+    const nearLat = parseNumber(options.nearLat);
+    const nearLng = parseNumber(options.nearLng);
+    const radiusKm = parseNumber(options.radiusKm) ?? 5;
 
     if (minPrice !== undefined || maxPrice !== undefined) {
       where.price = {
@@ -805,12 +835,50 @@ export class PropertiesService {
       };
     }
 
+    if (bedrooms !== undefined) {
+      where['features.bedrooms'] = { $gte: bedrooms };
+    }
+
+    if (bathrooms !== undefined) {
+      where['features.bathrooms'] = { $gte: bathrooms };
+    }
+
     if (options.search) {
       const safeSearch = this.escapeRegex(options.search);
       where.$or = [
         { title: { $regex: safeSearch, $options: 'i' } },
         { description: { $regex: safeSearch, $options: 'i' } },
       ];
+    }
+
+    const hasNearbyFilter = nearLat !== undefined && nearLng !== undefined;
+
+    if (hasNearbyFilter) {
+      const allMatching = await this.propertyRepository.find({
+        where,
+        order: { createdAt: 'DESC' },
+      });
+
+      const center = { lat: nearLat, lng: nearLng };
+      const filtered = allMatching.filter((property) => {
+        const coords = property.address?.coordinates;
+        if (!coords) {
+          return false;
+        }
+
+        const distance = this.calculateDistanceKm(center, coords);
+        return distance <= radiusKm;
+      });
+
+      const total = filtered.length;
+      const properties = filtered.slice(skip, skip + limit);
+
+      return {
+        properties: properties.map((property) => property.toJSON() as Property),
+        total,
+        page,
+        limit,
+      };
     }
 
     const [properties, total] = await this.propertyRepository.findAndCount({

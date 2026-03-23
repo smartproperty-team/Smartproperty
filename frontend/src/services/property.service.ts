@@ -49,6 +49,16 @@ export const propertyService = {
       params.append("minPrice", filters.minPrice.toString());
     if (filters.maxPrice)
       params.append("maxPrice", filters.maxPrice.toString());
+    if (filters.bedrooms !== undefined)
+      params.append("bedrooms", filters.bedrooms.toString());
+    if (filters.bathrooms !== undefined)
+      params.append("bathrooms", filters.bathrooms.toString());
+    if (filters.nearLat !== undefined)
+      params.append("nearLat", filters.nearLat.toString());
+    if (filters.nearLng !== undefined)
+      params.append("nearLng", filters.nearLng.toString());
+    if (filters.radiusKm !== undefined)
+      params.append("radiusKm", filters.radiusKm.toString());
     if (filters.city) params.append("city", filters.city);
     if (filters.search) params.append("search", filters.search);
     if (filters.ownerId) params.append("ownerId", filters.ownerId);
