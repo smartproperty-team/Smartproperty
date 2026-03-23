@@ -1,9 +1,34 @@
 import { AppSidebar, HomeFooter } from "@/components/layout";
-import { Alert } from "@/components/ui";
+import LocationPreferenceMap from "@/components/settings/LocationPreferenceMap";
+import { Alert, Stepper, type StepperStep } from "@/components/ui";
 import applicationService from "@/services/application.service";
-import type { Application, ApplicationStatus } from "@/types/application";
+import type {
+  Application,
+  ApplicationQuestionnaire,
+  ApplicationStatus,
+} from "@/types/application";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+
+const APPLICATION_FORM_STEPS: StepperStep[] = [
+  { id: "identity", label: "Identity" },
+  { id: "household", label: "Household" },
+  { id: "rental-need", label: "Rental Need" },
+  { id: "employment", label: "Employment" },
+  { id: "financial", label: "Financial" },
+  { id: "history", label: "History" },
+];
+
+const LEASE_DURATION_OPTIONS = [
+  { value: "6_months", label: "6 months" },
+  { value: "12_months", label: "12 months" },
+  { value: "24_months", label: "24 months" },
+  { value: "flexible", label: "Flexible" },
+] as const;
+
+const BUDGET_SLIDER_MIN = 300;
+const BUDGET_SLIDER_MAX = 6000;
+const BUDGET_SLIDER_STEP = 50;
 
 const statusClass: Record<ApplicationStatus, string> = {
   submitted: "bg-blue-100 text-blue-700",
@@ -25,16 +50,6 @@ const statusLabel: Record<ApplicationStatus, string> = {
   withdrawn: "Withdrawn",
 };
 
-const statusEmojis: Record<ApplicationStatus, string> = {
-  submitted: "📋",
-  under_review: "👀",
-  documents_requested: "📄",
-  viewing_scheduled: "📅",
-  approved: "✅",
-  rejected: "❌",
-  withdrawn: "⏸️",
-};
-
 export default function TenantApplicationsPage() {
   const [searchParams] = useSearchParams();
   const prefilledPropertyId = searchParams.get("propertyId") || "";
@@ -46,11 +61,52 @@ export default function TenantApplicationsPage() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const [propertyId, setPropertyId] = useState(prefilledPropertyId);
-  const [companyName, setCompanyName] = useState("");
-  const [jobTitle, setJobTitle] = useState("");
   const [monthlyIncome, setMonthlyIncome] = useState("");
+
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [currentAddress, setCurrentAddress] = useState("");
+  const [preferredContactChannel, setPreferredContactChannel] =
+    useState("email");
+
+  const [occupantsAdults, setOccupantsAdults] = useState("1");
+  const [occupantsChildren, setOccupantsChildren] = useState("0");
+  const [occupantRelationshipSummary, setOccupantRelationshipSummary] =
+    useState("");
+  const [hasPets, setHasPets] = useState(false);
+  const [petType, setPetType] = useState("");
+  const [petCount, setPetCount] = useState("0");
+  const [smokingStatus, setSmokingStatus] = useState("not_specified");
+
+  const [desiredMoveInDate, setDesiredMoveInDate] = useState("");
+  const [leaseDurationPreference, setLeaseDurationPreference] =
+    useState("12_months");
+  const [monthlyBudget, setMonthlyBudget] = useState("1200");
+  const [
+    mandatoryPropertySpecificAnswers,
+    setMandatoryPropertySpecificAnswers,
+  ] = useState("");
+
+  const [employmentStatus, setEmploymentStatus] = useState("");
+  const [contractType, setContractType] = useState("");
+  const [netMonthlyIncomeMin, setNetMonthlyIncomeMin] = useState("");
+  const [netMonthlyIncomeMax, setNetMonthlyIncomeMax] = useState("");
+  const [coApplicantIncome, setCoApplicantIncome] = useState("");
+
+  const [monthlyDebtPayments, setMonthlyDebtPayments] = useState("");
+  const [currentRentAmount, setCurrentRentAmount] = useState("");
+  const [guarantorNeeded, setGuarantorNeeded] = useState(false);
+  const [guarantorName, setGuarantorName] = useState("");
+  const [guarantorIncome, setGuarantorIncome] = useState("");
+
+  const [previousLandlordContact, setPreviousLandlordContact] = useState("");
+  const [reasonForMoving, setReasonForMoving] = useState("");
+  const [hadRentPaymentIncidents, setHadRentPaymentIncidents] = useState(false);
+  const [rentPaymentIncidentsExplanation, setRentPaymentIncidentsExplanation] =
+    useState("");
+
   const [messageToOwner, setMessageToOwner] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [currentFormStep, setCurrentFormStep] = useState(0);
 
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
 
@@ -61,6 +117,100 @@ export default function TenantApplicationsPage() {
       ),
     [applications],
   );
+
+  const finalFormStepIndex = APPLICATION_FORM_STEPS.length - 1;
+
+  const toNumberOrUndefined = (value: string) => {
+    const trimmedValue = value.trim();
+    if (!trimmedValue) {
+      return undefined;
+    }
+
+    const parsedValue = Number(trimmedValue);
+    return Number.isFinite(parsedValue) ? parsedValue : undefined;
+  };
+
+  const validateStep = (stepIndex: number) => {
+    if (stepIndex === 0 && !propertyId.trim()) {
+      return "Please open a property and click Apply first.";
+    }
+
+    if (stepIndex === 0) {
+      if (!dateOfBirth) {
+        return "Please provide your date of birth.";
+      }
+
+      if (!currentAddress.trim()) {
+        return "Please provide your current address.";
+      }
+    }
+
+    if (stepIndex === 2) {
+      if (!leaseDurationPreference.trim()) {
+        return "Please select a lease duration preference.";
+      }
+    }
+
+    if (stepIndex === 3) {
+      if (!employmentStatus.trim()) {
+        return "Please provide your employment status.";
+      }
+
+      if (!monthlyIncome.trim() || Number(monthlyIncome) <= 0) {
+        return "Please provide a valid monthly income.";
+      }
+
+      const netMin = toNumberOrUndefined(netMonthlyIncomeMin);
+      const netMax = toNumberOrUndefined(netMonthlyIncomeMax);
+      if (netMin !== undefined && netMax !== undefined && netMin > netMax) {
+        return "Net income min cannot be higher than net income max.";
+      }
+    }
+
+    if (stepIndex === 4) {
+      if (guarantorNeeded && !guarantorName.trim()) {
+        return "Please provide guarantor name or set guarantor to No.";
+      }
+    }
+
+    if (stepIndex === 5) {
+      if (!reasonForMoving.trim()) {
+        return "Please provide a reason for moving.";
+      }
+
+      if (hadRentPaymentIncidents && !rentPaymentIncidentsExplanation.trim()) {
+        return "Please explain past payment incidents or switch to No incidents.";
+      }
+    }
+
+    return null;
+  };
+
+  const goToPreviousStep = () => {
+    setError(null);
+    setCurrentFormStep((previous) => Math.max(previous - 1, 0));
+  };
+
+  const goToNextStep = () => {
+    const validationError = validateStep(currentFormStep);
+
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setError(null);
+    setCurrentFormStep((previous) =>
+      Math.min(previous + 1, finalFormStepIndex),
+    );
+  };
+
+  const handleStepChange = (stepIndex: number) => {
+    if (stepIndex <= currentFormStep) {
+      setError(null);
+      setCurrentFormStep(stepIndex);
+    }
+  };
 
   const loadApplications = async () => {
     setLoading(true);
@@ -110,10 +260,55 @@ export default function TenantApplicationsPage() {
   const submitApplication = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    if (currentFormStep < finalFormStepIndex) {
+      goToNextStep();
+      return;
+    }
+
     if (!propertyId.trim()) {
       setError("Please open a property and click Apply first.");
       return;
     }
+
+    const questionnaire: ApplicationQuestionnaire = {
+      dateOfBirth: dateOfBirth || undefined,
+      currentAddress: currentAddress.trim() || undefined,
+      preferredContactChannel: preferredContactChannel || undefined,
+      occupantsAdults: toNumberOrUndefined(occupantsAdults),
+      occupantsChildren: toNumberOrUndefined(occupantsChildren),
+      occupantRelationshipSummary:
+        occupantRelationshipSummary.trim() || undefined,
+      hasPets,
+      petType: hasPets ? petType.trim() || undefined : undefined,
+      petCount: hasPets ? toNumberOrUndefined(petCount) : undefined,
+      smokingStatus: smokingStatus || undefined,
+      desiredMoveInDate: desiredMoveInDate || undefined,
+      leaseDurationPreference: leaseDurationPreference.trim() || undefined,
+      monthlyBudgetMin: toNumberOrUndefined(monthlyBudget),
+      monthlyBudgetMax: toNumberOrUndefined(monthlyBudget),
+      mandatoryPropertySpecificAnswers:
+        mandatoryPropertySpecificAnswers.trim() || undefined,
+      employmentStatus: employmentStatus || undefined,
+      contractType: contractType || undefined,
+      netMonthlyIncomeMin: toNumberOrUndefined(netMonthlyIncomeMin),
+      netMonthlyIncomeMax: toNumberOrUndefined(netMonthlyIncomeMax),
+      coApplicantIncome: toNumberOrUndefined(coApplicantIncome),
+      monthlyDebtPayments: toNumberOrUndefined(monthlyDebtPayments),
+      currentRentAmount: toNumberOrUndefined(currentRentAmount),
+      guarantorNeeded,
+      guarantorName: guarantorNeeded
+        ? guarantorName.trim() || undefined
+        : undefined,
+      guarantorIncome: guarantorNeeded
+        ? toNumberOrUndefined(guarantorIncome)
+        : undefined,
+      previousLandlordContact: previousLandlordContact.trim() || undefined,
+      reasonForMoving: reasonForMoving.trim() || undefined,
+      hadRentPaymentIncidents,
+      rentPaymentIncidentsExplanation: hadRentPaymentIncidents
+        ? rentPaymentIncidentsExplanation.trim() || undefined
+        : undefined,
+    };
 
     try {
       setError(null);
@@ -121,22 +316,54 @@ export default function TenantApplicationsPage() {
       await applicationService.submitApplication({
         propertyId,
         employmentInfo: {
-          companyName,
-          jobTitle,
+          companyName: employmentStatus.trim()
+            ? `Employment status: ${employmentStatus}`
+            : "Not provided",
+          jobTitle: contractType.trim()
+            ? `Contract: ${contractType}`
+            : "Not provided",
           monthlyIncome: Number(monthlyIncome),
         },
         messageToOwner: messageToOwner || undefined,
         applicationDeadline: deadline
           ? new Date(deadline).toISOString()
           : undefined,
+        questionnaire,
       });
 
       setPropertyId("");
-      setCompanyName("");
-      setJobTitle("");
       setMonthlyIncome("");
+      setDateOfBirth("");
+      setCurrentAddress("");
+      setPreferredContactChannel("email");
+      setOccupantsAdults("1");
+      setOccupantsChildren("0");
+      setOccupantRelationshipSummary("");
+      setHasPets(false);
+      setPetType("");
+      setPetCount("0");
+      setSmokingStatus("not_specified");
+      setDesiredMoveInDate("");
+      setLeaseDurationPreference("12_months");
+      setMonthlyBudget("1200");
+      setMandatoryPropertySpecificAnswers("");
+      setEmploymentStatus("");
+      setContractType("");
+      setNetMonthlyIncomeMin("");
+      setNetMonthlyIncomeMax("");
+      setCoApplicantIncome("");
+      setMonthlyDebtPayments("");
+      setCurrentRentAmount("");
+      setGuarantorNeeded(false);
+      setGuarantorName("");
+      setGuarantorIncome("");
+      setPreviousLandlordContact("");
+      setReasonForMoving("");
+      setHadRentPaymentIncidents(false);
+      setRentPaymentIncidentsExplanation("");
       setMessageToOwner("");
       setDeadline("");
+      setCurrentFormStep(0);
       setNotice("Application submitted successfully.");
       await loadApplications();
     } catch {
@@ -183,7 +410,7 @@ export default function TenantApplicationsPage() {
           <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
             <div className="mb-6">
               <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
-                🏠 Apply for a Rental Property
+                Apply for a Rental Property
               </h1>
               <p className="mt-2 text-sm text-gray-600">
                 Fill out your information to apply. The property owner will
@@ -210,159 +437,569 @@ export default function TenantApplicationsPage() {
               </div>
             )}
 
-            <form className="mt-8 space-y-6" onSubmit={submitApplication}>
-              {/* Property Selection */}
-              <fieldset className="rounded-lg border-2 border-indigo-200 bg-indigo-50 p-4">
-                <legend className="font-bold text-indigo-900">
-                  Property Selection
-                </legend>
-                <label className="grid gap-2 text-sm text-gray-700">
-                  <span className="font-bold text-indigo-900">
-                    🏘️ Which Property?
-                  </span>
-                  <span className="text-xs text-indigo-700">
-                    {prefilledPropertyId
-                      ? "✓ This property was selected when you clicked Apply"
-                      : "Enter the property ID you want to apply for"}
-                  </span>
-                  <input
-                    id="application-property-id"
-                    className={`rounded-lg border-2 px-3 py-2 font-medium text-gray-900 ${
-                      prefilledPropertyId
-                        ? "border-emerald-300 bg-emerald-50"
-                        : "border-gray-300"
-                    }`}
-                    value={propertyId}
-                    onChange={(e) => setPropertyId(e.target.value)}
-                    placeholder="Enter property ID"
-                    readOnly={!!prefilledPropertyId}
-                    disabled={!!prefilledPropertyId}
-                    required
-                    aria-required="true"
-                  />
-                  {prefilledPropertyId && (
-                    <p className="text-xs text-emerald-700">
-                      ✓ Property auto-filled
-                    </p>
-                  )}
-                </label>
-              </fieldset>
+            <form className="mt-8" onSubmit={submitApplication}>
+              <Stepper
+                steps={APPLICATION_FORM_STEPS}
+                currentStep={currentFormStep}
+                ariaLabel="Rental application steps"
+                allowStepNavigation
+                onStepChange={handleStepChange}
+                actions={
+                  <div className="flex flex-wrap gap-3 pt-2">
+                    {currentFormStep > 0 && (
+                      <button
+                        type="button"
+                        className="rounded-lg border border-gray-300 bg-white px-4 py-2 font-semibold text-gray-700 transition-colors hover:bg-gray-100"
+                        onClick={goToPreviousStep}
+                      >
+                        Back
+                      </button>
+                    )}
 
-              {/* Employment Information */}
-              <fieldset className="rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
-                <legend className="font-bold text-blue-900">
-                  💼 Your Employment
-                </legend>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <label className="grid gap-1 text-sm text-gray-700">
-                    <span className="font-semibold text-gray-900">
-                      Company Name
-                    </span>
-                    <span className="text-xs text-gray-600">
-                      Where do you work?
-                    </span>
-                    <input
-                      id="application-company-name"
-                      className="mt-1 rounded-lg border border-gray-300 px-3 py-2"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder="e.g., Tech Corp, Acme Inc"
-                      required
-                      aria-required="true"
-                    />
-                  </label>
-                  <label className="grid gap-1 text-sm text-gray-700">
-                    <span className="font-semibold text-gray-900">
-                      Job Title
-                    </span>
-                    <span className="text-xs text-gray-600">
-                      What's your position?
-                    </span>
-                    <input
-                      id="application-job-title"
-                      className="mt-1 rounded-lg border border-gray-300 px-3 py-2"
-                      value={jobTitle}
-                      onChange={(e) => setJobTitle(e.target.value)}
-                      placeholder="e.g., Software Engineer, Manager"
-                      required
-                      aria-required="true"
-                    />
-                  </label>
-                  <label className="col-span-2 grid gap-1 text-sm text-gray-700">
-                    <span className="font-semibold text-gray-900">
-                      Monthly Income 💰
-                    </span>
-                    <span className="text-xs text-gray-600">
-                      Your gross monthly salary (helps owners assess
-                      affordability)
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <span className="text-lg font-semibold text-gray-600">
-                        €
-                      </span>
-                      <input
-                        id="application-monthly-income"
-                        type="number"
-                        min="0"
-                        className="mt-1 flex-1 rounded-lg border border-gray-300 px-3 py-2"
-                        value={monthlyIncome}
-                        onChange={(e) => setMonthlyIncome(e.target.value)}
-                        placeholder="e.g., 3500"
-                        required
-                        aria-required="true"
-                      />
+                    {currentFormStep < finalFormStepIndex ? (
+                      <button
+                        type="button"
+                        className="ml-auto rounded-lg bg-indigo-600 px-5 py-2 font-semibold text-white transition-colors hover:bg-indigo-700"
+                        onClick={goToNextStep}
+                      >
+                        Next
+                      </button>
+                    ) : (
+                      <button
+                        type="submit"
+                        className="ml-auto rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-3 font-bold text-white shadow-lg transition-all hover:from-indigo-700 hover:to-indigo-800 hover:shadow-xl active:scale-95"
+                      >
+                        Submit My Application
+                      </button>
+                    )}
+                  </div>
+                }
+              >
+                {currentFormStep === 0 && (
+                  <div>
+                    <div className="rounded-lg border-2 border-sky-200 bg-sky-50 p-4">
+                      <p className="mb-3 font-bold text-sky-900">
+                        Applicant Identity
+                      </p>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <label className="grid gap-1 text-sm text-gray-700">
+                          <span className="font-semibold text-gray-900">
+                            Date of Birth
+                          </span>
+                          <input
+                            type="date"
+                            className="rounded-lg border border-gray-300 px-3 py-2"
+                            value={dateOfBirth}
+                            onChange={(e) => setDateOfBirth(e.target.value)}
+                            required
+                          />
+                        </label>
+                        <label className="grid gap-1 text-sm text-gray-700">
+                          <span className="font-semibold text-gray-900">
+                            Preferred Contact Channel
+                          </span>
+                          <select
+                            className="rounded-lg border border-gray-300 px-3 py-2"
+                            value={preferredContactChannel}
+                            onChange={(e) =>
+                              setPreferredContactChannel(e.target.value)
+                            }
+                          >
+                            <option value="email">Email</option>
+                            <option value="phone">Phone</option>
+                            <option value="sms">SMS</option>
+                            <option value="whatsapp">WhatsApp</option>
+                          </select>
+                        </label>
+                        <label className="md:col-span-2 grid gap-1 text-sm text-gray-700">
+                          <span className="font-semibold text-gray-900">
+                            Current Address
+                          </span>
+                          <input
+                            className="rounded-lg border border-gray-300 px-3 py-2"
+                            value={currentAddress}
+                            onChange={(e) => setCurrentAddress(e.target.value)}
+                            placeholder="Street, city, postal code"
+                            required
+                          />
+                          <span className="text-xs text-gray-500">
+                            You can type your address or choose it on the map
+                            below.
+                          </span>
+                          <div className="rounded-lg border border-sky-100 bg-white p-3">
+                            <LocationPreferenceMap
+                              value={currentAddress}
+                              onChange={setCurrentAddress}
+                              showRadius={false}
+                            />
+                          </div>
+                        </label>
+                      </div>
                     </div>
-                  </label>
-                </div>
-              </fieldset>
+                  </div>
+                )}
 
-              {/* Optional Message */}
-              <div className="rounded-lg border-2 border-purple-200 bg-purple-50 p-4">
-                <label className="grid gap-2 text-sm text-gray-700">
-                  <span className="font-bold text-purple-900">
-                    💬 Message to Owner (Optional)
-                  </span>
-                  <span className="text-xs text-purple-700">
-                    Tell the owner about yourself, why you're interested in this
-                    property, or any special circumstances
-                  </span>
-                  <textarea
-                    className="mt-1 min-h-20 rounded-lg border border-gray-300 px-3 py-2"
-                    value={messageToOwner}
-                    onChange={(e) => setMessageToOwner(e.target.value)}
-                    placeholder="e.g., 'I'm very interested in this property because...'"
-                  />
-                </label>
-              </div>
+                {currentFormStep === 1 && (
+                  <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
+                    <p className="mb-3 font-bold text-blue-900">
+                      Household & Occupancy
+                    </p>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <label className="grid gap-1 text-sm text-gray-700">
+                        <span className="font-semibold text-gray-900">
+                          Adults
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          className="rounded-lg border border-gray-300 px-3 py-2"
+                          value={occupantsAdults}
+                          onChange={(e) => setOccupantsAdults(e.target.value)}
+                        />
+                      </label>
+                      <label className="grid gap-1 text-sm text-gray-700">
+                        <span className="font-semibold text-gray-900">
+                          Children
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          className="rounded-lg border border-gray-300 px-3 py-2"
+                          value={occupantsChildren}
+                          onChange={(e) => setOccupantsChildren(e.target.value)}
+                        />
+                      </label>
+                      <label className="md:col-span-2 grid gap-1 text-sm text-gray-700">
+                        <span className="font-semibold text-gray-900">
+                          Relationships in Household
+                        </span>
+                        <input
+                          className="rounded-lg border border-gray-300 px-3 py-2"
+                          value={occupantRelationshipSummary}
+                          onChange={(e) =>
+                            setOccupantRelationshipSummary(e.target.value)
+                          }
+                          placeholder="e.g., partner, dependent"
+                        />
+                      </label>
+                      <label className="grid gap-1 text-sm text-gray-700">
+                        <span className="font-semibold text-gray-900">
+                          Pets
+                        </span>
+                        <select
+                          className="rounded-lg border border-gray-300 px-3 py-2"
+                          value={hasPets ? "yes" : "no"}
+                          onChange={(e) => setHasPets(e.target.value === "yes")}
+                        >
+                          <option value="no">No</option>
+                          <option value="yes">Yes</option>
+                        </select>
+                      </label>
+                      <label className="grid gap-1 text-sm text-gray-700">
+                        <span className="font-semibold text-gray-900">
+                          Smoking Status
+                        </span>
+                        <select
+                          className="rounded-lg border border-gray-300 px-3 py-2"
+                          value={smokingStatus}
+                          onChange={(e) => setSmokingStatus(e.target.value)}
+                        >
+                          <option value="not_specified">
+                            Prefer not to say
+                          </option>
+                          <option value="non_smoker">Non-smoker</option>
+                          <option value="smoker">Smoker</option>
+                        </select>
+                      </label>
+                      {hasPets && (
+                        <>
+                          <label className="grid gap-1 text-sm text-gray-700">
+                            <span className="font-semibold text-gray-900">
+                              Pet Type
+                            </span>
+                            <input
+                              className="rounded-lg border border-gray-300 px-3 py-2"
+                              value={petType}
+                              onChange={(e) => setPetType(e.target.value)}
+                              placeholder="e.g., cat"
+                            />
+                          </label>
+                          <label className="grid gap-1 text-sm text-gray-700">
+                            <span className="font-semibold text-gray-900">
+                              Pet Count
+                            </span>
+                            <input
+                              type="number"
+                              min="0"
+                              className="rounded-lg border border-gray-300 px-3 py-2"
+                              value={petCount}
+                              onChange={(e) => setPetCount(e.target.value)}
+                            />
+                          </label>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
 
-              {/* Optional Deadline */}
-              <div className="rounded-lg border-2 border-yellow-200 bg-yellow-50 p-4">
-                <label className="grid gap-2 text-sm text-gray-700">
-                  <span className="font-bold text-yellow-900">
-                    ⏰ When Do You Need a Place? (Optional)
-                  </span>
-                  <span className="text-xs text-yellow-700">
-                    Set a deadline to let the owner know when you need to move
-                    in
-                  </span>
-                  <input
-                    type="datetime-local"
-                    className="mt-1 rounded-lg border border-gray-300 px-3 py-2"
-                    value={deadline}
-                    onChange={(e) => setDeadline(e.target.value)}
-                  />
-                </label>
-              </div>
+                {currentFormStep === 2 && (
+                  <div className="rounded-lg border-2 border-violet-200 bg-violet-50 p-4">
+                    <p className="mb-3 font-bold text-violet-900">
+                      Rental Need
+                    </p>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <label className="grid gap-1 text-sm text-gray-700">
+                        <span className="font-semibold text-gray-900">
+                          Desired Move-in Date
+                        </span>
+                        <input
+                          type="date"
+                          className="rounded-lg border border-gray-300 px-3 py-2"
+                          value={desiredMoveInDate}
+                          onChange={(e) => setDesiredMoveInDate(e.target.value)}
+                        />
+                      </label>
 
-              {/* Submit Button */}
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="submit"
-                  className="flex-1 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 font-bold text-white shadow-lg transition-all hover:shadow-xl hover:from-indigo-700 hover:to-indigo-800 active:scale-95"
-                >
-                  🚀 Submit My Application
-                </button>
-              </div>
+                      <fieldset className="md:col-span-2 grid gap-2 text-sm text-gray-700">
+                        <legend className="font-semibold text-gray-900">
+                          Lease Duration Preference
+                        </legend>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {LEASE_DURATION_OPTIONS.map((option) => (
+                            <label
+                              key={option.value}
+                              className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2"
+                            >
+                              <input
+                                type="radio"
+                                name="leaseDurationPreference"
+                                value={option.value}
+                                checked={
+                                  leaseDurationPreference === option.value
+                                }
+                                onChange={(e) =>
+                                  setLeaseDurationPreference(e.target.value)
+                                }
+                              />
+                              <span>{option.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </fieldset>
+
+                      <div className="md:col-span-2 rounded-lg border border-gray-300 bg-white p-4">
+                        <label className="grid gap-3 text-sm text-gray-700">
+                          <div>
+                            <p className="font-semibold text-gray-900">
+                              Monthly Budget
+                            </p>
+                            <p className="mt-1 text-sm text-gray-600">
+                              {Number(monthlyBudget).toLocaleString("en-US")}{" "}
+                              DT
+                            </p>
+                          </div>
+                          <input
+                            type="range"
+                            min={BUDGET_SLIDER_MIN}
+                            max={BUDGET_SLIDER_MAX}
+                            step={BUDGET_SLIDER_STEP}
+                            value={monthlyBudget}
+                            onChange={(e) => setMonthlyBudget(e.target.value)}
+                          />
+                        </label>
+                      </div>
+
+                      <label className="md:col-span-2 grid gap-1 text-sm text-gray-700">
+                        <span className="font-semibold text-gray-900">
+                          Property-specific Notes (if required)
+                        </span>
+                        <textarea
+                          className="min-h-20 rounded-lg border border-gray-300 px-3 py-2"
+                          value={mandatoryPropertySpecificAnswers}
+                          onChange={(e) =>
+                            setMandatoryPropertySpecificAnswers(e.target.value)
+                          }
+                          placeholder="Any mandatory answers for this property"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {currentFormStep === 3 && (
+                  <div className="rounded-lg border-2 border-emerald-200 bg-emerald-50 p-4">
+                    <p className="mb-3 font-bold text-emerald-900">
+                      Employment & Income
+                    </p>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <label className="grid gap-1 text-sm text-gray-700">
+                        <span className="font-semibold text-gray-900">
+                          Employment Status
+                        </span>
+                        <select
+                          className="rounded-lg border border-gray-300 px-3 py-2"
+                          value={employmentStatus}
+                          onChange={(e) => setEmploymentStatus(e.target.value)}
+                        >
+                          <option value="">Select</option>
+                          <option value="employee">Employee</option>
+                          <option value="self_employed">Self-employed</option>
+                          <option value="student">Student</option>
+                          <option value="retired">Retired</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </label>
+                      <label className="grid gap-1 text-sm text-gray-700">
+                        <span className="font-semibold text-gray-900">
+                          Contract Type
+                        </span>
+                        <select
+                          className="rounded-lg border border-gray-300 px-3 py-2"
+                          value={contractType}
+                          onChange={(e) => setContractType(e.target.value)}
+                        >
+                          <option value="">Select</option>
+                          <option value="permanent">Permanent</option>
+                          <option value="fixed_term">Fixed-term</option>
+                          <option value="freelance">Freelance</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </label>
+                      <label className="col-span-2 grid gap-1 text-sm text-gray-700">
+                        <span className="font-semibold text-gray-900">
+                          Monthly Income used for application (€)
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          className="rounded-lg border border-gray-300 px-3 py-2"
+                          value={monthlyIncome}
+                          onChange={(e) => setMonthlyIncome(e.target.value)}
+                          placeholder="e.g., 3500"
+                          required
+                        />
+                      </label>
+                      <label className="grid gap-1 text-sm text-gray-700">
+                        <span className="font-semibold text-gray-900">
+                          Net Income Min (€)
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          className="rounded-lg border border-gray-300 px-3 py-2"
+                          value={netMonthlyIncomeMin}
+                          onChange={(e) =>
+                            setNetMonthlyIncomeMin(e.target.value)
+                          }
+                        />
+                      </label>
+                      <label className="grid gap-1 text-sm text-gray-700">
+                        <span className="font-semibold text-gray-900">
+                          Net Income Max (€)
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          className="rounded-lg border border-gray-300 px-3 py-2"
+                          value={netMonthlyIncomeMax}
+                          onChange={(e) =>
+                            setNetMonthlyIncomeMax(e.target.value)
+                          }
+                        />
+                      </label>
+                      <label className="col-span-2 grid gap-1 text-sm text-gray-700">
+                        <span className="font-semibold text-gray-900">
+                          Co-applicant Income (optional, €)
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          className="rounded-lg border border-gray-300 px-3 py-2"
+                          value={coApplicantIncome}
+                          onChange={(e) => setCoApplicantIncome(e.target.value)}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {currentFormStep === 4 && (
+                  <div className="rounded-lg border-2 border-amber-200 bg-amber-50 p-4">
+                    <p className="mb-3 font-bold text-amber-900">
+                      Financial Commitments
+                    </p>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <label className="grid gap-1 text-sm text-gray-700">
+                        <span className="font-semibold text-gray-900">
+                          Existing Monthly Debt Payments (€)
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          className="rounded-lg border border-gray-300 px-3 py-2"
+                          value={monthlyDebtPayments}
+                          onChange={(e) =>
+                            setMonthlyDebtPayments(e.target.value)
+                          }
+                        />
+                      </label>
+                      <label className="grid gap-1 text-sm text-gray-700">
+                        <span className="font-semibold text-gray-900">
+                          Current Rent Amount (€)
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          className="rounded-lg border border-gray-300 px-3 py-2"
+                          value={currentRentAmount}
+                          onChange={(e) => setCurrentRentAmount(e.target.value)}
+                        />
+                      </label>
+                      <label className="grid gap-1 text-sm text-gray-700">
+                        <span className="font-semibold text-gray-900">
+                          Guarantor Needed?
+                        </span>
+                        <select
+                          className="rounded-lg border border-gray-300 px-3 py-2"
+                          value={guarantorNeeded ? "yes" : "no"}
+                          onChange={(e) =>
+                            setGuarantorNeeded(e.target.value === "yes")
+                          }
+                        >
+                          <option value="no">No</option>
+                          <option value="yes">Yes</option>
+                        </select>
+                      </label>
+                      {guarantorNeeded && (
+                        <>
+                          <label className="grid gap-1 text-sm text-gray-700">
+                            <span className="font-semibold text-gray-900">
+                              Guarantor Name
+                            </span>
+                            <input
+                              className="rounded-lg border border-gray-300 px-3 py-2"
+                              value={guarantorName}
+                              onChange={(e) => setGuarantorName(e.target.value)}
+                              placeholder="Full name"
+                            />
+                          </label>
+                          <label className="grid gap-1 text-sm text-gray-700">
+                            <span className="font-semibold text-gray-900">
+                              Guarantor Income (€)
+                            </span>
+                            <input
+                              type="number"
+                              min="0"
+                              className="rounded-lg border border-gray-300 px-3 py-2"
+                              value={guarantorIncome}
+                              onChange={(e) =>
+                                setGuarantorIncome(e.target.value)
+                              }
+                            />
+                          </label>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {currentFormStep === 5 && (
+                  <div className="space-y-4">
+                    <div className="rounded-lg border-2 border-rose-200 bg-rose-50 p-4">
+                      <p className="mb-3 font-bold text-rose-900">
+                        Rental History
+                      </p>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <label className="md:col-span-2 grid gap-1 text-sm text-gray-700">
+                          <span className="font-semibold text-gray-900">
+                            Current/Previous Landlord Contact (optional)
+                          </span>
+                          <input
+                            className="rounded-lg border border-gray-300 px-3 py-2"
+                            value={previousLandlordContact}
+                            onChange={(e) =>
+                              setPreviousLandlordContact(e.target.value)
+                            }
+                            placeholder="Email or phone"
+                          />
+                        </label>
+                        <label className="md:col-span-2 grid gap-1 text-sm text-gray-700">
+                          <span className="font-semibold text-gray-900">
+                            Reason for Moving
+                          </span>
+                          <textarea
+                            className="min-h-20 rounded-lg border border-gray-300 px-3 py-2"
+                            value={reasonForMoving}
+                            onChange={(e) => setReasonForMoving(e.target.value)}
+                            required
+                          />
+                        </label>
+                        <label className="grid gap-1 text-sm text-gray-700">
+                          <span className="font-semibold text-gray-900">
+                            Past Rent Payment Incidents
+                          </span>
+                          <select
+                            className="rounded-lg border border-gray-300 px-3 py-2"
+                            value={hadRentPaymentIncidents ? "yes" : "no"}
+                            onChange={(e) =>
+                              setHadRentPaymentIncidents(
+                                e.target.value === "yes",
+                              )
+                            }
+                          >
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                          </select>
+                        </label>
+                        {hadRentPaymentIncidents && (
+                          <label className="md:col-span-2 grid gap-1 text-sm text-gray-700">
+                            <span className="font-semibold text-gray-900">
+                              Incidents Explanation
+                            </span>
+                            <textarea
+                              className="min-h-20 rounded-lg border border-gray-300 px-3 py-2"
+                              value={rentPaymentIncidentsExplanation}
+                              onChange={(e) =>
+                                setRentPaymentIncidentsExplanation(
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border-2 border-purple-200 bg-purple-50 p-4">
+                      <label className="grid gap-2 text-sm text-gray-700">
+                        <span className="font-bold text-purple-900">
+                          Message to Owner (Optional)
+                        </span>
+                        <textarea
+                          className="min-h-20 rounded-lg border border-gray-300 px-3 py-2"
+                          value={messageToOwner}
+                          onChange={(e) => setMessageToOwner(e.target.value)}
+                          placeholder="Anything you'd like the owner to know"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="rounded-lg border-2 border-yellow-200 bg-yellow-50 p-4">
+                      <label className="grid gap-2 text-sm text-gray-700">
+                        <span className="font-bold text-yellow-900">
+                          When Do You Need a Place? (Optional)
+                        </span>
+                        <input
+                          type="datetime-local"
+                          className="rounded-lg border border-gray-300 px-3 py-2"
+                          value={deadline}
+                          onChange={(e) => setDeadline(e.target.value)}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </Stepper>
             </form>
           </section>
 
@@ -370,7 +1007,7 @@ export default function TenantApplicationsPage() {
           <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-                📋 My Applications
+                My Applications
               </h2>
               <button
                 type="button"
@@ -383,11 +1020,11 @@ export default function TenantApplicationsPage() {
 
             {loading ? (
               <p className="text-sm text-gray-600">
-                ⏳ Loading your applications...
+                Loading your applications...
               </p>
             ) : sortedApplications.length === 0 ? (
               <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center">
-                <p className="text-lg text-gray-600">📭 No applications yet</p>
+                <p className="text-lg text-gray-600">No applications yet</p>
                 <p className="mt-2 text-sm text-gray-500">
                   Find a property you like and click "Apply Now" to get started!
                 </p>
@@ -403,15 +1040,13 @@ export default function TenantApplicationsPage() {
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="flex-1">
                         <p className="text-sm font-semibold text-gray-900">
-                          🏠{" "}
                           {application.propertyTitle ||
                             application.propertyAddress ||
                             "Your selected property"}
-                          {" · "}
-                          👤 Owner: {application.ownerName || "Property owner"}
+                          {" - "}
+                          Owner: {application.ownerName || "Property owner"}
                         </p>
                         <p className="mt-1 text-xs text-gray-500">
-                          📅{" "}
                           {new Date(application.createdAt).toLocaleDateString(
                             "en-US",
                             {
@@ -427,14 +1062,12 @@ export default function TenantApplicationsPage() {
                       <span
                         className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-bold ${statusClass[application.status]}`}
                       >
-                        {statusEmojis[application.status] || "📋"}{" "}
                         {statusLabel[application.status]}
                       </span>
                     </div>
 
                     {application.rejectionReason && (
                       <p className="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">
-                        ❌{" "}
                         <span className="font-semibold">Rejection Reason:</span>{" "}
                         {application.rejectionReason}
                       </p>
@@ -442,7 +1075,7 @@ export default function TenantApplicationsPage() {
 
                     {application.requestedDocuments.length > 0 && (
                       <div className="mt-3 rounded-lg border-l-4 border-amber-400 bg-amber-50 p-3 text-sm text-amber-800">
-                        <p className="font-semibold">📄 Documents Requested:</p>
+                        <p className="font-semibold">Documents Requested:</p>
                         <p className="mt-1">
                           {application.requestedDocuments.join(", ")}
                         </p>
@@ -451,7 +1084,6 @@ export default function TenantApplicationsPage() {
 
                     <div className="mt-4 flex flex-wrap items-center gap-2">
                       <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border-2 border-blue-300 bg-blue-50 px-4 py-2 font-semibold text-blue-700 transition-colors hover:bg-blue-100">
-                        <span>📎</span>
                         <input
                           id={`upload-${application.id}`}
                           type="file"
@@ -478,7 +1110,7 @@ export default function TenantApplicationsPage() {
                               void withdrawApplication(application.id)
                             }
                           >
-                            ❌ Withdraw Application
+                            Withdraw Application
                           </button>
                         )}
                     </div>

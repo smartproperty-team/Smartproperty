@@ -37,6 +37,38 @@ export interface ReferenceInfo {
   notes?: string;
 }
 
+export interface ApplicationQuestionnaire {
+  dateOfBirth?: string;
+  currentAddress?: string;
+  preferredContactChannel?: string;
+  occupantsAdults?: number;
+  occupantsChildren?: number;
+  occupantRelationshipSummary?: string;
+  hasPets?: boolean;
+  petType?: string;
+  petCount?: number;
+  smokingStatus?: string;
+  desiredMoveInDate?: string;
+  leaseDurationPreference?: string;
+  monthlyBudgetMin?: number;
+  monthlyBudgetMax?: number;
+  mandatoryPropertySpecificAnswers?: string;
+  employmentStatus?: string;
+  contractType?: string;
+  netMonthlyIncomeMin?: number;
+  netMonthlyIncomeMax?: number;
+  coApplicantIncome?: number;
+  monthlyDebtPayments?: number;
+  currentRentAmount?: number;
+  guarantorNeeded?: boolean;
+  guarantorName?: string;
+  guarantorIncome?: number;
+  previousLandlordContact?: string;
+  reasonForMoving?: string;
+  hadRentPaymentIncidents?: boolean;
+  rentPaymentIncidentsExplanation?: string;
+}
+
 export interface ApplicationDocument {
   id: string;
   name: string;
@@ -97,6 +129,9 @@ export class Application {
   messageToOwner?: string;
 
   @Column('simple-json', { nullable: true })
+  questionnaire?: ApplicationQuestionnaire;
+
+  @Column('simple-json', { nullable: true })
   documents?: ApplicationDocument[];
 
   @Column('simple-array', { nullable: true })
@@ -147,6 +182,7 @@ export class Application {
       employmentInfo: this.employmentInfo,
       references: this.references || [],
       messageToOwner: this.messageToOwner,
+      questionnaire: this.questionnaire,
       documents: this.documents || [],
       requestedDocuments: this.requestedDocuments || [],
       rejectionReason: this.rejectionReason,

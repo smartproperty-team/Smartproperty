@@ -82,6 +82,187 @@ export class ReferenceInfoDto {
   notes?: string;
 }
 
+export class ApplicationQuestionnaireDto {
+  @ApiPropertyOptional({ example: '1994-08-21' })
+  @IsOptional()
+  @IsDateString()
+  dateOfBirth?: string;
+
+  @ApiPropertyOptional({ example: '12 Rue des Lilas, Paris' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  currentAddress?: string;
+
+  @ApiPropertyOptional({ example: 'email' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  preferredContactChannel?: string;
+
+  @ApiPropertyOptional({ example: 2 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  occupantsAdults?: number;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  occupantsChildren?: number;
+
+  @ApiPropertyOptional({ example: 'partner, dependent' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  occupantRelationshipSummary?: string;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  hasPets?: boolean;
+
+  @ApiPropertyOptional({ example: 'cat' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  petType?: string;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  petCount?: number;
+
+  @ApiPropertyOptional({ example: 'non_smoker' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  smokingStatus?: string;
+
+  @ApiPropertyOptional({ example: '2026-09-01' })
+  @IsOptional()
+  @IsDateString()
+  desiredMoveInDate?: string;
+
+  @ApiPropertyOptional({ example: '12 months' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  leaseDurationPreference?: string;
+
+  @ApiPropertyOptional({ example: 1200 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  monthlyBudgetMin?: number;
+
+  @ApiPropertyOptional({ example: 1600 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  monthlyBudgetMax?: number;
+
+  @ApiPropertyOptional({
+    example: 'Ground floor preferred due to accessibility needs.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  mandatoryPropertySpecificAnswers?: string;
+
+  @ApiPropertyOptional({ example: 'employee' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  employmentStatus?: string;
+
+  @ApiPropertyOptional({ example: 'permanent' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  contractType?: string;
+
+  @ApiPropertyOptional({ example: 2800 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  netMonthlyIncomeMin?: number;
+
+  @ApiPropertyOptional({ example: 3400 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  netMonthlyIncomeMax?: number;
+
+  @ApiPropertyOptional({ example: 1200 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  coApplicantIncome?: number;
+
+  @ApiPropertyOptional({ example: 450 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  monthlyDebtPayments?: number;
+
+  @ApiPropertyOptional({ example: 980 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  currentRentAmount?: number;
+
+  @ApiPropertyOptional({ example: false })
+  @IsOptional()
+  guarantorNeeded?: boolean;
+
+  @ApiPropertyOptional({ example: 'Alex Martin' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  guarantorName?: string;
+
+  @ApiPropertyOptional({ example: 3500 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  guarantorIncome?: number;
+
+  @ApiPropertyOptional({ example: 'landlord@example.com / +33123456789' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  previousLandlordContact?: string;
+
+  @ApiPropertyOptional({ example: 'Need larger space for growing family.' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  reasonForMoving?: string;
+
+  @ApiPropertyOptional({ example: false })
+  @IsOptional()
+  hadRentPaymentIncidents?: boolean;
+
+  @ApiPropertyOptional({ example: 'Late once in 2023 due to bank delay.' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  rentPaymentIncidentsExplanation?: string;
+}
+
 export class SubmitApplicationDto {
   @ApiProperty({ example: '507f1f77bcf86cd799439011' })
   @IsString()
@@ -113,6 +294,12 @@ export class SubmitApplicationDto {
   @IsOptional()
   @IsDateString()
   applicationDeadline?: string;
+
+  @ApiPropertyOptional({ type: ApplicationQuestionnaireDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ApplicationQuestionnaireDto)
+  questionnaire?: ApplicationQuestionnaireDto;
 }
 
 export class UploadApplicationDocumentDto {

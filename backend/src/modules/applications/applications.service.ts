@@ -188,6 +188,7 @@ export class ApplicationsService {
       employmentInfo: dto.employmentInfo,
       references: dto.references || [],
       messageToOwner: dto.messageToOwner,
+      questionnaire: dto.questionnaire,
       applicationDeadline: dto.applicationDeadline
         ? new Date(dto.applicationDeadline)
         : undefined,
@@ -372,7 +373,8 @@ export class ApplicationsService {
           }
         } catch {
           // Keep user-friendly fallback values when lookup fails
-          applicationData.propertyTitle = applicationData.propertyTitle || app.propertyId;
+          applicationData.propertyTitle =
+            applicationData.propertyTitle || app.propertyId;
         }
 
         if (!applicationData.ownerName) {

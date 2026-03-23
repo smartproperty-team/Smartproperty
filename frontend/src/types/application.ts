@@ -24,6 +24,38 @@ export interface ReferenceInfo {
   notes?: string;
 }
 
+export interface ApplicationQuestionnaire {
+  dateOfBirth?: string;
+  currentAddress?: string;
+  preferredContactChannel?: string;
+  occupantsAdults?: number;
+  occupantsChildren?: number;
+  occupantRelationshipSummary?: string;
+  hasPets?: boolean;
+  petType?: string;
+  petCount?: number;
+  smokingStatus?: string;
+  desiredMoveInDate?: string;
+  leaseDurationPreference?: string;
+  monthlyBudgetMin?: number;
+  monthlyBudgetMax?: number;
+  mandatoryPropertySpecificAnswers?: string;
+  employmentStatus?: string;
+  contractType?: string;
+  netMonthlyIncomeMin?: number;
+  netMonthlyIncomeMax?: number;
+  coApplicantIncome?: number;
+  monthlyDebtPayments?: number;
+  currentRentAmount?: number;
+  guarantorNeeded?: boolean;
+  guarantorName?: string;
+  guarantorIncome?: number;
+  previousLandlordContact?: string;
+  reasonForMoving?: string;
+  hadRentPaymentIncidents?: boolean;
+  rentPaymentIncidentsExplanation?: string;
+}
+
 export interface ApplicationDocument {
   id: string;
   name: string;
@@ -63,6 +95,7 @@ export interface Application {
   employmentInfo: EmploymentInfo;
   references: ReferenceInfo[];
   messageToOwner?: string;
+  questionnaire?: ApplicationQuestionnaire;
   propertyTitle?: string;
   propertyAddress?: string;
   propertyPrice?: number;
@@ -93,6 +126,7 @@ export interface SubmitApplicationDto {
   references?: ReferenceInfo[];
   messageToOwner?: string;
   applicationDeadline?: string;
+  questionnaire?: ApplicationQuestionnaire;
 }
 
 export interface ApplicationQuery {

@@ -35,6 +35,7 @@ interface LocationPreferenceMapProps {
   selection?: UserLocationPreference;
   onSelectionChange?: (selection: UserLocationPreference) => void;
   disabled?: boolean;
+  showRadius?: boolean;
 }
 
 const searchLocations = async (
@@ -86,6 +87,7 @@ export default function LocationPreferenceMap({
   selection,
   onSelectionChange,
   disabled = false,
+  showRadius = true,
 }: LocationPreferenceMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -130,6 +132,18 @@ export default function LocationPreferenceMap({
       markerRef.current = L.marker([lat, lng]).addTo(map);
     } else {
       markerRef.current.setLatLng([lat, lng]);
+    }
+
+    if (!showRadius) {
+      if (circleRef.current) {
+        map.removeLayer(circleRef.current);
+        circleRef.current = null;
+      }
+
+      if (shouldCenter) {
+        map.setView([lat, lng], 12);
+      }
+      return;
     }
 
     if (!circleRef.current) {
@@ -194,7 +208,7 @@ export default function LocationPreferenceMap({
       markerRef.current = null;
       circleRef.current = null;
     };
-  }, [disabled, onChange, radiusKm]);
+  }, [disabled, onChange, radiusKm, showRadius]);
 
   useEffect(() => {
     updateMapSelection(selectedCoords.lat, selectedCoords.lng, radiusKm, false);
@@ -373,27 +387,29 @@ export default function LocationPreferenceMap({
         )}
       </div>
 
-      <div>
-        <label className="mb-2 block text-sm font-medium text-gray-600">
-          Radius
-        </label>
-        <select
-          value={radiusKm}
-          onChange={(event) => {
-            const nextRadius = Number(event.target.value);
-            setRadiusKm(nextRadius);
-            emitSelection(searchQuery.trim(), nextRadius, selectedCoords);
-          }}
-          disabled={disabled}
-          className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-gray-900 shadow-sm focus:border-home-primary focus:outline-none focus:ring-2 focus:ring-home-primary/20 disabled:bg-gray-100"
-        >
-          {RADIUS_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {option} kilometers
-            </option>
-          ))}
-        </select>
-      </div>
+      {showRadius && (
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-600">
+            Radius
+          </label>
+          <select
+            value={radiusKm}
+            onChange={(event) => {
+              const nextRadius = Number(event.target.value);
+              setRadiusKm(nextRadius);
+              emitSelection(searchQuery.trim(), nextRadius, selectedCoords);
+            }}
+            disabled={disabled}
+            className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-gray-900 shadow-sm focus:border-home-primary focus:outline-none focus:ring-2 focus:ring-home-primary/20 disabled:bg-gray-100"
+          >
+            {RADIUS_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option} kilometers
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="relative overflow-hidden rounded-2xl border border-gray-200">
         <button
