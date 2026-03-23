@@ -53,6 +53,11 @@ const APPLICATION_REVIEW_ROLES: UserRole[] = [
   UserRole.RENTAL_MANAGER,
 ];
 
+const MAINTENANCE_INTAKE_ROLES: UserRole[] = [
+  UserRole.OWNER,
+  UserRole.BRANCH_MANAGER,
+];
+
 function hasRole(
   user: User | null | undefined,
   allowedRoles: UserRole[],
@@ -119,6 +124,15 @@ export function canReviewVerifications(user: User | null | undefined): boolean {
  */
 export function canReviewApplications(user: User | null | undefined): boolean {
   return hasRole(user, APPLICATION_REVIEW_ROLES);
+}
+
+/**
+ * Can submit owner/branch manager maintenance intake requests.
+ */
+export function canCreateMaintenanceRequest(
+  user: User | null | undefined,
+): boolean {
+  return hasRole(user, MAINTENANCE_INTAKE_ROLES);
 }
 
 /**

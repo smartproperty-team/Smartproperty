@@ -29,6 +29,7 @@ import {
   VerificationPage,
 } from "./pages/dashboard";
 import { HomePage, PaletteDemoPage } from "./pages/home";
+import { MaintenanceRequestFormPage } from "./pages/maintenance";
 import { PreferencesOnboardingModal } from "./pages/onboarding";
 import { ProfilePage } from "./pages/profile";
 import {
@@ -42,6 +43,7 @@ import { SettingsPage } from "./pages/settings";
 import { useAuthStore, usePreferencesStore } from "./store";
 import {
   canAccessAdminUsers,
+  canCreateMaintenanceRequest,
   canCreateProperties,
   canManageProperties,
   canReviewApplications,
@@ -73,6 +75,7 @@ function getPageTitle(pathname: string): string {
     "/properties": "Properties",
     "/properties/mine": "My Properties",
     "/properties/new": "Create Property",
+    "/maintenance/requests/new": "Maintenance Request",
   };
 
   if (exactTitles[pathname]) {
@@ -125,6 +128,8 @@ function App() {
       pageTitle = "Verify Email | SmartProperty";
     } else if (path.startsWith("/properties/new")) {
       pageTitle = "Add Property | SmartProperty";
+    } else if (path.startsWith("/maintenance/requests/new")) {
+      pageTitle = "Maintenance Request | SmartProperty";
     } else if (path.startsWith("/properties/mine")) {
       pageTitle = "My Properties | SmartProperty";
     } else if (path.startsWith("/properties/") && path.endsWith("/edit")) {
@@ -384,6 +389,19 @@ function App() {
                 <PropertyFormPage />
               ) : (
                 <Navigate to="/properties" replace />
+              )}
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/maintenance/requests/new"
+          element={
+            <ProtectedRoute>
+              {canCreateMaintenanceRequest(user) ? (
+                <MaintenanceRequestFormPage />
+              ) : (
+                <Navigate to="/dashboard" replace />
               )}
             </ProtectedRoute>
           }

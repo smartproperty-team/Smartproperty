@@ -1,5 +1,6 @@
 import { useAuthStore } from "@/store";
 import {
+  canCreateMaintenanceRequest,
   canAccessAdminUsers,
   canReviewApplications,
   canReviewVerifications,
@@ -17,6 +18,7 @@ import {
   ShieldCheck,
   User,
   Users,
+  Wrench,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -54,6 +56,15 @@ export default function AppSidebar() {
               label: "Review Applications",
               to: "/applications/review",
               icon: ClipboardList,
+            },
+          ]
+        : []),
+      ...(canCreateMaintenanceRequest(user)
+        ? [
+            {
+              label: "Request Maintenance",
+              to: "/maintenance/requests/new",
+              icon: Wrench,
             },
           ]
         : []),

@@ -30,6 +30,7 @@ import type {
 } from "@/types/property";
 import { VerificationStatus } from "@/types/verification";
 import {
+  canCreateMaintenanceRequest,
   canAccessAdminUsers,
   canManageProperties,
   canReviewApplications,
@@ -46,6 +47,7 @@ import {
   Shield,
   ShieldCheck,
   Users,
+  Wrench,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -105,6 +107,7 @@ export default function DashboardPage() {
   const canAccessPortfolioDashboard =
     canManageProperties(user) ||
     user?.role === UserRole.ACCOUNTANT_ADMIN_ASSISTANT;
+  const canRequestMaintenance = canCreateMaintenanceRequest(user);
 
   // Fetch verification status for tenants
   useEffect(() => {
@@ -583,6 +586,14 @@ export default function DashboardPage() {
                 ? "Here's what's happening with your properties today."
                 : "Browse available properties and manage your applications."}
             </p>
+            {canRequestMaintenance && (
+              <div className="mt-4">
+                <Button onClick={() => navigate("/maintenance/requests/new")}>
+                  <Wrench className="mr-2 h-4 w-4" />
+                  Request Maintenance
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Verify Me CTA - Show for tenants (hide if verified or rejected) */}
