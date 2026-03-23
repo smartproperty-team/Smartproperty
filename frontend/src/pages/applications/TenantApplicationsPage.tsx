@@ -26,6 +26,31 @@ const LEASE_DURATION_OPTIONS = [
   { value: "flexible", label: "Flexible" },
 ] as const;
 
+const MONTHLY_INCOME_INTERVAL_OPTIONS = [
+  { value: "under_1000", label: "Less than 1,000 EUR", mappedIncome: 900 },
+  {
+    value: "1000_1999",
+    label: "1,000 - 1,999 EUR",
+    mappedIncome: 1500,
+  },
+  {
+    value: "2000_2999",
+    label: "2,000 - 2,999 EUR",
+    mappedIncome: 2500,
+  },
+  {
+    value: "3000_3999",
+    label: "3,000 - 3,999 EUR",
+    mappedIncome: 3500,
+  },
+  {
+    value: "4000_5999",
+    label: "4,000 - 5,999 EUR",
+    mappedIncome: 5000,
+  },
+  { value: "6000_plus", label: "6,000+ EUR", mappedIncome: 6000 },
+] as const;
+
 const BUDGET_SLIDER_MIN = 300;
 const BUDGET_SLIDER_MAX = 6000;
 const BUDGET_SLIDER_STEP = 50;
@@ -61,7 +86,7 @@ export default function TenantApplicationsPage() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const [propertyId, setPropertyId] = useState(prefilledPropertyId);
-  const [monthlyIncome, setMonthlyIncome] = useState("");
+  const [monthlyIncomeInterval, setMonthlyIncomeInterval] = useState("");
 
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [currentAddress, setCurrentAddress] = useState("");
@@ -88,8 +113,6 @@ export default function TenantApplicationsPage() {
 
   const [employmentStatus, setEmploymentStatus] = useState("");
   const [contractType, setContractType] = useState("");
-  const [netMonthlyIncomeMin, setNetMonthlyIncomeMin] = useState("");
-  const [netMonthlyIncomeMax, setNetMonthlyIncomeMax] = useState("");
   const [coApplicantIncome, setCoApplicantIncome] = useState("");
 
   const [monthlyDebtPayments, setMonthlyDebtPayments] = useState("");
@@ -109,6 +132,10 @@ export default function TenantApplicationsPage() {
   const [currentFormStep, setCurrentFormStep] = useState(0);
 
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
+  const [withdrawingFor, setWithdrawingFor] = useState<string | null>(null);
+  const [expandedHistoryFor, setExpandedHistoryFor] = useState<string | null>(
+    null,
+  );
 
   const sortedApplications = useMemo(
     () =>
@@ -120,6 +147,29 @@ export default function TenantApplicationsPage() {
 
   const finalFormStepIndex = APPLICATION_FORM_STEPS.length - 1;
 
+  const selectedMonthlyIncomeInterval = MONTHLY_INCOME_INTERVAL_OPTIONS.find(
+    (option) => option.value === monthlyIncomeInterval,
+  );
+
+  const formatDateTime = (value?: string) => {
+    if (!value) {
+      return "Not available";
+    }
+
+    const parsedDate = new Date(value);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return "Not available";
+    }
+
+    return parsedDate.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   const toNumberOrUndefined = (value: string) => {
     const trimmedValue = value.trim();
     if (!trimmedValue) {
@@ -128,6 +178,32 @@ export default function TenantApplicationsPage() {
 
     const parsedValue = Number(trimmedValue);
     return Number.isFinite(parsedValue) ? parsedValue : undefined;
+  };
+
+  const getApiErrorMessage = (error: unknown, fallback: string) => {
+    if (typeof error === "object" && error !== null && "response" in error) {
+      const response = (
+        error as {
+          response?: { data?: { message?: string | string[] } };
+        }
+      ).response;
+      const message = response?.data?.message;
+
+      if (Array.isArray(message)) {
+        const firstMessage = message.find(
+          (item) => typeof item === "string" && item.trim().length > 0,
+        );
+        if (firstMessage) {
+          return firstMessage;
+        }
+      }
+
+      if (typeof message === "string" && message.trim().length > 0) {
+        return message;
+      }
+    }
+
+    return fallback;
   };
 
   const validateStep = (stepIndex: number) => {
@@ -156,14 +232,8 @@ export default function TenantApplicationsPage() {
         return "Please provide your employment status.";
       }
 
-      if (!monthlyIncome.trim() || Number(monthlyIncome) <= 0) {
-        return "Please provide a valid monthly income.";
-      }
-
-      const netMin = toNumberOrUndefined(netMonthlyIncomeMin);
-      const netMax = toNumberOrUndefined(netMonthlyIncomeMax);
-      if (netMin !== undefined && netMax !== undefined && netMin > netMax) {
-        return "Net income min cannot be higher than net income max.";
+      if (!monthlyIncomeInterval.trim()) {
+        return "Please select your monthly income interval.";
       }
     }
 
@@ -270,6 +340,15 @@ export default function TenantApplicationsPage() {
       return;
     }
 
+    for (let stepIndex = 0; stepIndex <= finalFormStepIndex; stepIndex += 1) {
+      const validationError = validateStep(stepIndex);
+      if (validationError) {
+        setCurrentFormStep(stepIndex);
+        setError(validationError);
+        return;
+      }
+    }
+
     const questionnaire: ApplicationQuestionnaire = {
       dateOfBirth: dateOfBirth || undefined,
       currentAddress: currentAddress.trim() || undefined,
@@ -290,8 +369,6 @@ export default function TenantApplicationsPage() {
         mandatoryPropertySpecificAnswers.trim() || undefined,
       employmentStatus: employmentStatus || undefined,
       contractType: contractType || undefined,
-      netMonthlyIncomeMin: toNumberOrUndefined(netMonthlyIncomeMin),
-      netMonthlyIncomeMax: toNumberOrUndefined(netMonthlyIncomeMax),
       coApplicantIncome: toNumberOrUndefined(coApplicantIncome),
       monthlyDebtPayments: toNumberOrUndefined(monthlyDebtPayments),
       currentRentAmount: toNumberOrUndefined(currentRentAmount),
@@ -322,7 +399,7 @@ export default function TenantApplicationsPage() {
           jobTitle: contractType.trim()
             ? `Contract: ${contractType}`
             : "Not provided",
-          monthlyIncome: Number(monthlyIncome),
+          monthlyIncome: selectedMonthlyIncomeInterval?.mappedIncome ?? 0,
         },
         messageToOwner: messageToOwner || undefined,
         applicationDeadline: deadline
@@ -332,7 +409,7 @@ export default function TenantApplicationsPage() {
       });
 
       setPropertyId("");
-      setMonthlyIncome("");
+      setMonthlyIncomeInterval("");
       setDateOfBirth("");
       setCurrentAddress("");
       setPreferredContactChannel("email");
@@ -349,8 +426,6 @@ export default function TenantApplicationsPage() {
       setMandatoryPropertySpecificAnswers("");
       setEmploymentStatus("");
       setContractType("");
-      setNetMonthlyIncomeMin("");
-      setNetMonthlyIncomeMax("");
       setCoApplicantIncome("");
       setMonthlyDebtPayments("");
       setCurrentRentAmount("");
@@ -366,8 +441,8 @@ export default function TenantApplicationsPage() {
       setCurrentFormStep(0);
       setNotice("Application submitted successfully.");
       await loadApplications();
-    } catch {
-      setError("Failed to submit application.");
+    } catch (error) {
+      setError(getApiErrorMessage(error, "Failed to submit application."));
     }
   };
 
@@ -379,13 +454,22 @@ export default function TenantApplicationsPage() {
       return;
     }
 
+    const reasonInput = window.prompt(
+      "Optional: share a reason for withdrawal.",
+      "",
+    );
+    const reason = reasonInput?.trim() || undefined;
+
     try {
       setError(null);
-      await applicationService.withdrawApplication(id);
+      setWithdrawingFor(id);
+      await applicationService.withdrawApplication(id, reason);
       setNotice("Application withdrawn.");
       await loadApplications();
     } catch {
       setError("Unable to withdraw this application.");
+    } finally {
+      setWithdrawingFor(null);
     }
   };
 
@@ -694,8 +778,7 @@ export default function TenantApplicationsPage() {
                               Monthly Budget
                             </p>
                             <p className="mt-1 text-sm text-gray-600">
-                              {Number(monthlyBudget).toLocaleString("en-US")}{" "}
-                              DT
+                              {Number(monthlyBudget).toLocaleString("en-US")} DT
                             </p>
                           </div>
                           <input
@@ -765,48 +848,30 @@ export default function TenantApplicationsPage() {
                           <option value="other">Other</option>
                         </select>
                       </label>
-                      <label className="col-span-2 grid gap-1 text-sm text-gray-700">
-                        <span className="font-semibold text-gray-900">
-                          Monthly Income used for application (€)
-                        </span>
-                        <input
-                          type="number"
-                          min="0"
-                          className="rounded-lg border border-gray-300 px-3 py-2"
-                          value={monthlyIncome}
-                          onChange={(e) => setMonthlyIncome(e.target.value)}
-                          placeholder="e.g., 3500"
-                          required
-                        />
-                      </label>
-                      <label className="grid gap-1 text-sm text-gray-700">
-                        <span className="font-semibold text-gray-900">
-                          Net Income Min (€)
-                        </span>
-                        <input
-                          type="number"
-                          min="0"
-                          className="rounded-lg border border-gray-300 px-3 py-2"
-                          value={netMonthlyIncomeMin}
-                          onChange={(e) =>
-                            setNetMonthlyIncomeMin(e.target.value)
-                          }
-                        />
-                      </label>
-                      <label className="grid gap-1 text-sm text-gray-700">
-                        <span className="font-semibold text-gray-900">
-                          Net Income Max (€)
-                        </span>
-                        <input
-                          type="number"
-                          min="0"
-                          className="rounded-lg border border-gray-300 px-3 py-2"
-                          value={netMonthlyIncomeMax}
-                          onChange={(e) =>
-                            setNetMonthlyIncomeMax(e.target.value)
-                          }
-                        />
-                      </label>
+                      <fieldset className="col-span-2 grid gap-2 text-sm text-gray-700">
+                        <legend className="font-semibold text-gray-900">
+                          Monthly Income Interval
+                        </legend>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {MONTHLY_INCOME_INTERVAL_OPTIONS.map((option) => (
+                            <label
+                              key={option.value}
+                              className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2"
+                            >
+                              <input
+                                type="radio"
+                                name="monthlyIncomeInterval"
+                                value={option.value}
+                                checked={monthlyIncomeInterval === option.value}
+                                onChange={(e) =>
+                                  setMonthlyIncomeInterval(e.target.value)
+                                }
+                              />
+                              <span>{option.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </fieldset>
                       <label className="col-span-2 grid gap-1 text-sm text-gray-700">
                         <span className="font-semibold text-gray-900">
                           Co-applicant Income (optional, €)
@@ -1037,83 +1102,185 @@ export default function TenantApplicationsPage() {
                     id={`app-${application.id}`}
                     className="rounded-xl border-2 border-gray-200 p-5 transition-all hover:border-indigo-300 hover:shadow-md"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-900">
-                          {application.propertyTitle ||
-                            application.propertyAddress ||
-                            "Your selected property"}
-                          {" - "}
-                          Owner: {application.ownerName || "Property owner"}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-500">
-                          {new Date(application.createdAt).toLocaleDateString(
-                            "en-US",
-                            {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            },
+                    {(() => {
+                      const sortedStatusHistory = (
+                        application.statusHistory?.length
+                          ? [...application.statusHistory]
+                          : [
+                              {
+                                status: application.status,
+                                changedAt: application.updatedAt,
+                                changedBy: "system",
+                              },
+                            ]
+                      ).sort(
+                        (a, b) =>
+                          +new Date(a.changedAt) - +new Date(b.changedAt),
+                      );
+                      const isHistoryOpen =
+                        expandedHistoryFor === application.id;
+
+                      return (
+                        <>
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-gray-900">
+                                {application.propertyTitle ||
+                                  application.propertyAddress ||
+                                  "Your selected property"}
+                                {" - "}
+                                Owner:{" "}
+                                {application.ownerName || "Property owner"}
+                              </p>
+                              <p className="mt-1 text-xs text-gray-500">
+                                Submitted{" "}
+                                {formatDateTime(application.createdAt)}
+                              </p>
+                            </div>
+                            <span
+                              className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-bold ${statusClass[application.status]}`}
+                            >
+                              {statusLabel[application.status]}
+                            </span>
+                          </div>
+
+                          <div className="mt-3 grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 md:grid-cols-2">
+                            <p>
+                              <span className="font-semibold text-slate-900">
+                                Current status:
+                              </span>{" "}
+                              {statusLabel[application.status]}
+                            </p>
+                            <p>
+                              <span className="font-semibold text-slate-900">
+                                Last update:
+                              </span>{" "}
+                              {formatDateTime(application.updatedAt)}
+                            </p>
+                            {application.applicationDeadline && (
+                              <p>
+                                <span className="font-semibold text-slate-900">
+                                  Deadline:
+                                </span>{" "}
+                                {formatDateTime(
+                                  application.applicationDeadline,
+                                )}
+                              </p>
+                            )}
+                            {application.withdrawnAt && (
+                              <p>
+                                <span className="font-semibold text-slate-900">
+                                  Withdrawn at:
+                                </span>{" "}
+                                {formatDateTime(application.withdrawnAt)}
+                              </p>
+                            )}
+                          </div>
+
+                          {application.rejectionReason && (
+                            <p className="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">
+                              <span className="font-semibold">
+                                Rejection Reason:
+                              </span>{" "}
+                              {application.rejectionReason}
+                            </p>
                           )}
-                        </p>
-                      </div>
-                      <span
-                        className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-bold ${statusClass[application.status]}`}
-                      >
-                        {statusLabel[application.status]}
-                      </span>
-                    </div>
 
-                    {application.rejectionReason && (
-                      <p className="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">
-                        <span className="font-semibold">Rejection Reason:</span>{" "}
-                        {application.rejectionReason}
-                      </p>
-                    )}
+                          {application.requestedDocuments.length > 0 && (
+                            <div className="mt-3 rounded-lg border-l-4 border-amber-400 bg-amber-50 p-3 text-sm text-amber-800">
+                              <p className="font-semibold">
+                                Documents Requested:
+                              </p>
+                              <p className="mt-1">
+                                {application.requestedDocuments.join(", ")}
+                              </p>
+                            </div>
+                          )}
 
-                    {application.requestedDocuments.length > 0 && (
-                      <div className="mt-3 rounded-lg border-l-4 border-amber-400 bg-amber-50 p-3 text-sm text-amber-800">
-                        <p className="font-semibold">Documents Requested:</p>
-                        <p className="mt-1">
-                          {application.requestedDocuments.join(", ")}
-                        </p>
-                      </div>
-                    )}
+                          <div className="mt-4 flex flex-wrap items-center gap-2">
+                            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border-2 border-blue-300 bg-blue-50 px-4 py-2 font-semibold text-blue-700 transition-colors hover:bg-blue-100">
+                              <input
+                                id={`upload-${application.id}`}
+                                type="file"
+                                className="hidden"
+                                onChange={(event) => {
+                                  const file = event.target.files?.[0];
+                                  if (file) {
+                                    void uploadDocument(application.id, file);
+                                  }
+                                }}
+                              />
+                              {uploadingFor === application.id
+                                ? "Uploading..."
+                                : "Upload Document"}
+                            </label>
 
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
-                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border-2 border-blue-300 bg-blue-50 px-4 py-2 font-semibold text-blue-700 transition-colors hover:bg-blue-100">
-                        <input
-                          id={`upload-${application.id}`}
-                          type="file"
-                          className="hidden"
-                          onChange={(event) => {
-                            const file = event.target.files?.[0];
-                            if (file) {
-                              void uploadDocument(application.id, file);
-                            }
-                          }}
-                        />
-                        {uploadingFor === application.id
-                          ? "Uploading..."
-                          : "Upload Document"}
-                      </label>
+                            <button
+                              type="button"
+                              className="rounded-lg border-2 border-slate-300 bg-slate-50 px-4 py-2 font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+                              onClick={() =>
+                                setExpandedHistoryFor((previous) =>
+                                  previous === application.id
+                                    ? null
+                                    : application.id,
+                                )
+                              }
+                            >
+                              {isHistoryOpen
+                                ? "Hide Status History"
+                                : "View Status History"}
+                            </button>
 
-                      {application.status !== "approved" &&
-                        application.status !== "rejected" &&
-                        application.status !== "withdrawn" && (
-                          <button
-                            type="button"
-                            className="rounded-lg border-2 border-rose-300 bg-rose-50 px-4 py-2 font-semibold text-rose-700 transition-colors hover:bg-rose-100"
-                            onClick={() =>
-                              void withdrawApplication(application.id)
-                            }
-                          >
-                            Withdraw Application
-                          </button>
-                        )}
-                    </div>
+                            {application.status !== "approved" &&
+                              application.status !== "rejected" &&
+                              application.status !== "withdrawn" && (
+                                <button
+                                  type="button"
+                                  className="rounded-lg border-2 border-rose-300 bg-rose-50 px-4 py-2 font-semibold text-rose-700 transition-colors hover:bg-rose-100"
+                                  onClick={() =>
+                                    void withdrawApplication(application.id)
+                                  }
+                                  disabled={withdrawingFor === application.id}
+                                >
+                                  {withdrawingFor === application.id
+                                    ? "Withdrawing..."
+                                    : "Withdraw Application"}
+                                </button>
+                              )}
+                          </div>
+
+                          {isHistoryOpen && (
+                            <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
+                              <p className="text-sm font-semibold text-slate-900">
+                                Status History
+                              </p>
+                              <ul className="mt-3 space-y-2">
+                                {sortedStatusHistory.map(
+                                  (event, eventIndex) => (
+                                    <li
+                                      key={`${application.id}-status-${eventIndex}`}
+                                      className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700"
+                                    >
+                                      <p className="font-semibold text-slate-900">
+                                        {statusLabel[event.status]}
+                                      </p>
+                                      <p className="mt-1 text-xs text-slate-500">
+                                        {formatDateTime(event.changedAt)}
+                                      </p>
+                                      {event.note && (
+                                        <p className="mt-2 text-sm text-slate-700">
+                                          {event.note}
+                                        </p>
+                                      )}
+                                    </li>
+                                  ),
+                                )}
+                              </ul>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </article>
                 ))}
               </div>
