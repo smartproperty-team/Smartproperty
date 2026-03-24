@@ -3,6 +3,7 @@ import { Button, Input, Stepper, type StepperStep } from "@/components/ui";
 import { maintenanceService } from "@/services/maintenance.service";
 import { propertyService } from "@/services/property.service";
 import { useAuthStore } from "@/store";
+import { UserRole } from "@/types/auth";
 import type {
   CreateMaintenanceRequestDto,
   EntryPermissionOption,
@@ -79,13 +80,22 @@ export default function MaintenanceRequestFormPage() {
 
   useEffect(() => {
     void (async () => {
-      if (propertyOptions.length > 0 || loadingProperties) {
+      if (!user?.id) {
         return;
       }
 
       setLoadingProperties(true);
       try {
-        const result = await propertyService.getProperties({ limit: 100 });
+        const filters: { limit: number; ownerId?: string; managerId?: string } =
+          { limit: 100 };
+
+        if (user.role === UserRole.OWNER) {
+          filters.ownerId = user.id;
+        } else if (user.role === UserRole.BRANCH_MANAGER) {
+          filters.managerId = user.id;
+        }
+
+        const result = await propertyService.getProperties(filters);
         setPropertyOptions(result.properties || []);
       } catch (error) {
         console.error("Failed to load properties:", error);
@@ -93,7 +103,7 @@ export default function MaintenanceRequestFormPage() {
         setLoadingProperties(false);
       }
     })();
-  }, [loadingProperties, propertyOptions.length]);
+  }, [user?.id, user?.role]);
 
   const mediaRequired =
     formData.priority === "high" ||
