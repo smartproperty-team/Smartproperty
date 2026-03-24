@@ -19,6 +19,7 @@ import {
   verificationService,
 } from "@/services";
 import { useAuthStore } from "@/store";
+import { ApplicationStatus, type Application } from "@/types/application";
 import { UserRole } from "@/types/auth";
 import type {
   PortfolioConnectorDefinition,
@@ -50,6 +51,13 @@ import {
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+const ACTIVE_APPLICATION_STATUSES = new Set<ApplicationStatus>([
+  ApplicationStatus.SUBMITTED,
+  ApplicationStatus.UNDER_REVIEW,
+  ApplicationStatus.DOCUMENTS_REQUESTED,
+  ApplicationStatus.VIEWING_SCHEDULED,
+]);
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user, isLoading } = useAuthStore();
@@ -64,6 +72,21 @@ export default function DashboardPage() {
   const [ownerProperties, setOwnerProperties] = useState<Property[]>([]);
   const [isLoadingOwnerProperties, setIsLoadingOwnerProperties] =
     useState(false);
+  const [tenantApplications, setTenantApplications] = useState<Application[]>(
+    [],
+  );
+  const [isLoadingTenantApplications, setIsLoadingTenantApplications] =
+    useState(false);
+  const [showAllTenantApplications, setShowAllTenantApplications] =
+    useState(false);
+  const [expandedHistoryFor, setExpandedHistoryFor] = useState<string | null>(
+    null,
+  );
+  const [withdrawingFor, setWithdrawingFor] = useState<string | null>(null);
+  const [tenantApplicationsMessage, setTenantApplicationsMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [stats, setStats] = useState({
     first: 0,
     second: 0,
@@ -106,6 +129,45 @@ export default function DashboardPage() {
     canManageProperties(user) ||
     user?.role === UserRole.ACCOUNTANT_ADMIN_ASSISTANT;
 
+  const applicationStatusClass: Record<ApplicationStatus, string> = {
+    submitted: "bg-blue-100 text-blue-700",
+    under_review: "bg-amber-100 text-amber-700",
+    documents_requested: "bg-orange-100 text-orange-700",
+    viewing_scheduled: "bg-violet-100 text-violet-700",
+    approved: "bg-emerald-100 text-emerald-700",
+    rejected: "bg-rose-100 text-rose-700",
+    withdrawn: "bg-slate-200 text-slate-700",
+  };
+
+  const applicationStatusLabel: Record<ApplicationStatus, string> = {
+    submitted: "Submitted",
+    under_review: "Under review",
+    documents_requested: "Documents requested",
+    viewing_scheduled: "Viewing scheduled",
+    approved: "Approved",
+    rejected: "Rejected",
+    withdrawn: "Withdrawn",
+  };
+
+  const formatDateTime = (value?: string) => {
+    if (!value) {
+      return "Not available";
+    }
+
+    const parsedDate = new Date(value);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return "Not available";
+    }
+
+    return parsedDate.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   // Fetch verification status for tenants
   useEffect(() => {
     if (isTenant(user)) {
@@ -140,6 +202,84 @@ export default function DashboardPage() {
 
     void loadOwnerProperties();
   }, [user?.id, user?.role]);
+
+  useEffect(() => {
+    if (!isTenant(user)) {
+      setTenantApplications([]);
+      return;
+    }
+
+    const loadTenantApplications = async () => {
+      setIsLoadingTenantApplications(true);
+      try {
+        const response = await applicationService.getMyApplications({
+          page: 1,
+          limit: 50,
+        });
+        setTenantApplications(response.applications);
+      } catch {
+        setTenantApplications([]);
+      } finally {
+        setIsLoadingTenantApplications(false);
+      }
+    };
+
+    void loadTenantApplications();
+  }, [user]);
+
+  const reloadTenantApplications = async () => {
+    if (!isTenant(user)) {
+      return;
+    }
+
+    setIsLoadingTenantApplications(true);
+    try {
+      const response = await applicationService.getMyApplications({
+        page: 1,
+        limit: 50,
+      });
+      setTenantApplications(response.applications);
+    } catch {
+      setTenantApplicationsMessage({
+        type: "error",
+        text: "Failed to refresh applications.",
+      });
+    } finally {
+      setIsLoadingTenantApplications(false);
+    }
+  };
+
+  const withdrawTenantApplication = async (id: string) => {
+    const shouldWithdraw = window.confirm(
+      "Withdraw this application? You can submit a new one later if needed.",
+    );
+    if (!shouldWithdraw) {
+      return;
+    }
+
+    const reasonInput = window.prompt(
+      "Optional: share a reason for withdrawal.",
+      "",
+    );
+    const reason = reasonInput?.trim() || undefined;
+
+    try {
+      setWithdrawingFor(id);
+      await applicationService.withdrawApplication(id, reason);
+      setTenantApplicationsMessage({
+        type: "success",
+        text: "Application withdrawn.",
+      });
+      await reloadTenantApplications();
+    } catch {
+      setTenantApplicationsMessage({
+        type: "error",
+        text: "Unable to withdraw this application.",
+      });
+    } finally {
+      setWithdrawingFor(null);
+    }
+  };
 
   useEffect(() => {
     if (!user?.id) {
@@ -760,6 +900,180 @@ export default function DashboardPage() {
             </Card>
           </div>
 
+          {isTenant(user) && (
+            <Card className="mb-8">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>My Applied Houses</CardTitle>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    setShowAllTenantApplications((previous) => !previous)
+                  }
+                >
+                  {showAllTenantApplications
+                    ? "Show Less"
+                    : "View All Applications"}
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {tenantApplicationsMessage && (
+                  <div className="mb-3">
+                    <Alert
+                      type={tenantApplicationsMessage.type}
+                      message={tenantApplicationsMessage.text}
+                      onClose={() => setTenantApplicationsMessage(null)}
+                    />
+                  </div>
+                )}
+                {isLoadingTenantApplications ? (
+                  <p className="text-sm text-gray-600">
+                    Loading applications...
+                  </p>
+                ) : tenantApplications.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-600">
+                    You have not applied to any houses yet.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {[...tenantApplications]
+                      .sort(
+                        (a, b) =>
+                          +new Date(b.createdAt) - +new Date(a.createdAt),
+                      )
+                      .slice(0, showAllTenantApplications ? undefined : 4)
+                      .map((application) => {
+                        const sortedStatusHistory = (
+                          application.statusHistory?.length
+                            ? [...application.statusHistory]
+                            : [
+                                {
+                                  status: application.status,
+                                  changedAt: application.updatedAt,
+                                  changedBy: "system",
+                                },
+                              ]
+                        ).sort(
+                          (a, b) =>
+                            +new Date(a.changedAt) - +new Date(b.changedAt),
+                        );
+                        const isHistoryOpen =
+                          expandedHistoryFor === application.id;
+
+                        return (
+                          <div
+                            key={application.id}
+                            className="rounded-lg border border-gray-200 p-4"
+                          >
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <p className="font-medium text-gray-900">
+                                  {application.propertyTitle ||
+                                    application.propertyAddress ||
+                                    "Applied property"}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  Applied on{" "}
+                                  {formatDateTime(application.createdAt)}
+                                </p>
+                                <p className="mt-1 text-xs text-gray-500">
+                                  Last update:{" "}
+                                  {formatDateTime(application.updatedAt)}
+                                </p>
+                              </div>
+                              <span
+                                className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${applicationStatusClass[application.status]}`}
+                              >
+                                {applicationStatusLabel[application.status]}
+                              </span>
+                            </div>
+
+                            {application.requestedDocuments.length > 0 && (
+                              <p className="mt-2 rounded-md bg-amber-50 p-2 text-xs text-amber-800">
+                                Documents requested:{" "}
+                                {application.requestedDocuments.join(", ")}
+                              </p>
+                            )}
+
+                            {application.rejectionReason && (
+                              <p className="mt-2 rounded-md bg-rose-50 p-2 text-xs text-rose-700">
+                                Rejection reason: {application.rejectionReason}
+                              </p>
+                            )}
+
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                                onClick={() =>
+                                  setExpandedHistoryFor((previous) =>
+                                    previous === application.id
+                                      ? null
+                                      : application.id,
+                                  )
+                                }
+                              >
+                                {isHistoryOpen
+                                  ? "Hide Status History"
+                                  : "View Status History"}
+                              </button>
+
+                              {ACTIVE_APPLICATION_STATUSES.has(
+                                application.status,
+                              ) && (
+                                <button
+                                  type="button"
+                                  className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                                  onClick={() =>
+                                    void withdrawTenantApplication(
+                                      application.id,
+                                    )
+                                  }
+                                  disabled={withdrawingFor === application.id}
+                                >
+                                  {withdrawingFor === application.id
+                                    ? "Withdrawing..."
+                                    : "Withdraw Application"}
+                                </button>
+                              )}
+                            </div>
+
+                            {isHistoryOpen && (
+                              <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                <p className="text-xs font-semibold text-slate-900">
+                                  Status History
+                                </p>
+                                <ul className="mt-2 space-y-2">
+                                  {sortedStatusHistory.map(
+                                    (event, eventIndex) => (
+                                      <li
+                                        key={`${application.id}-status-${eventIndex}`}
+                                        className="rounded border border-slate-200 bg-white p-2 text-xs text-slate-700"
+                                      >
+                                        <p className="font-semibold">
+                                          {applicationStatusLabel[event.status]}
+                                        </p>
+                                        <p className="text-slate-500">
+                                          {formatDateTime(event.changedAt)}
+                                        </p>
+                                        {event.note && (
+                                          <p className="mt-1">{event.note}</p>
+                                        )}
+                                      </li>
+                                    ),
+                                  )}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {user?.role === UserRole.OWNER && (
             <Card className="mb-8">
               <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1192,7 +1506,6 @@ export default function DashboardPage() {
                   rel="noopener noreferrer"
                   aria-label="Open Swagger API docs (opens in new tab)"
                   className="flex items-center rounded-lg border border-gray-200 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50"
-                  aria-label="Open Swagger API docs in a new tab"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100">
                     <FileText className="h-5 w-5 text-indigo-600" />
@@ -1213,7 +1526,6 @@ export default function DashboardPage() {
                   rel="noopener noreferrer"
                   aria-label="Open MailHog (opens in new tab)"
                   className="flex items-center rounded-lg border border-gray-200 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50"
-                  aria-label="Open MailHog in a new tab"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
                     <Mail className="h-5 w-5 text-green-600" />
@@ -1230,7 +1542,6 @@ export default function DashboardPage() {
                   rel="noopener noreferrer"
                   aria-label="Open Mongo Express (opens in new tab)"
                   className="flex items-center rounded-lg border border-gray-200 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50"
-                  aria-label="Open Mongo Express in a new tab"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
                     <Building2 className="h-5 w-5 text-purple-600" />

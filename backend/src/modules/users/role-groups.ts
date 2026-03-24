@@ -33,7 +33,6 @@ export const VERIFICATION_REVIEW_ROLES: UserRole[] = [
 ];
 
 export const APPLICATION_REVIEW_ROLES: UserRole[] = [
-  UserRole.OWNER,
   UserRole.BRANCH_MANAGER,
   UserRole.REAL_ESTATE_AGENT,
   UserRole.RENTAL_MANAGER,

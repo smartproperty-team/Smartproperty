@@ -28,6 +28,12 @@ import { Application, ApplicationStatus } from './entities/application.entity';
 
 @Injectable()
 export class ApplicationsService {
+  private static readonly REVIEWER_ROLES = new Set<UserRole>([
+    UserRole.BRANCH_MANAGER,
+    UserRole.REAL_ESTATE_AGENT,
+    UserRole.RENTAL_MANAGER,
+  ]);
+
   constructor(
     @InjectRepository(Application)
     private readonly applicationRepo: MongoRepository<Application>,
@@ -92,10 +98,13 @@ export class ApplicationsService {
       return true;
     }
 
-    const ownerId = this.normalizeId(application.ownerId);
+    if (!ApplicationsService.REVIEWER_ROLES.has(role)) {
+      return false;
+    }
+
     const managerId = this.normalizeId(application.managerId);
 
-    return ownerId === userId || managerId === userId;
+    return managerId === userId;
   }
 
   private toStatusEvent(
@@ -117,7 +126,7 @@ export class ApplicationsService {
     message: string,
     type: NotificationType = NotificationType.APPLICATION_STATUS_CHANGED,
   ) {
-    const reviewerIds = [application.ownerId, application.managerId].filter(
+    const reviewerIds = [application.managerId].filter(
       (id): id is string => !!id,
     );
 
@@ -132,6 +141,21 @@ export class ApplicationsService {
         }),
       ),
     );
+  }
+
+  private async notifyTenantStatusChange(
+    application: Application,
+    title: string,
+    message: string,
+    type: NotificationType = NotificationType.APPLICATION_STATUS_CHANGED,
+  ) {
+    await this.notificationsService.create({
+      userId: application.tenantId,
+      title,
+      message,
+      type,
+      link: `/applications?applicationId=${application.id}`,
+    });
   }
 
   async submitApplication(
@@ -174,8 +198,13 @@ export class ApplicationsService {
 
     const normalizedOwnerId = this.normalizeId(property.ownerId);
     if (!normalizedOwnerId) {
+      throw new BadRequestException('Property owner is missing.');
+    }
+
+    const normalizedManagerId = this.normalizeId(property.managerId);
+    if (!normalizedManagerId) {
       throw new BadRequestException(
-        'Property owner is missing. Cannot submit application.',
+        'No responsible agent/manager is assigned to this property yet.',
       );
     }
 
@@ -183,7 +212,7 @@ export class ApplicationsService {
       propertyId: dto.propertyId,
       tenantId,
       ownerId: normalizedOwnerId,
-      managerId: this.normalizeId(property.managerId),
+      managerId: normalizedManagerId,
       status: ApplicationStatus.SUBMITTED,
       employmentInfo: dto.employmentInfo,
       references: dto.references || [],
@@ -216,13 +245,11 @@ export class ApplicationsService {
       NotificationType.APPLICATION_SUBMITTED,
     );
 
-    await this.notificationsService.create({
-      userId: saved.tenantId,
-      title: 'Application submitted',
-      message: 'Your rental application was submitted successfully.',
-      type: NotificationType.APPLICATION_STATUS_CHANGED,
-      link: `/applications?applicationId=${saved.id}`,
-    });
+    await this.notifyTenantStatusChange(
+      saved,
+      'Application submitted',
+      'Your rental application was submitted successfully.',
+    );
 
     return saved;
   }
@@ -436,6 +463,12 @@ export class ApplicationsService {
       'The tenant withdrew their rental application.',
     );
 
+    await this.notifyTenantStatusChange(
+      updated,
+      'Application withdrawn',
+      'Your rental application has been withdrawn.',
+    );
+
     return updated;
   }
 
@@ -613,15 +646,13 @@ export class ApplicationsService {
 
     const updated = await this.applicationRepo.save(application);
 
-    await this.notificationsService.create({
-      userId: updated.tenantId,
-      title: 'Additional documents requested',
-      message:
-        dto.note ||
+    await this.notifyTenantStatusChange(
+      updated,
+      'Additional documents requested',
+      dto.note ||
         'The property manager requested additional documents for your application.',
-      type: NotificationType.APPLICATION_DOCUMENT_REQUESTED,
-      link: `/applications?applicationId=${updated.id}`,
-    });
+      NotificationType.APPLICATION_DOCUMENT_REQUESTED,
+    );
 
     return updated;
   }
@@ -648,13 +679,11 @@ export class ApplicationsService {
 
     const updated = await this.applicationRepo.save(application);
 
-    await this.notificationsService.create({
-      userId: updated.tenantId,
-      title: 'Application approved',
-      message: 'Your rental application has been approved.',
-      type: NotificationType.APPLICATION_STATUS_CHANGED,
-      link: `/applications?applicationId=${updated.id}`,
-    });
+    await this.notifyTenantStatusChange(
+      updated,
+      'Application approved',
+      'Your rental application has been approved.',
+    );
 
     return updated;
   }
@@ -682,13 +711,11 @@ export class ApplicationsService {
 
     const updated = await this.applicationRepo.save(application);
 
-    await this.notificationsService.create({
-      userId: updated.tenantId,
-      title: 'Application rejected',
-      message: `Your rental application was rejected. Reason: ${reason}`,
-      type: NotificationType.APPLICATION_STATUS_CHANGED,
-      link: `/applications?applicationId=${updated.id}`,
-    });
+    await this.notifyTenantStatusChange(
+      updated,
+      'Application rejected',
+      `Your rental application was rejected. Reason: ${reason}`,
+    );
 
     return updated;
   }
@@ -726,13 +753,11 @@ export class ApplicationsService {
 
     const updated = await this.applicationRepo.save(application);
 
-    await this.notificationsService.create({
-      userId: updated.tenantId,
-      title: 'Property viewing scheduled',
-      message: `A property viewing has been scheduled for ${new Date(dto.scheduledAt).toLocaleString()}.`,
-      type: NotificationType.APPLICATION_STATUS_CHANGED,
-      link: `/applications?applicationId=${updated.id}`,
-    });
+    await this.notifyTenantStatusChange(
+      updated,
+      'Property viewing scheduled',
+      `A property viewing has been scheduled for ${new Date(dto.scheduledAt).toLocaleString()}.`,
+    );
 
     return updated;
   }
