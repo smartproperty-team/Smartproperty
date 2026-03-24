@@ -32,6 +32,7 @@ import { VerificationStatus } from "@/types/verification";
 import {
   canAccessAdminUsers,
   canCreateMaintenanceRequest,
+  canManageAgencyOnboarding,
   canManageAssignedMaintenance,
   canManageProperties,
   canReviewApplications,
@@ -698,6 +699,50 @@ export default function DashboardPage() {
                         Manage Users
                       </Button>
                     )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Branch Manager: Agencies CTA */}
+          {canManageAgencyOnboarding(user) && (
+            <div className="mb-8">
+              <div className="relative overflow-hidden rounded-xl border border-emerald-200 bg-linear-to-r from-emerald-500 via-teal-500 to-cyan-500 p-6 shadow-lg">
+                <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white/10" />
+                <div className="absolute -bottom-4 -left-4 h-24 w-24 rounded-full bg-white/10" />
+                <div className="relative flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
+                      <Building2 className="h-7 w-7 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-white">
+                        Agency Management
+                      </h3>
+                      <p className="text-sm text-emerald-100">
+                        View your agencies and create a new one with automatic
+                        role account provisioning.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    <Button
+                      onClick={() => navigate("/branch-manager/agencies")}
+                      className="bg-white text-emerald-700 shadow-md hover:bg-emerald-50 focus-visible:ring-white"
+                      size="lg"
+                    >
+                      <Building2 className="mr-2 h-5 w-5" />
+                      My Agencies
+                    </Button>
+                    <Button
+                      onClick={() => navigate("/branch-manager/agencies/new")}
+                      className="bg-white text-emerald-700 shadow-md hover:bg-emerald-50 focus-visible:ring-white"
+                      size="lg"
+                    >
+                      <Building2 className="mr-2 h-5 w-5" />
+                      New Agency
+                    </Button>
                   </div>
                 </div>
               </div>

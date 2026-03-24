@@ -2,6 +2,7 @@ import { useAuthStore } from "@/store";
 import {
   canAccessAdminUsers,
   canCreateMaintenanceRequest,
+  canManageAgencyOnboarding,
   canManageAssignedMaintenance,
   canReviewApplications,
   canReviewVerifications,
@@ -10,6 +11,7 @@ import {
 } from "@/utils";
 import {
   ArrowLeft,
+  Building2,
   ClipboardList,
   LayoutDashboard,
   LogOut,
@@ -107,6 +109,14 @@ export default function AppSidebar() {
         label: "User Administration",
         to: "/super-administrator/users",
         icon: Users,
+      });
+    }
+
+    if (canManageAgencyOnboarding(user)) {
+      baseLinks.push({
+        label: "My Agencies",
+        to: "/branch-manager/agencies",
+        icon: Building2,
       });
     }
 

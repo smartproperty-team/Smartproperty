@@ -6,7 +6,6 @@ export const TENANT_ONLY_ROLES: UserRole[] = [UserRole.TENANT];
 
 export const PROPERTY_CREATOR_ROLES: UserRole[] = [
   UserRole.OWNER,
-  UserRole.BRANCH_MANAGER,
   UserRole.REAL_ESTATE_AGENT,
   ...PLATFORM_ADMIN_ROLES,
 ];

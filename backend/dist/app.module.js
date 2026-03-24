@@ -21,6 +21,7 @@ const app_service_1 = require("./app.service");
 const config_2 = require("./config");
 const minio_config_1 = require("./config/minio.config");
 const validation_schema_1 = require("./config/validation.schema");
+const agencies_module_1 = require("./modules/agencies/agencies.module");
 const applications_module_1 = require("./modules/applications/applications.module");
 const auth_module_1 = require("./modules/auth/auth.module");
 const maintenance_module_1 = require("./modules/maintenance/maintenance.module");
@@ -123,6 +124,7 @@ AppModule = __decorate([
                 },
             }),
             auth_module_1.AuthModule,
+            agencies_module_1.AgenciesModule,
             applications_module_1.ApplicationsModule,
             users_module_1.UsersModule,
             properties_module_1.PropertiesModule,

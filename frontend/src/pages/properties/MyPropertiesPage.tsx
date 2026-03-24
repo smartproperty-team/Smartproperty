@@ -8,14 +8,14 @@ import LocationPreferenceMap from "@/components/settings/LocationPreferenceMap";
 import { useTranslation } from "@/i18n";
 import { propertyService } from "@/services/property.service";
 import { useAuthStore } from "@/store";
-import type { UserLocationPreference } from "@/types/auth";
+import { UserRole, type UserLocationPreference } from "@/types/auth";
 import type {
   Property,
   PropertyFilters,
   PropertyStatus,
   PropertyType,
 } from "@/types/property";
-import { canManageProperties, isPlatformAdmin } from "@/utils";
+import { canCreateProperties, isPlatformAdmin } from "@/utils";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import "./properties.css";
@@ -263,7 +263,8 @@ function PropertyCard({
 export default function MyPropertiesPage() {
   const { user } = useAuthStore();
   const t = useTranslation();
-  const canAdd = canManageProperties(user);
+  const canAdd =
+    canCreateProperties(user) && user?.role !== UserRole.BRANCH_MANAGER;
   const [searchParams, setSearchParams] = useSearchParams();
   const parsePositiveIntegerParam = (
     value: string | null,
@@ -412,7 +413,7 @@ export default function MyPropertiesPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters, user?.id, user?.role]);
+  }, [filters, user]);
 
   useEffect(() => {
     loadProperties();

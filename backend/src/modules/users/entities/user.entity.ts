@@ -176,6 +176,12 @@ export class User {
   @Column({ default: false })
   twoFactorEnabled: boolean;
 
+  @Column({ nullable: true })
+  agencyId?: string;
+
+  @Column({ default: false })
+  mustChangePassword: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 
@@ -284,6 +290,8 @@ export class User {
       authProvider: this.authProvider,
       isEmailVerified: this.isEmailVerified,
       twoFactorEnabled: this.twoFactorEnabled,
+      agencyId: this.agencyId,
+      mustChangePassword: this.mustChangePassword,
       lastLogin: this.lastLogin,
       preferences: this.preferences,
       createdAt: this.createdAt,

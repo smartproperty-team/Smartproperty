@@ -31,6 +31,10 @@ import {
   UserStatus,
 } from '../users/entities/user.entity';
 import {
+  DEFAULT_REGISTRATION_ROLE,
+  SELF_REGISTRABLE_ROLES,
+} from '../users/role-groups';
+import {
   ChangePasswordDto,
   ForgotPasswordDto,
   LoginDto,
@@ -39,10 +43,6 @@ import {
   ResetPasswordDto,
   VerifyEmailDto,
 } from './dto/auth.dto';
-import {
-  DEFAULT_REGISTRATION_ROLE,
-  SELF_REGISTRABLE_ROLES,
-} from '../users/role-groups';
 import { Session } from './entities/session.entity';
 import { DeviceInfo, SessionService } from './session.service';
 import { FacebookProfile } from './strategies/facebook.strategy';
@@ -670,6 +670,7 @@ export class AuthService {
     // Clear reset token
     targetUser.passwordResetToken = undefined;
     targetUser.passwordResetExpires = undefined;
+    targetUser.mustChangePassword = false;
 
     await this.userRepository.save(targetUser);
 
@@ -722,6 +723,7 @@ export class AuthService {
       previousPasswords.unshift(user.password);
     }
     user.previousPasswords = previousPasswords.slice(0, 5);
+    user.mustChangePassword = false;
 
     await this.userRepository.save(user);
 

@@ -33,6 +33,7 @@ import { minioConfig } from './config/minio.config';
 import { validationSchema } from './config/validation.schema';
 
 // Feature Modules
+import { AgenciesModule } from './modules/agencies/agencies.module';
 import { ApplicationsModule } from './modules/applications/applications.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
@@ -165,6 +166,7 @@ import { VerificationModule } from './modules/verification/verification.module';
     // Feature Modules
     // =====================
     AuthModule,
+    AgenciesModule,
     ApplicationsModule,
     UsersModule,
     PropertiesModule,

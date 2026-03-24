@@ -28,7 +28,6 @@ const PROPERTY_MANAGERS: UserRole[] = [
 const PROPERTY_CREATORS: UserRole[] = [
   UserRole.SUPER_ADMIN,
   UserRole.OWNER,
-  UserRole.BRANCH_MANAGER,
   UserRole.REAL_ESTATE_AGENT,
 ];
 
@@ -59,6 +58,8 @@ const MAINTENANCE_INTAKE_ROLES: UserRole[] = [
 ];
 
 const MAINTENANCE_PROVIDER_ROLES: UserRole[] = [UserRole.SERVICE_PROVIDER];
+
+const AGENCY_ONBOARDING_ROLES: UserRole[] = [UserRole.BRANCH_MANAGER];
 
 function hasRole(
   user: User | null | undefined,
@@ -153,6 +154,15 @@ export function canManageAssignedMaintenance(
   user: User | null | undefined,
 ): boolean {
   return hasRole(user, MAINTENANCE_PROVIDER_ROLES);
+}
+
+/**
+ * Can access agency onboarding workflow.
+ */
+export function canManageAgencyOnboarding(
+  user: User | null | undefined,
+): boolean {
+  return hasRole(user, AGENCY_ONBOARDING_ROLES);
 }
 
 /**

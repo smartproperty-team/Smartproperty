@@ -24,6 +24,8 @@ import {
 import {
   AdminUsersPage,
   AdminVerificationPage,
+  BranchManagerAgenciesPage,
+  BranchManagerAgencyOnboardingPage,
   DashboardPage,
   SessionsPage,
   VerificationPage,
@@ -49,6 +51,7 @@ import {
   canAccessAdminUsers,
   canCreateMaintenanceRequest,
   canCreateProperties,
+  canManageAgencyOnboarding,
   canManageAssignedMaintenance,
   canManageProperties,
   canReviewApplications,
@@ -75,6 +78,8 @@ function getPageTitle(pathname: string): string {
     "/applications/review": "Applications Review",
     "/super-administrator/verifications": "Verification Review",
     "/super-administrator/users": "User Management",
+    "/branch-manager/agencies": "My Agencies",
+    "/branch-manager/agencies/new": "Agency Onboarding",
     "/profile": "Profile",
     "/settings": "Settings",
     "/security/2fa": "Two-Factor Authentication",
@@ -168,6 +173,8 @@ function App() {
       pageTitle = "Admin Verifications | SmartProperty";
     } else if (path === "/super-administrator/users") {
       pageTitle = "Admin Users | SmartProperty";
+    } else if (path === "/branch-manager/agencies") {
+      pageTitle = "My Agencies | SmartProperty";
     } else if (path === "/security/2fa") {
       pageTitle = "Two-Factor Authentication | SmartProperty";
     }
@@ -335,6 +342,30 @@ function App() {
             <ProtectedRoute>
               {canAccessAdminUsers(user) ? (
                 <AdminUsersPage />
+              ) : (
+                <Navigate to="/dashboard" replace />
+              )}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/branch-manager/agencies"
+          element={
+            <ProtectedRoute>
+              {canManageAgencyOnboarding(user) ? (
+                <BranchManagerAgenciesPage />
+              ) : (
+                <Navigate to="/dashboard" replace />
+              )}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/branch-manager/agencies/new"
+          element={
+            <ProtectedRoute>
+              {canManageAgencyOnboarding(user) ? (
+                <BranchManagerAgencyOnboardingPage />
               ) : (
                 <Navigate to="/dashboard" replace />
               )}

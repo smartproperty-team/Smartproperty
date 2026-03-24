@@ -64,6 +64,8 @@ export interface User {
   authProvider?: AuthProvider;
   isEmailVerified: boolean;
   twoFactorEnabled: boolean;
+  agencyId?: string;
+  mustChangePassword?: boolean;
   preferences?: UserPreferences;
   lastLogin?: string;
   createdAt: string;

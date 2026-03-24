@@ -8,7 +8,7 @@ import LocationPreferenceMap from "@/components/settings/LocationPreferenceMap";
 import { useTranslation } from "@/i18n";
 import { propertyService } from "@/services/property.service";
 import { useAuthStore } from "@/store";
-import type { UserLocationPreference } from "@/types/auth";
+import { UserRole, type UserLocationPreference } from "@/types/auth";
 import type {
   Property,
   PropertyFilters,
@@ -263,8 +263,11 @@ function PropertyCard({
 export default function PropertiesPage() {
   const { user } = useAuthStore();
   const t = useTranslation();
-  const canAddProperty = isOwner(user);
+  const canAddProperty =
+    isOwner(user) && user?.role !== UserRole.BRANCH_MANAGER;
   const canManage = canManageProperties(user);
+  const canSeeMyPropertiesButton =
+    canManage && user?.role !== UserRole.BRANCH_MANAGER;
   const [searchParams, setSearchParams] = useSearchParams();
   const parsePositiveIntegerParam = (
     value: string | null,
@@ -651,7 +654,7 @@ export default function PropertiesPage() {
                   {t.properties.addProperty}
                 </Link>
               )}
-              {canManage && (
+              {canSeeMyPropertiesButton && (
                 <Link to="/properties/mine" className="btn-my-properties">
                   <MyPropertiesIcon />
                   {t.properties.showMyProperties}
