@@ -1,6 +1,6 @@
 import { AppSidebar, HomeFooter } from "@/components/layout";
 import applicationService from "@/services/application.service";
-import type { Application } from "@/types/application";
+import { ApplicationStatus, type Application } from "@/types/application";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -13,11 +13,10 @@ export default function ApplicationsReviewPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const [requestDocsText, setRequestDocsText] = useState<
-    Record<string, string>
-  >({});
-  const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
-  const [viewingAt, setViewingAt] = useState<Record<string, string>>({});
+  const [rejectDraft, setRejectDraft] = useState<{
+    applicationId: string;
+    reason: string;
+  } | null>(null);
 
   const items = useMemo(
     () =>
@@ -26,6 +25,32 @@ export default function ApplicationsReviewPage() {
       ),
     [applications],
   );
+
+  const getApiErrorMessage = (error: unknown, fallback: string) => {
+    if (typeof error === "object" && error !== null && "response" in error) {
+      const response = (
+        error as {
+          response?: { data?: { message?: string | string[] } };
+        }
+      ).response;
+      const message = response?.data?.message;
+
+      if (Array.isArray(message)) {
+        const firstMessage = message.find(
+          (item) => typeof item === "string" && item.trim().length > 0,
+        );
+        if (firstMessage) {
+          return firstMessage;
+        }
+      }
+
+      if (typeof message === "string" && message.trim().length > 0) {
+        return message;
+      }
+    }
+
+    return fallback;
+  };
 
   const loadApplications = async () => {
     setLoading(true);
@@ -78,62 +103,31 @@ export default function ApplicationsReviewPage() {
     }
   };
 
-  const handleReject = async (id: string) => {
-    const reason = rejectReason[id]?.trim();
+  const openRejectPopup = (id: string) => {
+    setRejectDraft({ applicationId: id, reason: "" });
+  };
+
+  const handleReject = async () => {
+    if (!rejectDraft) {
+      return;
+    }
+
+    const reason = rejectDraft.reason.trim();
     if (!reason) {
       setError("Please provide a rejection reason.");
       return;
     }
 
     try {
-      await applicationService.rejectApplication(id, reason);
+      await applicationService.rejectApplication(
+        rejectDraft.applicationId,
+        reason,
+      );
       setNotice("Application rejected.");
+      setRejectDraft(null);
       await loadApplications();
-    } catch {
-      setError("Failed to reject application.");
-    }
-  };
-
-  const handleRequestDocs = async (id: string) => {
-    const input = requestDocsText[id] || "";
-    const requestedDocuments = input
-      .split(",")
-      .map((doc) => doc.trim())
-      .filter(Boolean);
-
-    if (!requestedDocuments.length) {
-      setError("Add at least one requested document.");
-      return;
-    }
-
-    try {
-      await applicationService.requestAdditionalDocuments(
-        id,
-        requestedDocuments,
-      );
-      setNotice("Requested additional documents.");
-      await loadApplications();
-    } catch {
-      setError("Failed to request documents.");
-    }
-  };
-
-  const handleScheduleViewing = async (id: string) => {
-    const value = viewingAt[id];
-    if (!value) {
-      setError("Please select a viewing date and time.");
-      return;
-    }
-
-    try {
-      await applicationService.scheduleViewing(
-        id,
-        new Date(value).toISOString(),
-      );
-      setNotice("Viewing scheduled.");
-      await loadApplications();
-    } catch {
-      setError("Failed to schedule viewing.");
+    } catch (error) {
+      setError(getApiErrorMessage(error, "Failed to reject application."));
     }
   };
 
@@ -148,8 +142,7 @@ export default function ApplicationsReviewPage() {
                 Received Applications
               </h1>
               <p className="mt-2 text-sm text-gray-600">
-                Review tenant applications, request documents, approve or
-                reject, and schedule viewings.
+                Review tenant applications and decide to approve or reject.
               </p>
             </div>
             <button
@@ -181,6 +174,13 @@ export default function ApplicationsReviewPage() {
           ) : (
             <div className="space-y-6">
               {items.map((application) => {
+                const canDecide =
+                  application.status === ApplicationStatus.SUBMITTED ||
+                  application.status === ApplicationStatus.UNDER_REVIEW ||
+                  application.status ===
+                    ApplicationStatus.DOCUMENTS_REQUESTED ||
+                  application.status === ApplicationStatus.VIEWING_SCHEDULED;
+
                 const statusColors: Record<
                   string,
                   { bg: string; text: string; label: string }
@@ -333,97 +333,21 @@ export default function ApplicationsReviewPage() {
                         </div>
                       )}
 
-                    {/* Actions section */}
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
-                      <label className="grid gap-1 rounded-lg bg-white p-3 text-sm text-gray-700">
-                        <span className="font-semibold">
-                          📄 Request Documents
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          e.g.: Pay stubs, ID, bank statement
-                        </span>
-                        <input
-                          className="mt-1 rounded border border-gray-300 px-3 py-2 text-sm"
-                          value={requestDocsText[application.id] || ""}
-                          onChange={(e) =>
-                            setRequestDocsText((prev) => ({
-                              ...prev,
-                              [application.id]: e.target.value,
-                            }))
-                          }
-                          placeholder="Enter document names separated by commas"
-                        />
-                      </label>
-
-                      <label className="grid gap-1 rounded-lg bg-white p-3 text-sm text-gray-700">
-                        <span className="font-semibold">
-                          📅 Schedule Viewing
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          When would you like to view?
-                        </span>
-                        <input
-                          type="datetime-local"
-                          className="mt-1 rounded border border-gray-300 px-3 py-2 text-sm"
-                          value={viewingAt[application.id] || ""}
-                          onChange={(e) =>
-                            setViewingAt((prev) => ({
-                              ...prev,
-                              [application.id]: e.target.value,
-                            }))
-                          }
-                        />
-                      </label>
-
-                      <label className="grid gap-1 rounded-lg bg-white p-3 text-sm text-gray-700 md:col-span-2">
-                        <span className="font-semibold">
-                          ❌ Rejection Reason
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          Only fill if you plan to reject this application
-                        </span>
-                        <textarea
-                          className="min-h-16 mt-1 rounded border border-gray-300 px-3 py-2 text-sm"
-                          value={rejectReason[application.id] || ""}
-                          onChange={(e) =>
-                            setRejectReason((prev) => ({
-                              ...prev,
-                              [application.id]: e.target.value,
-                            }))
-                          }
-                        />
-                      </label>
-                    </div>
-
                     {/* Action Buttons */}
                     <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                       <button
                         type="button"
-                        className="flex-1 rounded-lg bg-emerald-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-emerald-700 active:bg-emerald-800"
+                        className="flex-1 rounded-lg bg-emerald-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-emerald-700 active:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
                         onClick={() => void handleApprove(application.id)}
+                        disabled={!canDecide}
                       >
                         ✅ Approve Application
                       </button>
                       <button
                         type="button"
-                        className="flex-1 rounded-lg border-2 border-amber-400 bg-amber-50 px-4 py-3 font-semibold text-amber-700 transition-colors hover:bg-amber-100 active:bg-amber-200"
-                        onClick={() => void handleRequestDocs(application.id)}
-                      >
-                        📄 Request Documents
-                      </button>
-                      <button
-                        type="button"
-                        className="flex-1 rounded-lg border-2 border-purple-400 bg-purple-50 px-4 py-3 font-semibold text-purple-700 transition-colors hover:bg-purple-100 active:bg-purple-200"
-                        onClick={() =>
-                          void handleScheduleViewing(application.id)
-                        }
-                      >
-                        📅 Schedule Viewing
-                      </button>
-                      <button
-                        type="button"
-                        className="flex-1 rounded-lg border-2 border-rose-400 bg-rose-50 px-4 py-3 font-semibold text-rose-700 transition-colors hover:bg-rose-100 active:bg-rose-200"
-                        onClick={() => void handleReject(application.id)}
+                        className="flex-1 rounded-lg border-2 border-rose-400 bg-rose-50 px-4 py-3 font-semibold text-rose-700 transition-colors hover:bg-rose-100 active:bg-rose-200 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => openRejectPopup(application.id)}
+                        disabled={!canDecide}
                       >
                         ❌ Reject Application
                       </button>
@@ -435,6 +359,51 @@ export default function ApplicationsReviewPage() {
           )}
         </div>
       </main>
+      {rejectDraft && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-lg rounded-2xl border border-rose-200 bg-white p-6 shadow-2xl">
+            <h3 className="text-xl font-bold text-rose-900">
+              Reject Application
+            </h3>
+            <p className="mt-2 text-sm text-rose-800">
+              Please provide a rejection reason.
+            </p>
+
+            <label className="mt-4 block text-sm font-semibold text-gray-900">
+              Rejection reason
+              <textarea
+                className="mt-2 min-h-24 w-full rounded-lg border border-rose-200 px-3 py-2 text-sm text-gray-700 focus:border-rose-400 focus:outline-none"
+                value={rejectDraft.reason}
+                onChange={(event) =>
+                  setRejectDraft((previous) =>
+                    previous
+                      ? { ...previous, reason: event.target.value }
+                      : previous,
+                  )
+                }
+                placeholder="Explain why this application is rejected."
+              />
+            </label>
+
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
+                onClick={() => setRejectDraft(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700"
+                onClick={() => void handleReject()}
+              >
+                Confirm Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <HomeFooter />
     </>
   );

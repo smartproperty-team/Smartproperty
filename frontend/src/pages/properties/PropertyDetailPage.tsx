@@ -4,11 +4,13 @@
 
 import { HomeFooter, Navbar } from "@/components/layout";
 import { useTranslation } from "@/i18n";
+import applicationService from "@/services/application.service";
 import {
   propertyService,
   type PropertyShareData,
 } from "@/services/property.service";
 import { useAuthStore } from "@/store";
+import { ApplicationStatus } from "@/types/application";
 import type { Property, PropertyImage } from "@/types/property";
 import { canManageProperties, isTenant } from "@/utils";
 import L from "leaflet";
@@ -19,6 +21,13 @@ import "leaflet/dist/leaflet.css";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import "./properties.css";
+
+const ACTIVE_APPLICATION_STATUSES = new Set<ApplicationStatus>([
+  ApplicationStatus.SUBMITTED,
+  ApplicationStatus.UNDER_REVIEW,
+  ApplicationStatus.DOCUMENTS_REQUESTED,
+  ApplicationStatus.VIEWING_SCHEDULED,
+]);
 
 // Fix Leaflet default marker icons (Vite asset handling)
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)
@@ -800,6 +809,8 @@ export default function PropertyDetailPage() {
   const [shareData, setShareData] = useState<PropertyShareData | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [hasActiveApplication, setHasActiveApplication] = useState(false);
+  const [checkingApplication, setCheckingApplication] = useState(false);
 
   const loadProperty = useCallback(async () => {
     if (!id) return;
@@ -821,6 +832,38 @@ export default function PropertyDetailPage() {
   useEffect(() => {
     loadProperty();
   }, [loadProperty]);
+
+  useEffect(() => {
+    const propertyId = property?.id || property?._id;
+
+    if (!isTenant(user) || !propertyId) {
+      setHasActiveApplication(false);
+      return;
+    }
+
+    const checkApplicationEligibility = async () => {
+      setCheckingApplication(true);
+      try {
+        const response = await applicationService.getMyApplications({
+          propertyId,
+          page: 1,
+          limit: 20,
+        });
+
+        const hasActive = response.applications.some((application) =>
+          ACTIVE_APPLICATION_STATUSES.has(application.status),
+        );
+
+        setHasActiveApplication(hasActive);
+      } catch {
+        setHasActiveApplication(false);
+      } finally {
+        setCheckingApplication(false);
+      }
+    };
+
+    void checkApplicationEligibility();
+  }, [property?.id, property?._id, user]);
 
   const handleDelete = async () => {
     if (!property) return;
@@ -1257,7 +1300,6 @@ export default function PropertyDetailPage() {
                       rel="noreferrer"
                       aria-label={`${t.propertyDetail.openSharedLink} (opens in new tab)`}
                       className="btn-edit"
-                      aria-label="Open shared property link in a new tab"
                     >
                       {t.propertyDetail.openSharedLink}
                       <span className="sr-only"> (opens in a new tab)</span>
@@ -1269,7 +1311,7 @@ export default function PropertyDetailPage() {
 
             {isTenant(user) && user && (
               <div className="sidebar-card">
-                <h3>{t.propertyDetail.applyTitle || "Apply for Rental"}</h3>
+                <h3>Apply for Rental</h3>
                 <p
                   style={{
                     fontSize: "0.875rem",
@@ -1277,16 +1319,47 @@ export default function PropertyDetailPage() {
                     marginBottom: "1rem",
                   }}
                 >
-                  {t.propertyDetail.applyDescription ||
-                    "Submit your rental application for this property"}
+                  Submit your rental application for this property
                 </p>
-                <Link
-                  to={`/applications?propertyId=${property.id || property._id}`}
-                  className="btn-contact"
-                  style={{ textAlign: "center", width: "100%" }}
-                >
-                  {t.propertyDetail.applyButton || "Apply Now"}
-                </Link>
+                {hasActiveApplication ? (
+                  <>
+                    <button
+                      type="button"
+                      className="btn-contact"
+                      style={{
+                        textAlign: "center",
+                        width: "100%",
+                        opacity: 0.7,
+                      }}
+                      disabled
+                    >
+                      Already Applied
+                    </button>
+                    <p
+                      style={{
+                        marginTop: "0.5rem",
+                        fontSize: "0.8rem",
+                        color: "#92400e",
+                      }}
+                    >
+                      You already have an active application for this property.
+                    </p>
+                  </>
+                ) : (
+                  <Link
+                    to={`/applications?propertyId=${property.id || property._id}`}
+                    className="btn-contact"
+                    style={{ textAlign: "center", width: "100%" }}
+                    aria-disabled={checkingApplication}
+                    onClick={(event) => {
+                      if (checkingApplication) {
+                        event.preventDefault();
+                      }
+                    }}
+                  >
+                    {checkingApplication ? "Checking..." : "Apply Now"}
+                  </Link>
+                )}
               </div>
             )}
 

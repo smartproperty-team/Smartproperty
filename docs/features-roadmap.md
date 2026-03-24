@@ -280,10 +280,10 @@ US-3.2.2 Automatic analysis of the candidate file (Actor: AI System)
 
 ### Portfolio Management & Data Exchange
 
-- [X]  Property categorization (sale, rental, management)
-- [X]  Portfolio dashboard with KPI widgets
-- [X]  Import/export via Excel templates
-- [X]  Partner API connectors for listing synchronization
+- [ ]  Property categorization (sale, rental, management)
+- [ ]  Portfolio dashboard with KPI widgets
+- [ ]  Import/export via Excel templates
+- [ ]  Partner API connectors for listing synchronization
 
 ### Property Images
 
@@ -300,10 +300,10 @@ US-3.2.2 Automatic analysis of the candidate file (Actor: AI System)
 - [X]  Full-text search
 - [X]  Filter by type
 - [X]  Filter by price range
-- [X]  Filter by bedrooms/bathrooms
+- [ ]  Filter by bedrooms/bathrooms
 - [ ]  Filter by amenities
 - [X]  Filter by location/city
-- [X]  Geospatial search (nearby)
+- [ ]  Geospatial search (nearby)
 - [X]  Sort options (price, date, relevance)
 - [X]  Pagination
 
@@ -331,18 +331,18 @@ US-3.2.2 Automatic analysis of the candidate file (Actor: AI System)
 
 ### Application Entity
 
-- [ ]  Application entity
-- [ ]  Application status workflow
-- [ ]  Employment info embedded
-- [ ]  References embedded
+- [X]  Application entity
+- [X]  Application status workflow
+- [X]  Employment info embedded
+- [X]  References embedded
 
 ### Tenant Features
 
-- [ ]  Submit rental application
+- [X]  Submit rental application
 - [ ]  Upload required documents
-- [ ]  Track application status
-- [ ]  Withdraw application
-- [ ]  View application history
+- [X]  Track application status
+- [X]  Withdraw application
+- [X]  View application history
 
 ### Owner/Manager Features
 
@@ -458,7 +458,7 @@ US-3.2.2 Automatic analysis of the candidate file (Actor: AI System)
 - [ ]  Rate completed work
 - [ ]  Emergency contact
 
-### Owner/bManager/  Features
+### Owner/Manager Features
 
 - [ ]  View maintenance requests
 - [ ]  Assign to staff/contractor
@@ -600,7 +600,7 @@ US-3.2.2 Automatic analysis of the candidate file (Actor: AI System)
 
 - [X]  Dashboard layout with header and user menu
 - [X]  Email verification status alert
-- [X]  Overview widgets
+- [ ]  Overview widgets
 - [ ]  Quick actions
 - [ ]  Recent activity
 - [X]  Notifications dropdown

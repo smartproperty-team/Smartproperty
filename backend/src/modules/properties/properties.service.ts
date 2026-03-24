@@ -743,7 +743,19 @@ export class PropertiesService {
       throw new ForbiddenException('Tenants cannot assign a manager');
     }
 
-    const ownerId = createPropertyDto.ownerId || currentUserId;
+    const requestedOwnerId = createPropertyDto.ownerId?.trim();
+    const requestedManagerId = createPropertyDto.managerId?.trim();
+
+    const ownerId = requestedOwnerId || currentUserId;
+
+    const shouldAutoAssignManager =
+      currentUserRole === UserRole.BRANCH_MANAGER ||
+      currentUserRole === UserRole.REAL_ESTATE_AGENT ||
+      currentUserRole === UserRole.RENTAL_MANAGER;
+
+    const managerId =
+      requestedManagerId ||
+      (shouldAutoAssignManager ? currentUserId : undefined);
 
     // Build a clean object without undefined values – MongoDB's $jsonSchema
     // validator does not recognise "undefined" as a BSON type, so sending
@@ -751,6 +763,7 @@ export class PropertiesService {
     const raw: Record<string, any> = {
       ...createPropertyDto,
       ownerId,
+      managerId,
       status: createPropertyDto.status || PropertyStatus.AVAILABLE,
       currency: createPropertyDto.currency || 'USD',
     };

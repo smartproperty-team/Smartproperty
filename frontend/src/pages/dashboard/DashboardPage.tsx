@@ -19,6 +19,7 @@ import {
   verificationService,
 } from "@/services";
 import { useAuthStore } from "@/store";
+import { ApplicationStatus, type Application } from "@/types/application";
 import { UserRole } from "@/types/auth";
 import type {
   PortfolioConnectorDefinition,
@@ -55,6 +56,13 @@ import {
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+const ACTIVE_APPLICATION_STATUSES = new Set<ApplicationStatus>([
+  ApplicationStatus.SUBMITTED,
+  ApplicationStatus.UNDER_REVIEW,
+  ApplicationStatus.DOCUMENTS_REQUESTED,
+  ApplicationStatus.VIEWING_SCHEDULED,
+]);
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user, isLoading } = useAuthStore();
@@ -69,6 +77,56 @@ export default function DashboardPage() {
   const [ownerProperties, setOwnerProperties] = useState<Property[]>([]);
   const [isLoadingOwnerProperties, setIsLoadingOwnerProperties] =
     useState(false);
+  const [tenantApplications, setTenantApplications] = useState<Application[]>(
+    [],
+  );
+  const [receivedApplications, setReceivedApplications] = useState<
+    Application[]
+  >([]);
+  const [isLoadingTenantApplications, setIsLoadingTenantApplications] =
+    useState(false);
+  const [isLoadingReceivedApplications, setIsLoadingReceivedApplications] =
+    useState(false);
+  const [showAllTenantApplications, setShowAllTenantApplications] =
+    useState(false);
+  const [showAllReceivedApplications, setShowAllReceivedApplications] =
+    useState(false);
+  const [processingReceivedFor, setProcessingReceivedFor] = useState<
+    string | null
+  >(null);
+  const [rejectDraft, setRejectDraft] = useState<{
+    applicationId: string;
+    reason: string;
+  } | null>(null);
+  const [expandedHistoryFor, setExpandedHistoryFor] = useState<string | null>(
+    null,
+  );
+  const [withdrawingFor, setWithdrawingFor] = useState<string | null>(null);
+  const [withdrawDraft, setWithdrawDraft] = useState<{
+    applicationId: string;
+    reason: string;
+  } | null>(null);
+  const [withdrawPopup, setWithdrawPopup] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [tenantApplicationsMessage, setTenantApplicationsMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [receivedApplicationsMessage, setReceivedApplicationsMessage] =
+    useState<{
+      type: "success" | "error";
+      text: string;
+    } | null>(null);
+  const [approveResultPopup, setApproveResultPopup] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [rejectResultPopup, setRejectResultPopup] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [stats, setStats] = useState({
     first: 0,
     second: 0,
@@ -114,6 +172,45 @@ export default function DashboardPage() {
   const canTrackOwnMaintenance = canTrackMaintenanceRequests(user);
   const canManageMaintenanceAsProvider = canManageAssignedMaintenance(user);
 
+  const applicationStatusClass: Record<ApplicationStatus, string> = {
+    submitted: "bg-blue-100 text-blue-700",
+    under_review: "bg-amber-100 text-amber-700",
+    documents_requested: "bg-orange-100 text-orange-700",
+    viewing_scheduled: "bg-violet-100 text-violet-700",
+    approved: "bg-emerald-100 text-emerald-700",
+    rejected: "bg-rose-100 text-rose-700",
+    withdrawn: "bg-slate-200 text-slate-700",
+  };
+
+  const applicationStatusLabel: Record<ApplicationStatus, string> = {
+    submitted: "Submitted",
+    under_review: "Under review",
+    documents_requested: "Documents requested",
+    viewing_scheduled: "Viewing scheduled",
+    approved: "Approved",
+    rejected: "Rejected",
+    withdrawn: "Withdrawn",
+  };
+
+  const formatDateTime = (value?: string) => {
+    if (!value) {
+      return "Not available";
+    }
+
+    const parsedDate = new Date(value);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return "Not available";
+    }
+
+    return parsedDate.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   // Fetch verification status for tenants
   useEffect(() => {
     if (isTenant(user)) {
@@ -148,6 +245,193 @@ export default function DashboardPage() {
 
     void loadOwnerProperties();
   }, [user?.id, user?.role]);
+
+  useEffect(() => {
+    if (!isTenant(user)) {
+      setTenantApplications([]);
+      return;
+    }
+
+    const loadTenantApplications = async () => {
+      setIsLoadingTenantApplications(true);
+      try {
+        const response = await applicationService.getMyApplications({
+          page: 1,
+          limit: 50,
+        });
+        setTenantApplications(response.applications);
+      } catch {
+        setTenantApplications([]);
+      } finally {
+        setIsLoadingTenantApplications(false);
+      }
+    };
+
+    void loadTenantApplications();
+  }, [user]);
+
+  useEffect(() => {
+    if (!canReviewApplications(user)) {
+      setReceivedApplications([]);
+      return;
+    }
+
+    void reloadReceivedApplications();
+  }, [user]);
+
+  const reloadReceivedApplications = async () => {
+    if (!canReviewApplications(user)) {
+      return;
+    }
+
+    setIsLoadingReceivedApplications(true);
+    try {
+      const response = await applicationService.getReceivedApplications({
+        page: 1,
+        limit: 50,
+      });
+      setReceivedApplications(response.applications);
+    } catch {
+      setReceivedApplicationsMessage({
+        type: "error",
+        text: "Failed to refresh received applications.",
+      });
+    } finally {
+      setIsLoadingReceivedApplications(false);
+    }
+  };
+
+  const approveReceivedApplication = async (applicationId: string) => {
+    try {
+      setProcessingReceivedFor(applicationId);
+      await applicationService.approveApplication(applicationId);
+      setReceivedApplicationsMessage({
+        type: "success",
+        text: "Application approved.",
+      });
+      setApproveResultPopup({
+        type: "success",
+        text: "Application approved successfully.",
+      });
+      await reloadReceivedApplications();
+    } catch {
+      setReceivedApplicationsMessage({
+        type: "error",
+        text: "Unable to approve this application.",
+      });
+      setApproveResultPopup({
+        type: "error",
+        text: "Unable to approve this application.",
+      });
+    } finally {
+      setProcessingReceivedFor(null);
+    }
+  };
+
+  const confirmRejectReceivedApplication = async () => {
+    if (!rejectDraft) {
+      return;
+    }
+
+    const reason = rejectDraft.reason.trim();
+    if (!reason) {
+      setReceivedApplicationsMessage({
+        type: "error",
+        text: "Please provide a rejection reason.",
+      });
+      return;
+    }
+
+    try {
+      setProcessingReceivedFor(rejectDraft.applicationId);
+      await applicationService.rejectApplication(
+        rejectDraft.applicationId,
+        reason,
+      );
+      setReceivedApplicationsMessage({
+        type: "success",
+        text: "Application rejected.",
+      });
+      setRejectResultPopup({
+        type: "success",
+        text: "Application rejected successfully.",
+      });
+      setRejectDraft(null);
+      await reloadReceivedApplications();
+    } catch {
+      setReceivedApplicationsMessage({
+        type: "error",
+        text: "Unable to reject this application.",
+      });
+      setRejectResultPopup({
+        type: "error",
+        text: "Unable to reject this application.",
+      });
+    } finally {
+      setProcessingReceivedFor(null);
+    }
+  };
+
+  const reloadTenantApplications = async () => {
+    if (!isTenant(user)) {
+      return;
+    }
+
+    setIsLoadingTenantApplications(true);
+    try {
+      const response = await applicationService.getMyApplications({
+        page: 1,
+        limit: 50,
+      });
+      setTenantApplications(response.applications);
+    } catch {
+      setTenantApplicationsMessage({
+        type: "error",
+        text: "Failed to refresh applications.",
+      });
+    } finally {
+      setIsLoadingTenantApplications(false);
+    }
+  };
+
+  const withdrawTenantApplication = async (id: string) => {
+    setWithdrawDraft({ applicationId: id, reason: "" });
+  };
+
+  const confirmWithdrawTenantApplication = async () => {
+    if (!withdrawDraft) {
+      return;
+    }
+
+    const applicationId = withdrawDraft.applicationId;
+    const reason = withdrawDraft.reason.trim() || undefined;
+
+    try {
+      setWithdrawingFor(applicationId);
+      await applicationService.withdrawApplication(applicationId, reason);
+      setTenantApplicationsMessage({
+        type: "success",
+        text: "Application withdrawn.",
+      });
+      setWithdrawPopup({
+        type: "success",
+        text: "Application withdrawn successfully.",
+      });
+      setWithdrawDraft(null);
+      await reloadTenantApplications();
+    } catch {
+      setTenantApplicationsMessage({
+        type: "error",
+        text: "Unable to withdraw this application.",
+      });
+      setWithdrawPopup({
+        type: "error",
+        text: "Unable to withdraw this application.",
+      });
+    } finally {
+      setWithdrawingFor(null);
+    }
+  };
 
   useEffect(() => {
     if (!user?.id) {
@@ -841,6 +1125,313 @@ export default function DashboardPage() {
             </Card>
           </div>
 
+          {canReviewApplications(user) && (
+            <Card className="mb-8">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Received Applications</CardTitle>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setShowAllReceivedApplications((previous) => !previous)
+                    }
+                  >
+                    {showAllReceivedApplications ? "Show Less" : "Show All"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => navigate("/applications/review")}
+                  >
+                    Open Review Workspace
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {receivedApplicationsMessage && (
+                  <div className="mb-3">
+                    <Alert
+                      type={receivedApplicationsMessage.type}
+                      message={receivedApplicationsMessage.text}
+                      onClose={() => setReceivedApplicationsMessage(null)}
+                    />
+                  </div>
+                )}
+                {isLoadingReceivedApplications ? (
+                  <p className="text-sm text-gray-600">
+                    Loading received applications...
+                  </p>
+                ) : receivedApplications.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-600">
+                    No received applications right now.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {[...receivedApplications]
+                      .sort(
+                        (a, b) =>
+                          +new Date(b.createdAt) - +new Date(a.createdAt),
+                      )
+                      .slice(0, showAllReceivedApplications ? undefined : 6)
+                      .map((application) => (
+                        <div
+                          key={application.id}
+                          className="rounded-lg border border-gray-200 p-4"
+                        >
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {application.propertyTitle ||
+                                  application.propertyAddress ||
+                                  "Property"}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Applicant: {application.tenantName || "Tenant"}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Submitted{" "}
+                                {formatDateTime(application.createdAt)}
+                              </p>
+                            </div>
+                            <span
+                              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${applicationStatusClass[application.status]}`}
+                            >
+                              {applicationStatusLabel[application.status]}
+                            </span>
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+                              onClick={() =>
+                                navigate(
+                                  `/applications/review?applicationId=${application.id}`,
+                                )
+                              }
+                            >
+                              Open Application
+                            </button>
+                            {ACTIVE_APPLICATION_STATUSES.has(
+                              application.status,
+                            ) && (
+                              <>
+                                <button
+                                  type="button"
+                                  className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-70"
+                                  onClick={() =>
+                                    void approveReceivedApplication(
+                                      application.id,
+                                    )
+                                  }
+                                  disabled={
+                                    processingReceivedFor === application.id
+                                  }
+                                >
+                                  {processingReceivedFor === application.id
+                                    ? "Processing..."
+                                    : "Approve"}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
+                                  onClick={() =>
+                                    setRejectDraft({
+                                      applicationId: application.id,
+                                      reason: "",
+                                    })
+                                  }
+                                  disabled={
+                                    processingReceivedFor === application.id
+                                  }
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {isTenant(user) && (
+            <Card className="mb-8">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>My Applied Houses</CardTitle>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    setShowAllTenantApplications((previous) => !previous)
+                  }
+                >
+                  {showAllTenantApplications
+                    ? "Show Less"
+                    : "View All Applications"}
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {tenantApplicationsMessage && (
+                  <div className="mb-3">
+                    <Alert
+                      type={tenantApplicationsMessage.type}
+                      message={tenantApplicationsMessage.text}
+                      onClose={() => setTenantApplicationsMessage(null)}
+                    />
+                  </div>
+                )}
+                {isLoadingTenantApplications ? (
+                  <p className="text-sm text-gray-600">
+                    Loading applications...
+                  </p>
+                ) : tenantApplications.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-600">
+                    You have not applied to any houses yet.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {[...tenantApplications]
+                      .sort(
+                        (a, b) =>
+                          +new Date(b.createdAt) - +new Date(a.createdAt),
+                      )
+                      .slice(0, showAllTenantApplications ? undefined : 4)
+                      .map((application) => {
+                        const sortedStatusHistory = (
+                          application.statusHistory?.length
+                            ? [...application.statusHistory]
+                            : [
+                                {
+                                  status: application.status,
+                                  changedAt: application.updatedAt,
+                                  changedBy: "system",
+                                },
+                              ]
+                        ).sort(
+                          (a, b) =>
+                            +new Date(a.changedAt) - +new Date(b.changedAt),
+                        );
+                        const isHistoryOpen =
+                          expandedHistoryFor === application.id;
+
+                        return (
+                          <div
+                            key={application.id}
+                            className="rounded-lg border border-gray-200 p-4"
+                          >
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <p className="font-medium text-gray-900">
+                                  {application.propertyTitle ||
+                                    application.propertyAddress ||
+                                    "Applied property"}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  Applied on{" "}
+                                  {formatDateTime(application.createdAt)}
+                                </p>
+                                <p className="mt-1 text-xs text-gray-500">
+                                  Last update:{" "}
+                                  {formatDateTime(application.updatedAt)}
+                                </p>
+                              </div>
+                              <span
+                                className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${applicationStatusClass[application.status]}`}
+                              >
+                                {applicationStatusLabel[application.status]}
+                              </span>
+                            </div>
+
+                            {application.requestedDocuments.length > 0 && (
+                              <p className="mt-2 rounded-md bg-amber-50 p-2 text-xs text-amber-800">
+                                Documents requested:{" "}
+                                {application.requestedDocuments.join(", ")}
+                              </p>
+                            )}
+
+                            {application.rejectionReason && (
+                              <p className="mt-2 rounded-md bg-rose-50 p-2 text-xs text-rose-700">
+                                Rejection reason: {application.rejectionReason}
+                              </p>
+                            )}
+
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                                onClick={() =>
+                                  setExpandedHistoryFor((previous) =>
+                                    previous === application.id
+                                      ? null
+                                      : application.id,
+                                  )
+                                }
+                              >
+                                {isHistoryOpen
+                                  ? "Hide Status History"
+                                  : "View Status History"}
+                              </button>
+
+                              {ACTIVE_APPLICATION_STATUSES.has(
+                                application.status,
+                              ) && (
+                                <button
+                                  type="button"
+                                  className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                                  onClick={() =>
+                                    void withdrawTenantApplication(
+                                      application.id,
+                                    )
+                                  }
+                                  disabled={withdrawingFor === application.id}
+                                >
+                                  {withdrawingFor === application.id
+                                    ? "Withdrawing..."
+                                    : "Withdraw Application"}
+                                </button>
+                              )}
+                            </div>
+
+                            {isHistoryOpen && (
+                              <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                <p className="text-xs font-semibold text-slate-900">
+                                  Status History
+                                </p>
+                                <ul className="mt-2 space-y-2">
+                                  {sortedStatusHistory.map(
+                                    (event, eventIndex) => (
+                                      <li
+                                        key={`${application.id}-status-${eventIndex}`}
+                                        className="rounded border border-slate-200 bg-white p-2 text-xs text-slate-700"
+                                      >
+                                        <p className="font-semibold">
+                                          {applicationStatusLabel[event.status]}
+                                        </p>
+                                        <p className="text-slate-500">
+                                          {formatDateTime(event.changedAt)}
+                                        </p>
+                                        {event.note && (
+                                          <p className="mt-1">{event.note}</p>
+                                        )}
+                                      </li>
+                                    ),
+                                  )}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {user?.role === UserRole.OWNER && (
             <Card className="mb-8">
               <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1273,7 +1864,6 @@ export default function DashboardPage() {
                   rel="noopener noreferrer"
                   aria-label="Open Swagger API docs (opens in new tab)"
                   className="flex items-center rounded-lg border border-gray-200 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50"
-                  aria-label="Open Swagger API docs in a new tab"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100">
                     <FileText className="h-5 w-5 text-indigo-600" />
@@ -1294,7 +1884,6 @@ export default function DashboardPage() {
                   rel="noopener noreferrer"
                   aria-label="Open MailHog (opens in new tab)"
                   className="flex items-center rounded-lg border border-gray-200 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50"
-                  aria-label="Open MailHog in a new tab"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
                     <Mail className="h-5 w-5 text-green-600" />
@@ -1311,7 +1900,6 @@ export default function DashboardPage() {
                   rel="noopener noreferrer"
                   aria-label="Open Mongo Express (opens in new tab)"
                   className="flex items-center rounded-lg border border-gray-200 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50"
-                  aria-label="Open Mongo Express in a new tab"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
                     <Building2 className="h-5 w-5 text-purple-600" />
@@ -1328,6 +1916,180 @@ export default function DashboardPage() {
           </Card>
         </main>
       </div>
+      {withdrawDraft && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-lg rounded-2xl border border-rose-200 bg-white p-6 shadow-2xl">
+            <h3 className="text-xl font-bold text-rose-900">
+              Withdraw Application
+            </h3>
+            <p className="mt-2 text-sm text-rose-800">
+              Are you sure you want to withdraw this application?
+            </p>
+
+            <label className="mt-4 block text-sm font-semibold text-gray-900">
+              Reason (optional)
+              <textarea
+                className="mt-2 min-h-24 w-full rounded-lg border border-rose-200 px-3 py-2 text-sm text-gray-700 focus:border-rose-400 focus:outline-none"
+                value={withdrawDraft.reason}
+                onChange={(event) =>
+                  setWithdrawDraft((previous) =>
+                    previous
+                      ? { ...previous, reason: event.target.value }
+                      : previous,
+                  )
+                }
+                placeholder="You can share why you are withdrawing."
+              />
+            </label>
+
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
+                onClick={() => setWithdrawDraft(null)}
+                disabled={withdrawingFor === withdrawDraft.applicationId}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-70"
+                onClick={() => void confirmWithdrawTenantApplication()}
+                disabled={withdrawingFor === withdrawDraft.applicationId}
+              >
+                {withdrawingFor === withdrawDraft.applicationId
+                  ? "Withdrawing..."
+                  : "Confirm Withdrawal"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {withdrawPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-rose-300 bg-rose-50 p-6 text-center shadow-2xl">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-rose-600 text-2xl font-bold text-white">
+              {withdrawPopup.type === "success" ? "!" : "x"}
+            </div>
+            <h3 className="mt-4 text-xl font-bold text-rose-900">
+              {withdrawPopup.type === "success"
+                ? "Application Withdrawn"
+                : "Withdrawal Failed"}
+            </h3>
+            <p className="mt-2 text-sm text-rose-800">{withdrawPopup.text}</p>
+            <div className="mt-5 flex justify-center">
+              <button
+                type="button"
+                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700"
+                onClick={() => setWithdrawPopup(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {approveResultPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-emerald-300 bg-emerald-50 p-6 text-center shadow-2xl">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-600 text-2xl font-bold text-white">
+              {approveResultPopup.type === "success" ? "!" : "x"}
+            </div>
+            <h3 className="mt-4 text-xl font-bold text-emerald-900">
+              {approveResultPopup.type === "success"
+                ? "Application Approved"
+                : "Approval Failed"}
+            </h3>
+            <p className="mt-2 text-sm text-emerald-800">
+              {approveResultPopup.text}
+            </p>
+            <div className="mt-5 flex justify-center">
+              <button
+                type="button"
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                onClick={() => setApproveResultPopup(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {rejectResultPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-rose-300 bg-rose-50 p-6 text-center shadow-2xl">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-rose-600 text-2xl font-bold text-white">
+              {rejectResultPopup.type === "success" ? "!" : "x"}
+            </div>
+            <h3 className="mt-4 text-xl font-bold text-rose-900">
+              {rejectResultPopup.type === "success"
+                ? "Application Rejected"
+                : "Rejection Failed"}
+            </h3>
+            <p className="mt-2 text-sm text-rose-800">
+              {rejectResultPopup.text}
+            </p>
+            <div className="mt-5 flex justify-center">
+              <button
+                type="button"
+                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700"
+                onClick={() => setRejectResultPopup(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {rejectDraft && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-lg rounded-2xl border border-rose-200 bg-white p-6 shadow-2xl">
+            <h3 className="text-xl font-bold text-rose-900">
+              Reject Application
+            </h3>
+            <p className="mt-2 text-sm text-rose-800">
+              Please provide a rejection reason.
+            </p>
+
+            <label className="mt-4 block text-sm font-semibold text-gray-900">
+              Rejection reason
+              <textarea
+                className="mt-2 min-h-24 w-full rounded-lg border border-rose-200 px-3 py-2 text-sm text-gray-700 focus:border-rose-400 focus:outline-none"
+                value={rejectDraft.reason}
+                onChange={(event) =>
+                  setRejectDraft((previous) =>
+                    previous
+                      ? { ...previous, reason: event.target.value }
+                      : previous,
+                  )
+                }
+                placeholder="Explain why this application is rejected."
+              />
+            </label>
+
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
+                onClick={() => setRejectDraft(null)}
+                disabled={processingReceivedFor === rejectDraft.applicationId}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-70"
+                onClick={() => void confirmRejectReceivedApplication()}
+                disabled={processingReceivedFor === rejectDraft.applicationId}
+              >
+                {processingReceivedFor === rejectDraft.applicationId
+                  ? "Rejecting..."
+                  : "Confirm Reject"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <HomeFooter />
     </>
   );

@@ -174,6 +174,23 @@ export default function LocationPreferenceMap({
       11,
     );
 
+    // Keep map layers below app-level fixed headers and overlays.
+    const panes = map.getPanes();
+    panes.mapPane.style.zIndex = "1";
+    panes.tilePane.style.zIndex = "2";
+    panes.overlayPane.style.zIndex = "3";
+    panes.shadowPane.style.zIndex = "4";
+    panes.markerPane.style.zIndex = "5";
+    panes.tooltipPane.style.zIndex = "6";
+    panes.popupPane.style.zIndex = "7";
+
+    const controlElements = map
+      .getContainer()
+      .querySelectorAll(".leaflet-control");
+    controlElements.forEach((element) => {
+      (element as HTMLElement).style.zIndex = "8";
+    });
+
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
