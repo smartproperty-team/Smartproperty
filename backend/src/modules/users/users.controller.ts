@@ -82,6 +82,21 @@ export class UsersController {
   }
 
   // ===========================================
+  // Get List of Tenants (Admin only)
+  // ===========================================
+
+  @Get('role/tenants')
+  @Roles(...PLATFORM_ADMIN_ROLES)
+  @ApiOperation({ summary: 'Get list of all tenants (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of tenants',
+  })
+  async getTenants() {
+    return this.usersService.findByRole(UserRole.TENANT);
+  }
+
+  // ===========================================
   // Get Current User Profile
   // ===========================================
 
