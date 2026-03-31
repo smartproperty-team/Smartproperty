@@ -189,6 +189,14 @@ export class UsersService {
     });
   }
 
+  async findByRole(role: UserRole): Promise<any[]> {
+    const users = await this.userRepository.find({
+      where: { role },
+      order: { createdAt: 'DESC' },
+    });
+    return users.map((u) => u.toJSON());
+  }
+
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findById(id);
 

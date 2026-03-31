@@ -2,16 +2,17 @@
 // SmartProperty - Main App Component
 // ===========================================
 
-import { useEffect, useRef } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import "./App.css";
-import ReadAloudWidget from "./components/accessibility/ReadAloudWidget";
-import { ProtectedRoute } from "./components/auth";
-import { useLanguageStore } from "./i18n";
+import { useEffect, useRef } from 'react';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import './App.css';
+import ReadAloudWidget from './components/accessibility/ReadAloudWidget';
+import { ProtectedRoute } from './components/auth';
+import { PushNotificationTestButton } from './components/notifications/PushNotificationTestButton';
+import { useLanguageStore } from './i18n';
 import {
   ApplicationsReviewPage,
   TenantApplicationsPage,
-} from "./pages/applications";
+} from './pages/applications';
 import {
   FacebookCallbackPage,
   ForgotPasswordPage,
@@ -20,7 +21,7 @@ import {
   RegisterPage,
   ResetPasswordPage,
   VerifyEmailPage,
-} from "./pages/auth";
+} from './pages/auth';
 import {
   AdminUsersPage,
   AdminVerificationPage,
@@ -29,24 +30,25 @@ import {
   DashboardPage,
   SessionsPage,
   VerificationPage,
-} from "./pages/dashboard";
-import { HomePage, PaletteDemoPage } from "./pages/home";
+} from './pages/dashboard';
+import { HomePage, PaletteDemoPage } from './pages/home';
 import {
   MaintenanceRequestFormPage,
   MyMaintenanceRequestsPage,
   ServiceProviderMaintenancePage,
-} from "./pages/maintenance";
-import { PreferencesOnboardingModal } from "./pages/onboarding";
-import { ProfilePage } from "./pages/profile";
+} from './pages/maintenance';
+import { PreferencesOnboardingModal } from './pages/onboarding';
+import { ProfilePage } from './pages/profile';
 import {
   MyPropertiesPage,
   PropertiesPage,
   PropertyDetailPage,
   PropertyFormPage,
-} from "./pages/properties";
-import TwoFactorPage from "./pages/security/TwoFactorPage";
-import { SettingsPage } from "./pages/settings";
-import { useAuthStore, usePreferencesStore } from "./store";
+} from './pages/properties';
+import TwoFactorPage from './pages/security/TwoFactorPage';
+import { SettingsPage } from './pages/settings';
+import { pushNotificationService } from './services/push-notification.service';
+import { useAuthStore, usePreferencesStore } from './store';
 import {
   canAccessAdminUsers,
   canCreateMaintenanceRequest,
@@ -58,37 +60,37 @@ import {
   canReviewVerifications,
   canTrackMaintenanceRequests,
   isTenant,
-} from "./utils";
+} from './utils';
 
 function getPageTitle(pathname: string): string {
   const exactTitles: Record<string, string> = {
-    "/": "Home",
-    "/design/palette": "Design Palette",
-    "/login": "Login",
-    "/register": "Register",
-    "/forgot-password": "Forgot Password",
-    "/reset-password": "Reset Password",
-    "/verify-email": "Verify Email",
-    "/auth/google/callback": "Google Sign-In",
-    "/auth/facebook/callback": "Facebook Sign-In",
-    "/dashboard": "Dashboard",
-    "/sessions": "Sessions",
-    "/verification": "Verification",
-    "/applications": "My Applications",
-    "/applications/review": "Applications Review",
-    "/super-administrator/verifications": "Verification Review",
-    "/super-administrator/users": "User Management",
-    "/branch-manager/agencies": "My Agencies",
-    "/branch-manager/agencies/new": "Agency Onboarding",
-    "/profile": "Profile",
-    "/settings": "Settings",
-    "/security/2fa": "Two-Factor Authentication",
-    "/properties": "Properties",
-    "/properties/mine": "My Properties",
-    "/properties/new": "Create Property",
-    "/maintenance/requests/new": "Maintenance Request",
-    "/maintenance/requests/mine": "My Maintenance Status",
-    "/maintenance/requests/assigned": "Assigned Maintenance",
+    '/': 'Home',
+    '/design/palette': 'Design Palette',
+    '/login': 'Login',
+    '/register': 'Register',
+    '/forgot-password': 'Forgot Password',
+    '/reset-password': 'Reset Password',
+    '/verify-email': 'Verify Email',
+    '/auth/google/callback': 'Google Sign-In',
+    '/auth/facebook/callback': 'Facebook Sign-In',
+    '/dashboard': 'Dashboard',
+    '/sessions': 'Sessions',
+    '/verification': 'Verification',
+    '/applications': 'My Applications',
+    '/applications/review': 'Applications Review',
+    '/super-administrator/verifications': 'Verification Review',
+    '/super-administrator/users': 'User Management',
+    '/branch-manager/agencies': 'My Agencies',
+    '/branch-manager/agencies/new': 'Agency Onboarding',
+    '/profile': 'Profile',
+    '/settings': 'Settings',
+    '/security/2fa': 'Two-Factor Authentication',
+    '/properties': 'Properties',
+    '/properties/mine': 'My Properties',
+    '/properties/new': 'Create Property',
+    '/maintenance/requests/new': 'Maintenance Request',
+    '/maintenance/requests/mine': 'My Maintenance Status',
+    '/maintenance/requests/assigned': 'Assigned Maintenance',
   };
 
   if (exactTitles[pathname]) {
@@ -96,14 +98,14 @@ function getPageTitle(pathname: string): string {
   }
 
   if (/^\/properties\/[^/]+\/edit$/.test(pathname)) {
-    return "Edit Property | SmartProperty";
+    return 'Edit Property | SmartProperty';
   }
 
   if (/^\/properties\/[^/]+$/.test(pathname)) {
-    return "Property Details | SmartProperty";
+    return 'Property Details | SmartProperty';
   }
 
-  return "SmartProperty";
+  return 'SmartProperty';
 }
 
 function App() {
@@ -117,9 +119,9 @@ function App() {
     /^\/(login|register|forgot-password|reset-password|verify-email)$/.test(
       location.pathname,
     ) ||
-    location.pathname === "/auth/google/callback" ||
-    location.pathname === "/auth/facebook/callback";
-  const mainContentId = "main-content";
+    location.pathname === '/auth/google/callback' ||
+    location.pathname === '/auth/facebook/callback';
+  const mainContentId = 'main-content';
 
   // Check if user is authenticated on app load
   useEffect(() => {
@@ -128,55 +130,55 @@ function App() {
 
   useEffect(() => {
     const path = location.pathname;
-    let pageTitle = "SmartProperty";
+    let pageTitle = 'SmartProperty';
 
-    if (path === "/") pageTitle = "Home | SmartProperty";
-    else if (path === "/login") pageTitle = "Sign In | SmartProperty";
-    else if (path === "/register") pageTitle = "Register | SmartProperty";
-    else if (path === "/forgot-password") {
-      pageTitle = "Forgot Password | SmartProperty";
-    } else if (path === "/reset-password") {
-      pageTitle = "Reset Password | SmartProperty";
-    } else if (path === "/verify-email") {
-      pageTitle = "Verify Email | SmartProperty";
-    } else if (path.startsWith("/properties/new")) {
-      pageTitle = "Add Property | SmartProperty";
-    } else if (path.startsWith("/maintenance/requests/new")) {
-      pageTitle = "Maintenance Request | SmartProperty";
-    } else if (path.startsWith("/maintenance/requests/mine")) {
-      pageTitle = "My Maintenance Status | SmartProperty";
-    } else if (path.startsWith("/maintenance/requests/assigned")) {
-      pageTitle = "Assigned Maintenance | SmartProperty";
-    } else if (path.startsWith("/properties/mine")) {
-      pageTitle = "My Properties | SmartProperty";
-    } else if (path.startsWith("/properties/") && path.endsWith("/edit")) {
-      pageTitle = "Edit Property | SmartProperty";
-    } else if (path.startsWith("/properties/")) {
-      pageTitle = "Property Details | SmartProperty";
-    } else if (path === "/properties") {
-      pageTitle = "Properties | SmartProperty";
-    } else if (path === "/dashboard") {
-      pageTitle = "Dashboard | SmartProperty";
-    } else if (path === "/profile") {
-      pageTitle = "Profile | SmartProperty";
-    } else if (path === "/settings") {
-      pageTitle = "Settings | SmartProperty";
-    } else if (path === "/sessions") {
-      pageTitle = "Sessions | SmartProperty";
-    } else if (path === "/verification") {
-      pageTitle = "Verification | SmartProperty";
-    } else if (path === "/applications") {
-      pageTitle = "My Applications | SmartProperty";
-    } else if (path === "/applications/review") {
-      pageTitle = "Review Applications | SmartProperty";
-    } else if (path === "/super-administrator/verifications") {
-      pageTitle = "Admin Verifications | SmartProperty";
-    } else if (path === "/super-administrator/users") {
-      pageTitle = "Admin Users | SmartProperty";
-    } else if (path === "/branch-manager/agencies") {
-      pageTitle = "My Agencies | SmartProperty";
-    } else if (path === "/security/2fa") {
-      pageTitle = "Two-Factor Authentication | SmartProperty";
+    if (path === '/') pageTitle = 'Home | SmartProperty';
+    else if (path === '/login') pageTitle = 'Sign In | SmartProperty';
+    else if (path === '/register') pageTitle = 'Register | SmartProperty';
+    else if (path === '/forgot-password') {
+      pageTitle = 'Forgot Password | SmartProperty';
+    } else if (path === '/reset-password') {
+      pageTitle = 'Reset Password | SmartProperty';
+    } else if (path === '/verify-email') {
+      pageTitle = 'Verify Email | SmartProperty';
+    } else if (path.startsWith('/properties/new')) {
+      pageTitle = 'Add Property | SmartProperty';
+    } else if (path.startsWith('/maintenance/requests/new')) {
+      pageTitle = 'Maintenance Request | SmartProperty';
+    } else if (path.startsWith('/maintenance/requests/mine')) {
+      pageTitle = 'My Maintenance Status | SmartProperty';
+    } else if (path.startsWith('/maintenance/requests/assigned')) {
+      pageTitle = 'Assigned Maintenance | SmartProperty';
+    } else if (path.startsWith('/properties/mine')) {
+      pageTitle = 'My Properties | SmartProperty';
+    } else if (path.startsWith('/properties/') && path.endsWith('/edit')) {
+      pageTitle = 'Edit Property | SmartProperty';
+    } else if (path.startsWith('/properties/')) {
+      pageTitle = 'Property Details | SmartProperty';
+    } else if (path === '/properties') {
+      pageTitle = 'Properties | SmartProperty';
+    } else if (path === '/dashboard') {
+      pageTitle = 'Dashboard | SmartProperty';
+    } else if (path === '/profile') {
+      pageTitle = 'Profile | SmartProperty';
+    } else if (path === '/settings') {
+      pageTitle = 'Settings | SmartProperty';
+    } else if (path === '/sessions') {
+      pageTitle = 'Sessions | SmartProperty';
+    } else if (path === '/verification') {
+      pageTitle = 'Verification | SmartProperty';
+    } else if (path === '/applications') {
+      pageTitle = 'My Applications | SmartProperty';
+    } else if (path === '/applications/review') {
+      pageTitle = 'Review Applications | SmartProperty';
+    } else if (path === '/super-administrator/verifications') {
+      pageTitle = 'Admin Verifications | SmartProperty';
+    } else if (path === '/super-administrator/users') {
+      pageTitle = 'Admin Users | SmartProperty';
+    } else if (path === '/branch-manager/agencies') {
+      pageTitle = 'My Agencies | SmartProperty';
+    } else if (path === '/security/2fa') {
+      pageTitle = 'Two-Factor Authentication | SmartProperty';
     }
 
     document.title = pageTitle;
@@ -187,11 +189,18 @@ function App() {
   }, [language]);
 
   useEffect(() => {
-    const mainEl = document.querySelector("main");
+    const mainEl = document.querySelector('main');
     if (mainEl && !mainEl.id) {
-      mainEl.id = "main-content";
+      mainEl.id = 'main-content';
     }
   }, [location.pathname]);
+
+  // Initialize push notifications when user logs in
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      void pushNotificationService.initialize();
+    }
+  }, [isAuthenticated, user]);
 
   // Bootstrap preferences after login
   useEffect(() => {
@@ -204,7 +213,7 @@ function App() {
       let resolvedPreferences = getUserPreferences(user.id);
 
       try {
-        const serverPreferences = await import("./services").then((m) =>
+        const serverPreferences = await import('./services').then((m) =>
           m.authService.getPreferences(),
         );
         if (!isCancelled) {
@@ -237,7 +246,7 @@ function App() {
 
   return (
     <>
-      {location.pathname !== "/" && (
+      {location.pathname !== '/' && (
         <a href="#main-content" className="global-skip-link">
           Skip to main content
         </a>
@@ -481,6 +490,7 @@ function App() {
       </Routes>
       <PreferencesOnboardingModal />
       {showFloatingReadAloud && <ReadAloudWidget mode="floating" />}
+      {isAuthenticated && <PushNotificationTestButton />}
     </>
   );
 }

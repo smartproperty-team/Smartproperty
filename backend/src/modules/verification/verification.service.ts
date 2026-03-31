@@ -19,6 +19,7 @@ import { MongoRepository } from 'typeorm';
 import { NotificationType } from '../notifications/entities/notification.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MinioService } from '../upload/minio.service';
+import { UserRole } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
 import {
   DocumentType,
@@ -198,6 +199,46 @@ export class VerificationService {
 
     this.logger.log(`Verification submitted for user ${userId}`);
 
+    // Notify super admins when a tenant submits verification
+    try {
+      const tenant = await this.usersService.findById(userId);
+      const tenantName = `${tenant?.firstName ?? ''} ${tenant?.lastName ?? ''}`
+        .trim()
+        .replace(/^\s+|\s+$/g, '');
+      const label = tenantName || tenant?.email || userId;
+
+      const superAdmins = await this.usersService.findByRole(
+        UserRole.SUPER_ADMIN,
+      );
+
+      await Promise.all(
+        superAdmins.map(async (admin) => {
+          const adminId =
+            (admin as any)?.id ||
+            (admin as any)?._id?.toHexString?.() ||
+            (admin as any)?._id?.toString?.();
+
+          if (!adminId) return;
+
+          await this.notificationsService.create({
+            userId: adminId,
+            title: 'New Verification Request',
+            message: `${label} submitted a verification request.`,
+            type: NotificationType.INFO,
+            link: '/super-administrator/verifications',
+          });
+
+          await this.notificationsService.sendPushNotification(
+            adminId,
+            'New Verification Request',
+            `${label} submitted a verification request.`,
+          );
+        }),
+      );
+    } catch (error) {
+      this.logger.warn(`Failed to notify super admins: ${error}`);
+    }
+
     return this.getVerificationStatus(userId);
   }
 
@@ -297,6 +338,12 @@ export class VerificationService {
       link: '/dashboard',
     });
 
+    await this.notificationsService.sendPushNotification(
+      verification.userId,
+      'Account Verified ✅',
+      'Congratulations! Your account has been verified by our admin team. You now have full access to all features.',
+    );
+
     return this.getVerificationStatus(verification.userId);
   }
 
@@ -341,6 +388,12 @@ export class VerificationService {
       type: NotificationType.VERIFICATION_REJECTED,
       link: '/dashboard',
     });
+
+    await this.notificationsService.sendPushNotification(
+      verification.userId,
+      'Verification Rejected ❌',
+      `Your verification request has been rejected. Reason: ${reason}. You can re-submit your documents.`,
+    );
 
     return this.getVerificationStatus(verification.userId);
   }
