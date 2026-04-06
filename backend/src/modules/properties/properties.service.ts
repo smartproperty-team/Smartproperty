@@ -853,7 +853,7 @@ export class PropertiesService {
     }
 
     if (bathrooms !== undefined) {
-      where['features.bathrooms'] = { $gte: bathrooms };
+      where['features.bathrooms'] = bathrooms;
     }
 
     if (options.search) {
