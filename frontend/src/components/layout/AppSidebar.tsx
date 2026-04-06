@@ -25,7 +25,6 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import ReadAloudWidget from "../accessibility/ReadAloudWidget";
 import Navbar from "./Navbar";
 
 type SidebarLink = {
@@ -158,7 +157,6 @@ export default function AppSidebar() {
           <p className="max-w-32.5 truncate text-sm font-semibold text-gray-900">
             {user?.fullName || "SmartProperty"}
           </p>
-          <ReadAloudWidget mode="inline" showLabel={false} />
           <button
             type="button"
             onClick={() => setMobileOpen(true)}

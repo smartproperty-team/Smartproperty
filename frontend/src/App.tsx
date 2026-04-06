@@ -5,7 +5,6 @@
 import { useEffect, useRef } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import "./App.css";
-import ReadAloudWidget from "./components/accessibility/ReadAloudWidget";
 import { ProtectedRoute } from "./components/auth";
 import { PushNotificationTestButton } from "./components/notifications/PushNotificationTestButton";
 import { useLanguageStore } from "./i18n";
@@ -132,12 +131,7 @@ function App() {
   const { openOnboarding, getUserPreferences, setUserPreferences } =
     usePreferencesStore();
   const promptedUserRef = useRef<string | null>(null);
-  const showFloatingReadAloud =
-    /^\/(login|register|forgot-password|reset-password|verify-email)$/.test(
-      location.pathname,
-    ) ||
-    location.pathname === "/auth/google/callback" ||
-    location.pathname === "/auth/facebook/callback";
+ 
   // Check if user is authenticated on app load
   useEffect(() => {
     checkAuth();
@@ -452,7 +446,6 @@ function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <PreferencesOnboardingModal />
-      {showFloatingReadAloud && <ReadAloudWidget mode="floating" />}
       {isAuthenticated && <PushNotificationTestButton />}
     </>
   );
