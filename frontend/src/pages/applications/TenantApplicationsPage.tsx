@@ -79,6 +79,10 @@ export default function TenantApplicationsPage() {
     useState(false);
 
   const finalFormStepIndex = APPLICATION_FORM_STEPS.length - 1;
+  const totalFormSteps = APPLICATION_FORM_STEPS.length;
+  const progressPercent = Math.round(
+    ((currentFormStep + 1) / totalFormSteps) * 100,
+  );
   const maxAllowedBirthDate = (() => {
     const cutoffDate = new Date();
     cutoffDate.setHours(0, 0, 0, 0);
@@ -429,6 +433,27 @@ export default function TenantApplicationsPage() {
                 onKeyDown={handleFormKeyDown}
                 noValidate
               >
+                <div className="mb-6 rounded-2xl border-2 border-indigo-300 bg-white p-5 shadow-sm">
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-sm font-bold uppercase tracking-wide text-indigo-700">
+                      Questionnaire Progress
+                    </p>
+                    <span className="text-lg font-extrabold text-indigo-900">
+                      {progressPercent}%
+                    </span>
+                  </div>
+                  <p className="mb-3 text-sm font-semibold text-indigo-900">
+                    Step {currentFormStep + 1} of {totalFormSteps}:{" "}
+                    {APPLICATION_FORM_STEPS[currentFormStep]?.label}
+                  </p>
+                  <progress
+                    className="h-4 w-full overflow-hidden rounded-full [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-bar]:bg-indigo-100 [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-indigo-600 [&::-moz-progress-bar]:rounded-full [&::-moz-progress-bar]:bg-indigo-600"
+                    value={currentFormStep + 1}
+                    max={totalFormSteps}
+                    aria-label="Application form progress"
+                  />
+                </div>
+
                 <Stepper
                   steps={APPLICATION_FORM_STEPS}
                   currentStep={currentFormStep}
