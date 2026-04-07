@@ -766,6 +766,8 @@ export class PropertiesService {
       managerId,
       status: createPropertyDto.status || PropertyStatus.AVAILABLE,
       currency: createPropertyDto.currency || 'USD',
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
     // Remove every key whose value is undefined

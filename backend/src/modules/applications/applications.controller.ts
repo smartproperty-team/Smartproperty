@@ -160,7 +160,11 @@ export class ApplicationsController {
     @CurrentUser('role') role: UserRole,
     @Query() query: ListApplicationsQueryDto,
   ) {
-    return this.applicationsService.getReceivedApplications(userId, role, query);
+    return this.applicationsService.getReceivedApplications(
+      userId,
+      role,
+      query,
+    );
   }
 
   @Get(':id')

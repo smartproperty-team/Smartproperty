@@ -168,9 +168,20 @@ function PropertyCard({
   t,
 }: PropertyCardProps) {
   const propertyId = property.id || property._id || "";
-  const primaryImage =
-    property.images?.find((img) => img.isPrimary) || property.images?.[0];
-  const imageUrl = primaryImage?.url || "/placeholder-property.svg";
+  const sortedImages = [...(property.images ?? [])].sort((a, b) => {
+    if (a.isPrimary) return -1;
+    if (b.isPrimary) return 1;
+    return (a.order || 0) - (b.order || 0);
+  });
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+  useEffect(() => {
+    setSelectedImageIndex(0);
+  }, [propertyId, sortedImages.length]);
+
+  const currentImage = sortedImages[selectedImageIndex] || sortedImages[0];
+  const imageUrl = currentImage?.url || "/placeholder-property.svg";
+  const hasMultipleImages = sortedImages.length > 1;
 
   const statusLabel =
     property.status === "available"
@@ -214,6 +225,22 @@ function PropertyCard({
           {statusLabel}
         </span>
         <span className="property-type-badge">{typeLabel}</span>
+        {hasMultipleImages && (
+          <div className="property-image-dots" aria-label="Property images">
+            {sortedImages.map((_, index) => (
+              <button
+                key={`${propertyId}-img-${index}`}
+                type="button"
+                className={`property-image-dot ${
+                  index === selectedImageIndex ? "active" : ""
+                }`}
+                aria-label={`Show image ${index + 1}`}
+                aria-pressed={index === selectedImageIndex}
+                onClick={() => setSelectedImageIndex(index)}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="property-card-content">
@@ -315,7 +342,9 @@ export default function PropertiesPage() {
     return parsed !== undefined && parsed > 0 ? parsed : undefined;
   };
   const [showMap, setShowMap] = useState(false);
-  const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
+  const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(
+    null,
+  );
   const [properties, setProperties] = useState<Property[]>([]);
   const [comparisonIds, setComparisonIds] = useState<string[]>([]);
   const [comparisonError, setComparisonError] = useState<string | null>(null);
@@ -1025,7 +1054,9 @@ export default function PropertiesPage() {
                     isCompared={comparisonIds.includes(getPropertyId(property))}
                     compareDisabled={comparisonIds.length >= 3}
                     isSharing={sharingPropertyId === getPropertyId(property)}
-                    isHighlighted={hoveredPropertyId === getPropertyId(property)}
+                    isHighlighted={
+                      hoveredPropertyId === getPropertyId(property)
+                    }
                     onMouseEnter={setHoveredPropertyId}
                     onMouseLeave={() => setHoveredPropertyId(null)}
                     t={t}
