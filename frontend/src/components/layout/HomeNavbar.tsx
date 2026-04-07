@@ -21,7 +21,17 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { io, type Socket } from "socket.io-client";
 import ReadAloudWidget from "../accessibility/ReadAloudWidget";
+
+const resolveSocketBaseUrl = () => {
+  const configuredApiUrl = import.meta.env.VITE_API_URL as string | undefined;
+  if (!configuredApiUrl || configuredApiUrl.startsWith("/")) {
+    return window.location.origin;
+  }
+
+  return configuredApiUrl.replace(/\/api\/?$/, "");
+};
 
 export default function HomeNavbar() {
   const location = useLocation();
@@ -36,6 +46,8 @@ export default function HomeNavbar() {
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [notificationsAutoRefreshEnabled, setNotificationsAutoRefreshEnabled] =
     useState(true);
+  const notificationsAutoRefreshRef = useRef(true);
+  const notificationSocketRef = useRef<Socket | null>(null);
   const notifPanelRef = useRef<HTMLDivElement>(null);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -101,6 +113,78 @@ export default function HomeNavbar() {
       if (interval) clearInterval(interval);
     };
   }, [fetchNotifications, notificationsAutoRefreshEnabled, user]);
+
+  useEffect(() => {
+    notificationsAutoRefreshRef.current = notificationsAutoRefreshEnabled;
+  }, [notificationsAutoRefreshEnabled]);
+
+  useEffect(() => {
+    if (!user) {
+      notificationSocketRef.current?.disconnect();
+      notificationSocketRef.current = null;
+      return;
+    }
+
+    const token = getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    const socket = io(`${resolveSocketBaseUrl()}/notifications`, {
+      withCredentials: true,
+      auth: {
+        token: `Bearer ${token}`,
+      },
+      transports: ["websocket", "polling"],
+    });
+
+    socket.on("notification:new", (incoming: Notification) => {
+      if (!notificationsAutoRefreshRef.current) {
+        return;
+      }
+
+      setNotifications((prev) => {
+        if (prev.some((n) => n.id === incoming.id)) {
+          return prev;
+        }
+        return [incoming, ...prev];
+      });
+    });
+
+    socket.on("notification:count", (count: number) => {
+      if (!notificationsAutoRefreshRef.current) {
+        return;
+      }
+      setUnreadCount(count);
+    });
+
+    notificationSocketRef.current = socket;
+
+    return () => {
+      socket.disconnect();
+      if (notificationSocketRef.current === socket) {
+        notificationSocketRef.current = null;
+      }
+    };
+  }, [user]);
+
+  const handleNotificationPanelToggle = useCallback(async () => {
+    const nextOpen = !showNotifPanel;
+    setShowNotifPanel(nextOpen);
+
+    if (!nextOpen || unreadCount <= 0) {
+      return;
+    }
+
+    setUnreadCount(0);
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+
+    try {
+      await notificationService.markAllAsRead();
+    } catch {
+      await fetchNotifications();
+    }
+  }, [fetchNotifications, showNotifPanel, unreadCount]);
 
   useEffect(() => {
     if (!user) {
@@ -466,7 +550,9 @@ export default function HomeNavbar() {
                   className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/45 bg-white/15 text-white transition-colors hover:bg-white/25"
                   aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
                   title="Notifications"
-                  onClick={() => setShowNotifPanel(!showNotifPanel)}
+                  onClick={() => {
+                    void handleNotificationPanelToggle();
+                  }}
                   aria-expanded={showNotifPanel}
                   aria-controls="notifications-panel"
                   aria-haspopup="dialog"

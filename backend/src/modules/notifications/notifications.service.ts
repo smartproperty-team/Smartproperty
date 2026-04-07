@@ -15,6 +15,7 @@ import { MongoRepository } from 'typeorm';
 import * as webpush from 'web-push';
 import { Notification, NotificationType } from './entities/notification.entity';
 import { PushSubscription } from './entities/push-subscription.entity';
+import { NotificationsGateway } from './notifications.gateway';
 
 export interface CreateNotificationDto {
   userId: string;
@@ -34,8 +35,23 @@ export class NotificationsService {
     @InjectRepository(PushSubscription)
     private readonly pushSubscriptionRepo: MongoRepository<PushSubscription>,
     private readonly configService: ConfigService,
+    private readonly notificationsGateway: NotificationsGateway,
   ) {
     this.configureWebPush();
+  }
+
+  private toResponse(notification: Notification) {
+    return {
+      id: notification._id?.toHexString(),
+      userId: notification.userId,
+      title: notification.title,
+      message: notification.message,
+      type: notification.type,
+      isRead: notification.isRead,
+      link: notification.link,
+      createdAt:
+        notification.createdAt?.toISOString?.() || notification.createdAt,
+    };
   }
 
   // ─── Configure Web Push ────────────────────────────────
@@ -103,6 +119,12 @@ export class NotificationsService {
     });
 
     const saved = await this.notificationRepo.save(notification);
+    const unreadCount = await this.getUnreadCount(dto.userId);
+    this.notificationsGateway.emitNotification(
+      dto.userId,
+      this.toResponse(saved),
+    );
+    this.notificationsGateway.emitUnreadCount(dto.userId, unreadCount);
     this.logger.log(
       `Notification created for user ${dto.userId}: ${dto.title}`,
     );
@@ -116,16 +138,7 @@ export class NotificationsService {
       order: { createdAt: 'DESC' },
     });
 
-    return notifications.map((n) => ({
-      id: n._id?.toHexString(),
-      userId: n.userId,
-      title: n.title,
-      message: n.message,
-      type: n.type,
-      isRead: n.isRead,
-      link: n.link,
-      createdAt: n.createdAt?.toISOString?.() || n.createdAt,
-    }));
+    return notifications.map((n) => this.toResponse(n));
   }
 
   // ─── Get unread count ──────────────────────────────────
@@ -151,6 +164,8 @@ export class NotificationsService {
 
     notification.isRead = true;
     await this.notificationRepo.save(notification);
+    const unreadCount = await this.getUnreadCount(userId);
+    this.notificationsGateway.emitUnreadCount(userId, unreadCount);
     return { success: true };
   }
 
@@ -168,6 +183,8 @@ export class NotificationsService {
       await this.notificationRepo.save(n);
     }
 
+    this.notificationsGateway.emitUnreadCount(userId, 0);
+
     return { success: true, count: notifications.length };
   }
 
@@ -183,6 +200,8 @@ export class NotificationsService {
     }
 
     await this.notificationRepo.delete(notification._id);
+    const unreadCount = await this.getUnreadCount(userId);
+    this.notificationsGateway.emitUnreadCount(userId, unreadCount);
     return { success: true };
   }
 

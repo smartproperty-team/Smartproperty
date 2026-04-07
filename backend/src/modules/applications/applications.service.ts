@@ -126,8 +126,13 @@ export class ApplicationsService {
     message: string,
     type: NotificationType = NotificationType.APPLICATION_STATUS_CHANGED,
   ) {
-    const reviewerIds = [application.managerId].filter(
-      (id): id is string => !!id,
+    const reviewerIds = Array.from(
+      new Set(
+        [
+          this.normalizeId(application.managerId),
+          this.normalizeId(application.ownerId),
+        ].filter((id): id is string => !!id),
+      ),
     );
 
     await Promise.all(
