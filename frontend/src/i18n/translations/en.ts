@@ -457,6 +457,150 @@ export const en = {
     registerBtn: "Create Account",
   },
 
+  tenantQuestionnaire: {
+    title: "Apply for a Rental Property",
+    subtitle:
+      "Fill out your information to apply. The property owner will review your application and get back to you.",
+    errors: {
+      loadApplications: "Failed to load your applications.",
+      submitApplication: "Failed to submit application.",
+      openPropertyFirst: "Please open a property and click Apply first.",
+      provideDateOfBirth: "Please provide your date of birth.",
+      minimumAge: "Applicant must be at least 20 years old.",
+      provideCurrentAddress: "Please provide your current address.",
+      chooseMoveInDate: "Please choose your desired move-in date.",
+      selectLeaseDuration: "Please select a lease duration preference.",
+      provideReasonForMoving: "Please provide a reason for moving.",
+      explainIncidents:
+        "Please explain past payment incidents or switch to No incidents.",
+      activeForProperty:
+        "You already have an active application for this property.",
+    },
+    blocked: {
+      description:
+        "Withdraw your current application first if you want to submit a new one.",
+      goDashboard: "Go to Dashboard",
+      viewApplications: "View My Applications in Dashboard",
+    },
+    progress: {
+      title: "Questionnaire Progress",
+      step: "Step",
+      of: "of",
+      aria: "Application form progress",
+    },
+    stepper: {
+      aria: "Rental application steps",
+      back: "Back",
+      next: "Next",
+      submitting: "Submitting...",
+      submit: "Submit My Application",
+    },
+    steps: {
+      identity: "Identity",
+      household: "Household",
+      rentalNeed: "Rental Need",
+      history: "History",
+    },
+    sections: {
+      identity: "Applicant Identity",
+      household: "Household & Occupancy",
+      rentalNeed: "Rental Need",
+      history: "Rental History",
+      ownerMessage: "Message to Owner (Optional)",
+    },
+    fields: {
+      dateOfBirth: "Date of Birth",
+      preferredContact: "Preferred Contact Channel",
+      currentAddress: "Current Address",
+      addressHelp: "You can type your address or choose it on the map below.",
+      adults: "Adults",
+      children: "Children",
+      relationships: "Relationships in Household",
+      pets: "Pets",
+      smokingStatus: "Smoking Status",
+      petType: "Pet Type",
+      petCount: "Pet Count",
+      desiredMoveInDate: "Desired Move-in Date",
+      leaseDuration: "Lease Duration Preference",
+      reasonForMoving: "Reason for Moving",
+      incidents: "Past Rent Payment Incidents",
+      incidentsExplanation: "Incidents Explanation",
+    },
+    options: {
+      email: "Email",
+      phone: "Phone",
+      sms: "SMS",
+      whatsapp: "WhatsApp",
+      no: "No",
+      yes: "Yes",
+      preferNotSay: "Prefer not to say",
+      nonSmoker: "Non-smoker",
+      smoker: "Smoker",
+      lease6: "6 months",
+      lease12: "12 months",
+      lease24: "24 months",
+      leaseFlexible: "Flexible",
+    },
+    placeholders: {
+      address: "Street, city, postal code",
+      relationships: "e.g., partner, dependent",
+      petType: "e.g., cat",
+      ownerMessage: "Anything you'd like the owner to know",
+    },
+    popup: {
+      title: "Please Check Your Form",
+      ok: "OK",
+    },
+  },
+
+  preferencesOnboarding: {
+    title: "Tell us your property preferences",
+    subtitle:
+      "We use these answers to personalize listings and notifications for you.",
+    progress: {
+      questionOf: "Question {{current}} of {{total}}",
+      stepLabel: "Step {{step}}",
+    },
+    steps: {
+      propertyTypes: "Property type preferences",
+      budget: "Budget range preferences",
+      location: "Location preferences",
+      notifications: "Notification preferences",
+    },
+    questions: {
+      propertyTypes: "What property types do you prefer?",
+      budget: "What budget interval do you want?",
+      location: "Which locations are you interested in?",
+      notifications: "How do you want to receive notifications?",
+    },
+    options: {
+      propertyTypes: {
+        apartment: "Apartment",
+        house: "House",
+        studio: "Studio",
+        villa: "Villa",
+        office: "Office",
+      },
+      notificationChannels: {
+        email: "Email",
+        sms: "SMS",
+        push: "Push",
+      },
+    },
+    actions: {
+      skip: "Skip for now",
+      previous: "Previous",
+      next: "Validate & Next",
+      save: "Save preferences",
+    },
+    errors: {
+      selectPropertyType: "Please select at least one property type.",
+      selectLocation: "Please provide at least one preferred location.",
+      enableNotification: "Please enable at least one notification type.",
+      saveFailed: "Failed to save preferences. Please try again.",
+    },
+  },
+
   // ---- Common ----
   common: {
     loading: "Loading...",

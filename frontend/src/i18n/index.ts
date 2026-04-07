@@ -39,4 +39,3 @@ export function useTranslation() {
   const { language } = useLanguageStore();
   return translations[language];
 }
-

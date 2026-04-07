@@ -469,6 +469,152 @@ export const fr: Translations = {
     registerBtn: "Créer un compte",
   },
 
+  tenantQuestionnaire: {
+    title: "Postuler pour une location",
+    subtitle:
+      "Remplissez vos informations pour postuler. Le proprietaire examinera votre dossier et vous repondra.",
+    errors: {
+      loadApplications: "Impossible de charger vos candidatures.",
+      submitApplication: "Impossible d'envoyer la candidature.",
+      openPropertyFirst:
+        "Ouvrez d'abord une propriete puis cliquez sur Postuler.",
+      provideDateOfBirth: "Veuillez indiquer votre date de naissance.",
+      minimumAge: "Le candidat doit avoir au moins 20 ans.",
+      provideCurrentAddress: "Veuillez indiquer votre adresse actuelle.",
+      chooseMoveInDate: "Veuillez choisir votre date d'entree souhaitee.",
+      selectLeaseDuration: "Veuillez selectionner une duree de bail.",
+      provideReasonForMoving: "Veuillez indiquer la raison du demenagement.",
+      explainIncidents:
+        "Veuillez expliquer les incidents de paiement ou selectionner Aucun.",
+      activeForProperty:
+        "Vous avez deja une candidature active pour cette propriete.",
+    },
+    blocked: {
+      description:
+        "Retirez d'abord votre candidature actuelle si vous voulez en soumettre une nouvelle.",
+      goDashboard: "Aller au tableau de bord",
+      viewApplications: "Voir mes candidatures dans le tableau de bord",
+    },
+    progress: {
+      title: "Progression du questionnaire",
+      step: "Etape",
+      of: "sur",
+      aria: "Progression du formulaire de candidature",
+    },
+    stepper: {
+      aria: "Etapes de candidature location",
+      back: "Retour",
+      next: "Suivant",
+      submitting: "Envoi en cours...",
+      submit: "Envoyer ma candidature",
+    },
+    steps: {
+      identity: "Identite",
+      household: "Menage",
+      rentalNeed: "Besoin locatif",
+      history: "Historique",
+    },
+    sections: {
+      identity: "Identite du candidat",
+      household: "Menage et occupation",
+      rentalNeed: "Besoin locatif",
+      history: "Historique locatif",
+      ownerMessage: "Message au proprietaire (optionnel)",
+    },
+    fields: {
+      dateOfBirth: "Date de naissance",
+      preferredContact: "Canal de contact prefere",
+      currentAddress: "Adresse actuelle",
+      addressHelp:
+        "Vous pouvez saisir votre adresse ou la choisir sur la carte ci-dessous.",
+      adults: "Adultes",
+      children: "Enfants",
+      relationships: "Relations dans le foyer",
+      pets: "Animaux",
+      smokingStatus: "Statut tabagique",
+      petType: "Type d'animal",
+      petCount: "Nombre d'animaux",
+      desiredMoveInDate: "Date d'entree souhaitee",
+      leaseDuration: "Preference de duree du bail",
+      reasonForMoving: "Raison du demenagement",
+      incidents: "Incidents de paiement passes",
+      incidentsExplanation: "Explication des incidents",
+    },
+    options: {
+      email: "Email",
+      phone: "Telephone",
+      sms: "SMS",
+      whatsapp: "WhatsApp",
+      no: "Non",
+      yes: "Oui",
+      preferNotSay: "Je prefere ne pas le dire",
+      nonSmoker: "Non-fumeur",
+      smoker: "Fumeur",
+      lease6: "6 mois",
+      lease12: "12 mois",
+      lease24: "24 mois",
+      leaseFlexible: "Flexible",
+    },
+    placeholders: {
+      address: "Rue, ville, code postal",
+      relationships: "ex: partenaire, personne a charge",
+      petType: "ex: chat",
+      ownerMessage: "Ce que vous souhaitez partager au proprietaire",
+    },
+    popup: {
+      title: "Veuillez verifier votre formulaire",
+      ok: "OK",
+    },
+  },
+
+  preferencesOnboarding: {
+    title: "Dites-nous vos preferences de logement",
+    subtitle:
+      "Nous utilisons ces reponses pour personnaliser les annonces et notifications pour vous.",
+    progress: {
+      questionOf: "Question {{current}} sur {{total}}",
+      stepLabel: "Etape {{step}}",
+    },
+    steps: {
+      propertyTypes: "Preferences de type de bien",
+      budget: "Preferences de budget",
+      location: "Preferences de localisation",
+      notifications: "Preferences de notifications",
+    },
+    questions: {
+      propertyTypes: "Quels types de biens preferez-vous ?",
+      budget: "Quelle fourchette de budget souhaitez-vous ?",
+      location: "Quelles localisations vous interessent ?",
+      notifications: "Comment souhaitez-vous recevoir les notifications ?",
+    },
+    options: {
+      propertyTypes: {
+        apartment: "Appartement",
+        house: "Maison",
+        studio: "Studio",
+        villa: "Villa",
+        office: "Bureau",
+      },
+      notificationChannels: {
+        email: "Email",
+        sms: "SMS",
+        push: "Push",
+      },
+    },
+    actions: {
+      skip: "Passer pour le moment",
+      previous: "Precedent",
+      next: "Valider et suivant",
+      save: "Enregistrer les preferences",
+    },
+    errors: {
+      selectPropertyType: "Veuillez selectionner au moins un type de bien.",
+      selectLocation: "Veuillez indiquer au moins une localisation preferee.",
+      enableNotification: "Veuillez activer au moins un type de notification.",
+      saveFailed: "Echec de l'enregistrement des preferences. Reessayez.",
+    },
+  },
+
   // ---- Common ----
   common: {
     loading: "Chargement...",

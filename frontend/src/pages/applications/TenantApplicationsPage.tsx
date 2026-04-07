@@ -1,6 +1,7 @@
 import { AppSidebar, HomeFooter } from "@/components/layout";
 import LocationPreferenceMap from "@/components/settings/LocationPreferenceMap";
 import { Alert, Stepper, type StepperStep } from "@/components/ui";
+import { useTranslation } from "@/i18n";
 import applicationService from "@/services/application.service";
 import type {
   Application,
@@ -9,20 +10,6 @@ import type {
 import { ApplicationStatus } from "@/types/application";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-
-const APPLICATION_FORM_STEPS: StepperStep[] = [
-  { id: "identity", label: "Identity" },
-  { id: "household", label: "Household" },
-  { id: "rental-need", label: "Rental Need" },
-  { id: "history", label: "History" },
-];
-
-const LEASE_DURATION_OPTIONS = [
-  { value: "6_months", label: "6 months" },
-  { value: "12_months", label: "12 months" },
-  { value: "24_months", label: "24 months" },
-  { value: "flexible", label: "Flexible" },
-] as const;
 
 const ACTIVE_APPLICATION_STATUSES = new Set<ApplicationStatus>([
   ApplicationStatus.SUBMITTED,
@@ -33,6 +20,21 @@ const ACTIVE_APPLICATION_STATUSES = new Set<ApplicationStatus>([
 
 export default function TenantApplicationsPage() {
   const navigate = useNavigate();
+  const t = useTranslation();
+  const APPLICATION_FORM_STEPS: StepperStep[] = [
+    { id: "identity", label: t.tenantQuestionnaire.steps.identity },
+    { id: "household", label: t.tenantQuestionnaire.steps.household },
+    { id: "rental-need", label: t.tenantQuestionnaire.steps.rentalNeed },
+    { id: "history", label: t.tenantQuestionnaire.steps.history },
+  ];
+
+  const LEASE_DURATION_OPTIONS = [
+    { value: "6_months", label: t.tenantQuestionnaire.options.lease6 },
+    { value: "12_months", label: t.tenantQuestionnaire.options.lease12 },
+    { value: "24_months", label: t.tenantQuestionnaire.options.lease24 },
+    { value: "flexible", label: t.tenantQuestionnaire.options.leaseFlexible },
+  ] as const;
+
   const [searchParams] = useSearchParams();
   const prefilledPropertyId = searchParams.get("propertyId") || "";
   const targetApplicationId = searchParams.get("applicationId") || "";
@@ -132,12 +134,12 @@ export default function TenantApplicationsPage() {
 
   const validateStep = (stepIndex: number) => {
     if (stepIndex === 0 && !propertyId.trim()) {
-      return "Please open a property and click Apply first.";
+      return t.tenantQuestionnaire.errors.openPropertyFirst;
     }
 
     if (stepIndex === 0) {
       if (!dateOfBirth) {
-        return "Please provide your date of birth.";
+        return t.tenantQuestionnaire.errors.provideDateOfBirth;
       }
 
       const birthDate = new Date(`${dateOfBirth}T00:00:00`);
@@ -146,31 +148,31 @@ export default function TenantApplicationsPage() {
       cutoffDate.setFullYear(cutoffDate.getFullYear() - 20);
 
       if (Number.isNaN(birthDate.getTime()) || birthDate > cutoffDate) {
-        return "Applicant must be at least 20 years old.";
+        return t.tenantQuestionnaire.errors.minimumAge;
       }
 
       if (!currentAddress.trim()) {
-        return "Please provide your current address.";
+        return t.tenantQuestionnaire.errors.provideCurrentAddress;
       }
     }
 
     if (stepIndex === 2) {
       if (!desiredMoveInDate.trim()) {
-        return "Please choose your desired move-in date.";
+        return t.tenantQuestionnaire.errors.chooseMoveInDate;
       }
 
       if (!leaseDurationPreference.trim()) {
-        return "Please select a lease duration preference.";
+        return t.tenantQuestionnaire.errors.selectLeaseDuration;
       }
     }
 
     if (stepIndex === 3) {
       if (!reasonForMoving.trim()) {
-        return "Please provide a reason for moving.";
+        return t.tenantQuestionnaire.errors.provideReasonForMoving;
       }
 
       if (hadRentPaymentIncidents && !rentPaymentIncidentsExplanation.trim()) {
-        return "Please explain past payment incidents or switch to No incidents.";
+        return t.tenantQuestionnaire.errors.explainIncidents;
       }
     }
 
@@ -213,7 +215,7 @@ export default function TenantApplicationsPage() {
       setApplications(response.applications);
       setError(null);
     } catch {
-      setError("Failed to load your applications.");
+      setError(t.tenantQuestionnaire.errors.loadApplications);
     } finally {
       setLoading(false);
     }
@@ -277,14 +279,12 @@ export default function TenantApplicationsPage() {
     }
 
     if (!propertyId.trim()) {
-      showValidationPopup("Please open a property and click Apply first.");
+      showValidationPopup(t.tenantQuestionnaire.errors.openPropertyFirst);
       return;
     }
 
     if (isBlockedForSelectedProperty) {
-      showValidationPopup(
-        "You already have an active application for this property.",
-      );
+      showValidationPopup(t.tenantQuestionnaire.errors.activeForProperty);
       return;
     }
 
@@ -339,7 +339,12 @@ export default function TenantApplicationsPage() {
       });
       return;
     } catch (error) {
-      setError(getApiErrorMessage(error, "Failed to submit application."));
+      setError(
+        getApiErrorMessage(
+          error,
+          t.tenantQuestionnaire.errors.submitApplication,
+        ),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -371,11 +376,10 @@ export default function TenantApplicationsPage() {
           <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
             <div className="mb-6">
               <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
-                Apply for a Rental Property
+                {t.tenantQuestionnaire.title}
               </h1>
               <p className="mt-2 text-sm text-gray-600">
-                Fill out your information to apply. The property owner will
-                review your application and get back to you.
+                {t.tenantQuestionnaire.subtitle}
               </p>
             </div>
 
@@ -401,11 +405,10 @@ export default function TenantApplicationsPage() {
             {isBlockedForSelectedProperty && prefilledPropertyId && (
               <div className="mt-8 rounded-xl border border-amber-300 bg-amber-50 p-5">
                 <p className="text-sm font-semibold text-amber-900">
-                  You already have an active application for this property.
+                  {t.tenantQuestionnaire.errors.activeForProperty}
                 </p>
                 <p className="mt-1 text-sm text-amber-800">
-                  Withdraw your current application first if you want to submit
-                  a new one.
+                  {t.tenantQuestionnaire.blocked.description}
                 </p>
                 <div className="mt-4 flex flex-wrap gap-3">
                   <button
@@ -413,14 +416,14 @@ export default function TenantApplicationsPage() {
                     className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700"
                     onClick={() => navigate("/dashboard")}
                   >
-                    Go to Dashboard
+                    {t.tenantQuestionnaire.blocked.goDashboard}
                   </button>
                   <button
                     type="button"
                     className="rounded-lg border border-amber-400 bg-white px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100"
                     onClick={() => navigate("/dashboard")}
                   >
-                    View My Applications in Dashboard
+                    {t.tenantQuestionnaire.blocked.viewApplications}
                   </button>
                 </div>
               </div>
@@ -436,28 +439,29 @@ export default function TenantApplicationsPage() {
                 <div className="mb-6 rounded-2xl border-2 border-indigo-300 bg-white p-5 shadow-sm">
                   <div className="mb-3 flex items-center justify-between">
                     <p className="text-sm font-bold uppercase tracking-wide text-indigo-700">
-                      Questionnaire Progress
+                      {t.tenantQuestionnaire.progress.title}
                     </p>
                     <span className="text-lg font-extrabold text-indigo-900">
                       {progressPercent}%
                     </span>
                   </div>
                   <p className="mb-3 text-sm font-semibold text-indigo-900">
-                    Step {currentFormStep + 1} of {totalFormSteps}:{" "}
+                    {t.tenantQuestionnaire.progress.step} {currentFormStep + 1}{" "}
+                    {t.tenantQuestionnaire.progress.of} {totalFormSteps}:{" "}
                     {APPLICATION_FORM_STEPS[currentFormStep]?.label}
                   </p>
                   <progress
                     className="h-4 w-full overflow-hidden rounded-full [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-bar]:bg-indigo-100 [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-indigo-600 [&::-moz-progress-bar]:rounded-full [&::-moz-progress-bar]:bg-indigo-600"
                     value={currentFormStep + 1}
                     max={totalFormSteps}
-                    aria-label="Application form progress"
+                    aria-label={t.tenantQuestionnaire.progress.aria}
                   />
                 </div>
 
                 <Stepper
                   steps={APPLICATION_FORM_STEPS}
                   currentStep={currentFormStep}
-                  ariaLabel="Rental application steps"
+                  ariaLabel={t.tenantQuestionnaire.stepper.aria}
                   allowStepNavigation
                   onStepChange={handleStepChange}
                   actions={
@@ -468,7 +472,7 @@ export default function TenantApplicationsPage() {
                           className="rounded-lg border border-gray-300 bg-white px-4 py-2 font-semibold text-gray-700 transition-colors hover:bg-gray-100"
                           onClick={goToPreviousStep}
                         >
-                          Back
+                          {t.tenantQuestionnaire.stepper.back}
                         </button>
                       )}
 
@@ -478,7 +482,7 @@ export default function TenantApplicationsPage() {
                           className="ml-auto rounded-lg bg-indigo-600 px-5 py-2 font-semibold text-white transition-colors hover:bg-indigo-700"
                           onClick={goToNextStep}
                         >
-                          Next
+                          {t.tenantQuestionnaire.stepper.next}
                         </button>
                       ) : (
                         <button
@@ -490,8 +494,8 @@ export default function TenantApplicationsPage() {
                           className="ml-auto rounded-lg bg-linear-to-r from-indigo-600 to-indigo-700 px-6 py-3 font-bold text-white shadow-lg transition-all hover:from-indigo-700 hover:to-indigo-800 hover:shadow-xl active:scale-95"
                         >
                           {isSubmitting
-                            ? "Submitting..."
-                            : "Submit My Application"}
+                            ? t.tenantQuestionnaire.stepper.submitting
+                            : t.tenantQuestionnaire.stepper.submit}
                         </button>
                       )}
                     </div>
@@ -501,12 +505,12 @@ export default function TenantApplicationsPage() {
                     <div>
                       <div className="rounded-lg border-2 border-sky-200 bg-sky-50 p-4">
                         <p className="mb-3 font-bold text-sky-900">
-                          Applicant Identity
+                          {t.tenantQuestionnaire.sections.identity}
                         </p>
                         <div className="grid gap-4 md:grid-cols-2">
                           <label className="grid gap-1 text-sm text-gray-700">
                             <span className="font-semibold text-gray-900">
-                              Date of Birth
+                              {t.tenantQuestionnaire.fields.dateOfBirth}
                             </span>
                             <input
                               type="date"
@@ -519,7 +523,7 @@ export default function TenantApplicationsPage() {
                           </label>
                           <label className="grid gap-1 text-sm text-gray-700">
                             <span className="font-semibold text-gray-900">
-                              Preferred Contact Channel
+                              {t.tenantQuestionnaire.fields.preferredContact}
                             </span>
                             <select
                               className="rounded-lg border border-gray-300 px-3 py-2"
@@ -528,15 +532,23 @@ export default function TenantApplicationsPage() {
                                 setPreferredContactChannel(e.target.value)
                               }
                             >
-                              <option value="email">Email</option>
-                              <option value="phone">Phone</option>
-                              <option value="sms">SMS</option>
-                              <option value="whatsapp">WhatsApp</option>
+                              <option value="email">
+                                {t.tenantQuestionnaire.options.email}
+                              </option>
+                              <option value="phone">
+                                {t.tenantQuestionnaire.options.phone}
+                              </option>
+                              <option value="sms">
+                                {t.tenantQuestionnaire.options.sms}
+                              </option>
+                              <option value="whatsapp">
+                                {t.tenantQuestionnaire.options.whatsapp}
+                              </option>
                             </select>
                           </label>
                           <label className="md:col-span-2 grid gap-1 text-sm text-gray-700">
                             <span className="font-semibold text-gray-900">
-                              Current Address
+                              {t.tenantQuestionnaire.fields.currentAddress}
                             </span>
                             <input
                               className="rounded-lg border border-gray-300 px-3 py-2"
@@ -544,12 +556,13 @@ export default function TenantApplicationsPage() {
                               onChange={(e) =>
                                 setCurrentAddress(e.target.value)
                               }
-                              placeholder="Street, city, postal code"
+                              placeholder={
+                                t.tenantQuestionnaire.placeholders.address
+                              }
                               required
                             />
                             <span className="text-xs text-gray-500">
-                              You can type your address or choose it on the map
-                              below.
+                              {t.tenantQuestionnaire.fields.addressHelp}
                             </span>
                             <div className="rounded-lg border border-sky-100 bg-white p-3">
                               <LocationPreferenceMap
@@ -567,12 +580,12 @@ export default function TenantApplicationsPage() {
                   {currentFormStep === 1 && (
                     <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
                       <p className="mb-3 font-bold text-blue-900">
-                        Household & Occupancy
+                        {t.tenantQuestionnaire.sections.household}
                       </p>
                       <div className="grid gap-4 md:grid-cols-2">
                         <label className="grid gap-1 text-sm text-gray-700">
                           <span className="font-semibold text-gray-900">
-                            Adults
+                            {t.tenantQuestionnaire.fields.adults}
                           </span>
                           <input
                             type="number"
@@ -584,7 +597,7 @@ export default function TenantApplicationsPage() {
                         </label>
                         <label className="grid gap-1 text-sm text-gray-700">
                           <span className="font-semibold text-gray-900">
-                            Children
+                            {t.tenantQuestionnaire.fields.children}
                           </span>
                           <input
                             type="number"
@@ -598,7 +611,7 @@ export default function TenantApplicationsPage() {
                         </label>
                         <label className="md:col-span-2 grid gap-1 text-sm text-gray-700">
                           <span className="font-semibold text-gray-900">
-                            Relationships in Household
+                            {t.tenantQuestionnaire.fields.relationships}
                           </span>
                           <input
                             className="rounded-lg border border-gray-300 px-3 py-2"
@@ -606,12 +619,14 @@ export default function TenantApplicationsPage() {
                             onChange={(e) =>
                               setOccupantRelationshipSummary(e.target.value)
                             }
-                            placeholder="e.g., partner, dependent"
+                            placeholder={
+                              t.tenantQuestionnaire.placeholders.relationships
+                            }
                           />
                         </label>
                         <label className="grid gap-1 text-sm text-gray-700">
                           <span className="font-semibold text-gray-900">
-                            Pets
+                            {t.tenantQuestionnaire.fields.pets}
                           </span>
                           <select
                             className="rounded-lg border border-gray-300 px-3 py-2"
@@ -620,13 +635,17 @@ export default function TenantApplicationsPage() {
                               setHasPets(e.target.value === "yes")
                             }
                           >
-                            <option value="no">No</option>
-                            <option value="yes">Yes</option>
+                            <option value="no">
+                              {t.tenantQuestionnaire.options.no}
+                            </option>
+                            <option value="yes">
+                              {t.tenantQuestionnaire.options.yes}
+                            </option>
                           </select>
                         </label>
                         <label className="grid gap-1 text-sm text-gray-700">
                           <span className="font-semibold text-gray-900">
-                            Smoking Status
+                            {t.tenantQuestionnaire.fields.smokingStatus}
                           </span>
                           <select
                             className="rounded-lg border border-gray-300 px-3 py-2"
@@ -634,28 +653,34 @@ export default function TenantApplicationsPage() {
                             onChange={(e) => setSmokingStatus(e.target.value)}
                           >
                             <option value="not_specified">
-                              Prefer not to say
+                              {t.tenantQuestionnaire.options.preferNotSay}
                             </option>
-                            <option value="non_smoker">Non-smoker</option>
-                            <option value="smoker">Smoker</option>
+                            <option value="non_smoker">
+                              {t.tenantQuestionnaire.options.nonSmoker}
+                            </option>
+                            <option value="smoker">
+                              {t.tenantQuestionnaire.options.smoker}
+                            </option>
                           </select>
                         </label>
                         {hasPets && (
                           <>
                             <label className="grid gap-1 text-sm text-gray-700">
                               <span className="font-semibold text-gray-900">
-                                Pet Type
+                                {t.tenantQuestionnaire.fields.petType}
                               </span>
                               <input
                                 className="rounded-lg border border-gray-300 px-3 py-2"
                                 value={petType}
                                 onChange={(e) => setPetType(e.target.value)}
-                                placeholder="e.g., cat"
+                                placeholder={
+                                  t.tenantQuestionnaire.placeholders.petType
+                                }
                               />
                             </label>
                             <label className="grid gap-1 text-sm text-gray-700">
                               <span className="font-semibold text-gray-900">
-                                Pet Count
+                                {t.tenantQuestionnaire.fields.petCount}
                               </span>
                               <input
                                 type="number"
@@ -674,12 +699,12 @@ export default function TenantApplicationsPage() {
                   {currentFormStep === 2 && (
                     <div className="rounded-lg border-2 border-violet-200 bg-violet-50 p-4">
                       <p className="mb-3 font-bold text-violet-900">
-                        Rental Need
+                        {t.tenantQuestionnaire.sections.rentalNeed}
                       </p>
                       <div className="grid gap-4 md:grid-cols-2">
                         <label className="grid gap-1 text-sm text-gray-700">
                           <span className="font-semibold text-gray-900">
-                            Desired Move-in Date
+                            {t.tenantQuestionnaire.fields.desiredMoveInDate}
                           </span>
                           <input
                             type="date"
@@ -694,7 +719,7 @@ export default function TenantApplicationsPage() {
 
                         <fieldset className="md:col-span-2 grid gap-2 text-sm text-gray-700">
                           <legend className="font-semibold text-gray-900">
-                            Lease Duration Preference
+                            {t.tenantQuestionnaire.fields.leaseDuration}
                           </legend>
                           <div className="grid gap-2 sm:grid-cols-2">
                             {LEASE_DURATION_OPTIONS.map((option) => (
@@ -726,12 +751,12 @@ export default function TenantApplicationsPage() {
                     <div className="space-y-4">
                       <div className="rounded-lg border-2 border-rose-200 bg-rose-50 p-4">
                         <p className="mb-3 font-bold text-rose-900">
-                          Rental History
+                          {t.tenantQuestionnaire.sections.history}
                         </p>
                         <div className="grid gap-4 md:grid-cols-2">
                           <label className="md:col-span-2 grid gap-1 text-sm text-gray-700">
                             <span className="font-semibold text-gray-900">
-                              Reason for Moving
+                              {t.tenantQuestionnaire.fields.reasonForMoving}
                             </span>
                             <textarea
                               className="min-h-20 rounded-lg border border-gray-300 px-3 py-2"
@@ -744,7 +769,7 @@ export default function TenantApplicationsPage() {
                           </label>
                           <label className="grid gap-1 text-sm text-gray-700">
                             <span className="font-semibold text-gray-900">
-                              Past Rent Payment Incidents
+                              {t.tenantQuestionnaire.fields.incidents}
                             </span>
                             <select
                               className="rounded-lg border border-gray-300 px-3 py-2"
@@ -755,14 +780,21 @@ export default function TenantApplicationsPage() {
                                 )
                               }
                             >
-                              <option value="no">No</option>
-                              <option value="yes">Yes</option>
+                              <option value="no">
+                                {t.tenantQuestionnaire.options.no}
+                              </option>
+                              <option value="yes">
+                                {t.tenantQuestionnaire.options.yes}
+                              </option>
                             </select>
                           </label>
                           {hadRentPaymentIncidents && (
                             <label className="md:col-span-2 grid gap-1 text-sm text-gray-700">
                               <span className="font-semibold text-gray-900">
-                                Incidents Explanation
+                                {
+                                  t.tenantQuestionnaire.fields
+                                    .incidentsExplanation
+                                }
                               </span>
                               <textarea
                                 className="min-h-20 rounded-lg border border-gray-300 px-3 py-2"
@@ -781,13 +813,15 @@ export default function TenantApplicationsPage() {
                       <div className="rounded-lg border-2 border-purple-200 bg-purple-50 p-4">
                         <label className="grid gap-2 text-sm text-gray-700">
                           <span className="font-bold text-purple-900">
-                            Message to Owner (Optional)
+                            {t.tenantQuestionnaire.sections.ownerMessage}
                           </span>
                           <textarea
                             className="min-h-20 rounded-lg border border-gray-300 px-3 py-2"
                             value={messageToOwner}
                             onChange={(e) => setMessageToOwner(e.target.value)}
-                            placeholder="Anything you'd like the owner to know"
+                            placeholder={
+                              t.tenantQuestionnaire.placeholders.ownerMessage
+                            }
                           />
                         </label>
                       </div>
@@ -806,7 +840,7 @@ export default function TenantApplicationsPage() {
               !
             </div>
             <h3 className="mt-4 text-lg font-bold text-rose-900">
-              Please Check Your Form
+              {t.tenantQuestionnaire.popup.title}
             </h3>
             <p className="mt-2 text-sm text-rose-800">
               {validationPopupMessage}
@@ -817,7 +851,7 @@ export default function TenantApplicationsPage() {
                 className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700"
                 onClick={() => setValidationPopupMessage(null)}
               >
-                OK
+                {t.tenantQuestionnaire.popup.ok}
               </button>
             </div>
           </div>
