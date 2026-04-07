@@ -227,7 +227,7 @@ export default function PreferencesOnboardingModal() {
   }[currentStep];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-4">
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/40 px-4">
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <CardHeader>
           <div className="space-y-2">

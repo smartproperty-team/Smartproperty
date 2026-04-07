@@ -487,7 +487,7 @@ export default function TenantApplicationsPage() {
                           onClick={() => {
                             submitIntentRef.current = true;
                           }}
-                          className="ml-auto rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-3 font-bold text-white shadow-lg transition-all hover:from-indigo-700 hover:to-indigo-800 hover:shadow-xl active:scale-95"
+                          className="ml-auto rounded-lg bg-linear-to-r from-indigo-600 to-indigo-700 px-6 py-3 font-bold text-white shadow-lg transition-all hover:from-indigo-700 hover:to-indigo-800 hover:shadow-xl active:scale-95"
                         >
                           {isSubmitting
                             ? "Submitting..."
@@ -800,8 +800,8 @@ export default function TenantApplicationsPage() {
         </div>
       </main>
       {validationPopupMessage && (
-        <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/40 px-4">
-          <div className="relative z-[3001] w-full max-w-md rounded-2xl border border-rose-200 bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-3000 flex items-center justify-center bg-black/40 px-4">
+          <div className="relative z-3001 w-full max-w-md rounded-2xl border border-rose-200 bg-white p-6 shadow-2xl">
             <div className="flex h-11 w-11 items-center justify-center rounded-full bg-rose-600 text-xl font-bold text-white">
               !
             </div>

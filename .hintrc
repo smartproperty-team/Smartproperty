@@ -7,7 +7,8 @@
       "default",
       {
         "ignore": [
-          "backdrop-filter"
+          "backdrop-filter",
+          "scrollbar-color"
         ]
       }
     ],
@@ -16,7 +17,10 @@
       {
         "aria-valid-attr-value": "off"
       }
-    ]
+    ],
+    "typescript-config/consistent-casing": "off",
+    "typescript-config/is-valid": "off",
+    "no-inline-styles": "off"
   },
   "browserslist": [
     "defaults",
