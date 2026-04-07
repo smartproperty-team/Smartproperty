@@ -12,6 +12,9 @@ export default function ApplicationsReviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [propertyFilter, setPropertyFilter] = useState<string>("all");
+  const [tenantSearch, setTenantSearch] = useState("");
 
   const [rejectDraft, setRejectDraft] = useState<{
     applicationId: string;
@@ -25,6 +28,71 @@ export default function ApplicationsReviewPage() {
       ),
     [applications],
   );
+
+  const propertyOptions = useMemo(() => {
+    const uniqueTitles = new Set(
+      items.map((item) => item.propertyTitle || "Unknown property"),
+    );
+    return Array.from(uniqueTitles).sort((a, b) => a.localeCompare(b));
+  }, [items]);
+
+  const filteredItems = useMemo(() => {
+    const normalizedSearch = tenantSearch.trim().toLowerCase();
+
+    return items.filter((item) => {
+      const matchesStatus =
+        statusFilter === "all" || item.status === statusFilter;
+      const currentPropertyTitle = item.propertyTitle || "Unknown property";
+      const matchesProperty =
+        propertyFilter === "all" || currentPropertyTitle === propertyFilter;
+
+      const searchableText = [
+        item.tenantName,
+        item.tenantEmail,
+        item.propertyTitle,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      const matchesSearch =
+        normalizedSearch.length === 0 ||
+        searchableText.includes(normalizedSearch);
+
+      return matchesStatus && matchesProperty && matchesSearch;
+    });
+  }, [items, propertyFilter, statusFilter, tenantSearch]);
+
+  const statusLabelMap: Record<ApplicationStatus, string> = {
+    [ApplicationStatus.SUBMITTED]: "Submitted",
+    [ApplicationStatus.UNDER_REVIEW]: "Under Review",
+    [ApplicationStatus.DOCUMENTS_REQUESTED]: "Documents Requested",
+    [ApplicationStatus.VIEWING_SCHEDULED]: "Viewing Scheduled",
+    [ApplicationStatus.APPROVED]: "Approved",
+    [ApplicationStatus.REJECTED]: "Rejected",
+    [ApplicationStatus.WITHDRAWN]: "Withdrawn",
+  };
+
+  const formatDate = (value?: string) => {
+    if (!value) {
+      return "Not provided";
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return "Not provided";
+    }
+
+    return date.toLocaleDateString();
+  };
+
+  const formatBoolean = (value?: boolean) => {
+    if (typeof value !== "boolean") {
+      return "Not provided";
+    }
+
+    return value ? "Yes" : "No";
+  };
 
   const getApiErrorMessage = (error: unknown, fallback: string) => {
     if (typeof error === "object" && error !== null && "response" in error) {
@@ -131,6 +199,27 @@ export default function ApplicationsReviewPage() {
     }
   };
 
+  const handleContactTenant = (application: Application) => {
+    if (!application.tenantEmail) {
+      setError("Tenant email is not available for this application.");
+      return;
+    }
+
+    const propertyTitle = application.propertyTitle || "your selected property";
+    const subject = `About your application - ${propertyTitle}`;
+    const body = [
+      `Hello ${application.tenantName || "tenant"},`,
+      "",
+      `I am reviewing your application for ${propertyTitle}.`,
+      "",
+      "Best regards,",
+      "SmartProperty Team",
+    ].join("\n");
+
+    const mailtoUrl = `mailto:${encodeURIComponent(application.tenantEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+  };
+
   return (
     <>
       <AppSidebar />
@@ -165,15 +254,65 @@ export default function ApplicationsReviewPage() {
             </p>
           )}
 
+          {!loading && items.length > 0 && (
+            <div className="mb-4 grid gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4 md:grid-cols-3">
+              <label className="text-sm text-gray-700">
+                <span className="mb-1 block font-medium">Status</span>
+                <select
+                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value)}
+                >
+                  <option value="all">All statuses</option>
+                  {Object.values(ApplicationStatus).map((status) => (
+                    <option key={status} value={status}>
+                      {statusLabelMap[status]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="text-sm text-gray-700">
+                <span className="mb-1 block font-medium">Property</span>
+                <select
+                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+                  value={propertyFilter}
+                  onChange={(event) => setPropertyFilter(event.target.value)}
+                >
+                  <option value="all">All properties</option>
+                  {propertyOptions.map((propertyName) => (
+                    <option key={propertyName} value={propertyName}>
+                      {propertyName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="text-sm text-gray-700">
+                <span className="mb-1 block font-medium">Search tenant</span>
+                <input
+                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+                  placeholder="Name or email"
+                  value={tenantSearch}
+                  onChange={(event) => setTenantSearch(event.target.value)}
+                />
+              </label>
+            </div>
+          )}
+
           {loading ? (
             <p className="text-sm text-gray-600">Loading...</p>
           ) : items.length === 0 ? (
             <p className="text-sm text-gray-600">
               No applications received yet.
             </p>
+          ) : filteredItems.length === 0 ? (
+            <p className="text-sm text-gray-600">
+              No applications match your current filters.
+            </p>
           ) : (
             <div className="space-y-6">
-              {items.map((application) => {
+              {filteredItems.map((application) => {
                 const canDecide =
                   application.status === ApplicationStatus.SUBMITTED ||
                   application.status === ApplicationStatus.UNDER_REVIEW ||
@@ -253,7 +392,7 @@ export default function ApplicationsReviewPage() {
                     </div>
 
                     {/* Property and employment info */}
-                    <div className="mt-4 grid gap-4 rounded-lg bg-white p-4 md:grid-cols-2">
+                    <div className="mt-4 grid gap-4 rounded-lg bg-white p-4 md:grid-cols-3">
                       <div>
                         <p className="text-xs font-semibold uppercase text-gray-500">
                           Property
@@ -264,7 +403,7 @@ export default function ApplicationsReviewPage() {
                         <p className="mt-0.5 text-xs text-gray-600">
                           {application.propertyAddress}
                         </p>
-                        {application.propertyPrice && (
+                        {typeof application.propertyPrice === "number" && (
                           <p className="mt-1 text-xs text-gray-700">
                             💰 €{application.propertyPrice.toLocaleString()}
                             /month
@@ -287,6 +426,108 @@ export default function ApplicationsReviewPage() {
                           /month
                         </p>
                       </div>
+
+                      <div>
+                        <p className="text-xs font-semibold uppercase text-gray-500">
+                          Application details
+                        </p>
+                        <p className="mt-1 text-sm font-medium text-gray-900">
+                          Move-in:{" "}
+                          {formatDate(
+                            application.questionnaire?.desiredMoveInDate,
+                          )}
+                        </p>
+                        <p className="mt-0.5 text-xs text-gray-600">
+                          Message:{" "}
+                          {application.messageToOwner || "Not provided"}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-700">
+                          Submitted: {formatDate(application.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      <section className="rounded-lg border border-gray-200 bg-white p-4">
+                        <h3 className="text-sm font-semibold text-gray-900">
+                          Tenant Form Details
+                        </h3>
+                        <div className="mt-3 grid gap-x-4 gap-y-2 text-sm md:grid-cols-2">
+                          <p className="text-gray-600">Adults</p>
+                          <p className="font-medium text-gray-900">
+                            {application.questionnaire?.occupantsAdults ??
+                              "Not provided"}
+                          </p>
+
+                          <p className="text-gray-600">Children</p>
+                          <p className="font-medium text-gray-900">
+                            {application.questionnaire?.occupantsChildren ??
+                              "Not provided"}
+                          </p>
+
+                          <p className="text-gray-600">Pets</p>
+                          <p className="font-medium text-gray-900">
+                            {formatBoolean(application.questionnaire?.hasPets)}
+                          </p>
+
+                          <p className="text-gray-600">Smoking status</p>
+                          <p className="font-medium text-gray-900">
+                            {application.questionnaire?.smokingStatus ||
+                              "Not provided"}
+                          </p>
+
+                          <p className="text-gray-600">Lease preference</p>
+                          <p className="font-medium text-gray-900">
+                            {application.questionnaire
+                              ?.leaseDurationPreference || "Not provided"}
+                          </p>
+
+                          <p className="text-gray-600">Current address</p>
+                          <p className="font-medium text-gray-900">
+                            {application.questionnaire?.currentAddress ||
+                              "Not provided"}
+                          </p>
+
+                          <p className="text-gray-600">Reason for moving</p>
+                          <p className="font-medium text-gray-900">
+                            {application.questionnaire?.reasonForMoving ||
+                              "Not provided"}
+                          </p>
+                        </div>
+                      </section>
+
+                      <section className="rounded-lg border border-gray-200 bg-white p-4">
+                        <h3 className="text-sm font-semibold text-gray-900">
+                          References
+                        </h3>
+                        {!application.references ||
+                        application.references.length === 0 ? (
+                          <p className="mt-3 text-sm text-gray-600">
+                            No references provided.
+                          </p>
+                        ) : (
+                          <div className="mt-3 space-y-3">
+                            {application.references.map((reference, index) => (
+                              <div
+                                key={`${application.id}-ref-${index}`}
+                                className="rounded-md border border-gray-200 bg-gray-50 p-3"
+                              >
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {reference.name}
+                                </p>
+                                <p className="text-sm text-gray-700">
+                                  {reference.relation}
+                                </p>
+                                <p className="text-xs text-gray-600">
+                                  {reference.email ||
+                                    reference.phone ||
+                                    "No contact shared"}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </section>
                     </div>
 
                     {/* Uploaded Documents Section */}
@@ -335,6 +576,13 @@ export default function ApplicationsReviewPage() {
 
                     {/* Action Buttons */}
                     <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                      <button
+                        type="button"
+                        className="flex-1 rounded-lg border border-blue-300 bg-blue-50 px-4 py-3 font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                        onClick={() => handleContactTenant(application)}
+                      >
+                        📧 Contact Tenant
+                      </button>
                       <button
                         type="button"
                         className="flex-1 rounded-lg bg-emerald-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-emerald-700 active:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
