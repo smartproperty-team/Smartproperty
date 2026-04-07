@@ -1277,7 +1277,7 @@ export default function PropertyDetailPage() {
                   {canManage && (
                     <button
                       type="button"
-                      className="btn-secondary"
+                      className="btn-ai-trigger"
                       onClick={() => setAiPanelOpen(true)}
                       data-testid="ai-description-cta"
                     >
@@ -1464,7 +1464,7 @@ export default function PropertyDetailPage() {
                   </button>
                   <button
                     type="button"
-                    className="btn-secondary"
+                    className="btn-ai-trigger"
                     onClick={() => setAiPanelOpen(true)}
                     style={{ width: "100%" }}
                     data-testid="ai-description-cta-sidebar"

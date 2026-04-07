@@ -928,7 +928,8 @@
 
 /* Highlighted card in list */
 .property-card.highlighted {
-  box-shadow: 0 0 0 2.5px var(--color-primary, #3b82f6),
+  box-shadow:
+    0 0 0 2.5px var(--color-primary, #3b82f6),
     0 4px 24px rgba(59, 130, 246, 0.18);
   transform: translateY(-2px);
 }
@@ -1603,6 +1604,41 @@
 .btn-submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.btn-ai-trigger {
+  padding: 0.625rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.28);
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.btn-ai-trigger:hover:not(:disabled) {
+  background: linear-gradient(90deg, #1d4ed8 0%, #1e40af 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(30, 64, 175, 0.32);
+}
+
+.btn-ai-trigger:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.3);
+  outline-offset: 2px;
+}
+
+.btn-ai-trigger:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 /* Image Upload */

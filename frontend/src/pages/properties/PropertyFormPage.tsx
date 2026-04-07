@@ -912,7 +912,7 @@ export default function PropertyFormPage() {
                 </label>
                 <button
                   type="button"
-                  className="btn-secondary"
+                  className="btn-ai-trigger"
                   onClick={() => setAiPanelOpen(true)}
                   data-testid="ai-description-cta"
                 >
