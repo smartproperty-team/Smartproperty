@@ -21,6 +21,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed": "ts-node -r tsconfig-paths/register src/seeds/seed-users.ts",
     "seed:users": "ts-node -r tsconfig-paths/register src/seeds/seed-users.ts",
+    "update:users-validator": "node scripts/update-users-validator.js",
+    "update:properties-validator": "node scripts/update-properties-validator.js",
     "seed:properties": "ts-node -r tsconfig-paths/register src/seeds/seed-properties.ts",
     "postinstall": "node ./scripts/create-resolve-uri-shim.js"
   },
