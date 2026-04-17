@@ -128,10 +128,9 @@ export class ApplicationsService {
   ) {
     const reviewerIds = Array.from(
       new Set(
-        [
-          this.normalizeId(application.managerId),
-          this.normalizeId(application.ownerId),
-        ].filter((id): id is string => !!id),
+        [this.normalizeId(application.managerId)].filter(
+          (id): id is string => !!id,
+        ),
       ),
     );
 

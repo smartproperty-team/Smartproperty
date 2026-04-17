@@ -22,7 +22,6 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { io, type Socket } from "socket.io-client";
-import ReadAloudWidget from "../accessibility/ReadAloudWidget";
 
 const resolveSocketBaseUrl = () => {
   const configuredApiUrl = import.meta.env.VITE_API_URL as string | undefined;

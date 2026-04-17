@@ -355,7 +355,7 @@ export default function AdminUsersPage() {
                                 )
                               }
                               disabled={
-                                busyUserId === item.id || item.id === user.id
+                                busyUserId === item.id || item.id === user?.id
                               }
                               className="rounded-md border border-gray-300 px-2 py-1"
                             >
@@ -388,7 +388,7 @@ export default function AdminUsersPage() {
                                 size="sm"
                                 onClick={() => void handleToggleActive(item)}
                                 disabled={
-                                  busyUserId === item.id || item.id === user.id
+                                  busyUserId === item.id || item.id === user?.id
                                 }
                               >
                                 {item.status === UserStatus.ACTIVE

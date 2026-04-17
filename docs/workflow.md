@@ -16,7 +16,7 @@ This document describes the current backend workflow for property assignment and
 
 ## Role Gates (Current)
 
-- Property create: Owner, Real Estate Agent, Super Admin
+- Property create: Owner, Branch Manager, Real Estate Agent, Rental Manager, Super Admin
 - Property update/delete and portfolio access: Owner, Branch Manager, Real Estate Agent, Rental Manager, Super Admin
 - Application submit: Tenant only
 - Application review: Branch Manager, Real Estate Agent, Rental Manager, Super Admin
@@ -121,5 +121,5 @@ Rules:
 ## Summary of Assignment Responsibility
 
 - Owners can create properties for themselves and may set a manager if allowed by role gates.
-- Branch Managers and Real Estate Agents often act as both creator and manager (auto-assigned).
+- Branch Managers, Real Estate Agents, and Rental Managers often act as both creator and manager (auto-assigned).
 - Agencies are linked via `User.agencyId`; properties link to agencies only through the selected manager user.

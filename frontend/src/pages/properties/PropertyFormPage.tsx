@@ -18,6 +18,7 @@ import {
 } from "../../services/property.service";
 import type {
   CreatePropertyDto,
+  PropertyCategory,
   Property,
   PropertyStatus,
   PropertyType,
@@ -106,6 +107,7 @@ interface FormData {
   title: string;
   description: string;
   type: PropertyType;
+  category: PropertyCategory;
   status: PropertyStatus;
   price: string;
   currency: string;
@@ -125,6 +127,7 @@ const initialFormData: FormData = {
   title: "",
   description: "",
   type: "apartment",
+  category: "rental",
   status: "available",
   price: "",
   currency: "TND",
@@ -290,6 +293,7 @@ export default function PropertyFormPage() {
         title: property.title,
         description: property.description || "",
         type: property.type,
+        category: property.category || "rental",
         status: property.status,
         price: property.price.toString(),
         currency: property.currency,
@@ -518,6 +522,7 @@ export default function PropertyFormPage() {
         title: formData.title,
         description: formData.description || undefined,
         type: formData.type,
+        category: formData.category,
         status: formData.status,
         price: parseFloat(formData.price),
         currency: formData.currency,
@@ -660,6 +665,21 @@ export default function PropertyFormPage() {
                     {t.properties.maintenance}
                   </option>
                   <option value="unlisted">{t.properties.unlisted}</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="category">
+                  {t.properties.form.labels.category}
+                </label>
+                <select
+                  id="category"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                >
+                  <option value="rental">{t.properties.form.labels.rent}</option>
+                  <option value="sale">{t.properties.form.labels.sale}</option>
                 </select>
               </div>
             </div>
@@ -964,6 +984,7 @@ export default function PropertyFormPage() {
                         onClick={() =>
                           setFormData((prev) => ({
                             ...prev,
+                            category: "rental",
                             price: (
                               priceSuggestion.rentalPrice ??
                               priceSuggestion.predictedPrice
@@ -980,6 +1001,7 @@ export default function PropertyFormPage() {
                         onClick={() =>
                           setFormData((prev) => ({
                             ...prev,
+                            category: "sale",
                             price: priceSuggestion.salePrice.toString(),
                             currency: priceSuggestion.currency,
                           }))

@@ -222,6 +222,9 @@ export const en = {
         title: "Title",
         description: "Description",
         type: "Property type",
+        category: "Listing type",
+        rent: "For rent",
+        sale: "For sale",
         status: "Status",
         bedrooms: "Bedrooms",
         bathrooms: "Bathrooms",
@@ -670,4 +673,12 @@ export const en = {
   },
 } as const;
 
-export type Translations = typeof en;
+type WidenTranslationLeaves<T> = T extends string
+  ? string
+  : T extends readonly (infer U)[]
+    ? readonly WidenTranslationLeaves<U>[]
+    : T extends object
+      ? { [K in keyof T]: WidenTranslationLeaves<T[K]> }
+      : T;
+
+export type Translations = WidenTranslationLeaves<typeof en>;

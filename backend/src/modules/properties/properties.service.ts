@@ -3,6 +3,7 @@
 // ===========================================
 
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -943,8 +944,25 @@ export class PropertiesService {
       throw new ForbiddenException('You do not have access to this property');
     }
 
-    if (updatePropertyDto.ownerId && !hasPlatformAdminRole(currentUserRole)) {
+    if (
+      Object.prototype.hasOwnProperty.call(updatePropertyDto, 'ownerId') &&
+      !hasPlatformAdminRole(currentUserRole)
+    ) {
       throw new ForbiddenException('Only admins can change ownerId');
+    }
+
+    if (Object.prototype.hasOwnProperty.call(updatePropertyDto, 'ownerId')) {
+      const normalizedOwnerId = updatePropertyDto.ownerId?.trim();
+
+      if (!normalizedOwnerId) {
+        throw new BadRequestException('ownerId cannot be empty');
+      }
+
+      if (!ObjectId.isValid(normalizedOwnerId)) {
+        throw new BadRequestException('ownerId must be a valid ObjectId');
+      }
+
+      updatePropertyDto.ownerId = normalizedOwnerId;
     }
 
     if (updatePropertyDto.address) {

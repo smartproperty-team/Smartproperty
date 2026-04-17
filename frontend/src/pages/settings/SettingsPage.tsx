@@ -19,7 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../../components/ui";
-import { SessionsPage } from "../../pages/dashboard";
+import SessionsPage from "../../pages/dashboard/SessionsPage";
 import { ProfilePage } from "../../pages/profile";
 import TwoFactorPage from "../../pages/security/TwoFactorPage";
 import { useAuthStore } from "../../store";
