@@ -2,7 +2,7 @@
 // SmartProperty - Main App Component
 // ===========================================
 
-import { useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import "./App.css";
 import { ProtectedRoute } from "./components/auth";
@@ -21,28 +21,9 @@ import {
   ResetPasswordPage,
   VerifyEmailPage,
 } from "./pages/auth";
-import {
-  AdminUsersPage,
-  AdminVerificationPage,
-  BranchManagerAgenciesPage,
-  BranchManagerAgencyOnboardingPage,
-  DashboardPage,
-  VerificationPage,
-} from "./pages/dashboard";
 import { HomePage, PaletteDemoPage } from "./pages/home";
-import {
-  MaintenanceRequestFormPage,
-  MyMaintenanceRequestsPage,
-  ServiceProviderMaintenancePage,
-} from "./pages/maintenance";
 import { PreferencesOnboardingModal } from "./pages/onboarding";
-import {
-  MyPropertiesPage,
-  PropertiesPage,
-  PropertyDetailPage,
-  PropertyFormPage,
-} from "./pages/properties";
-import { SettingsPage } from "./pages/settings";
+import authService from "./services/auth.service";
 import { pushNotificationService } from "./services/push-notification.service";
 import { useAuthStore, usePreferencesStore } from "./store";
 import {
@@ -57,6 +38,58 @@ import {
   canTrackMaintenanceRequests,
   isTenant,
 } from "./utils";
+
+const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage"));
+const VerificationPage = lazy(() => import("./pages/dashboard/VerificationPage"));
+const AdminVerificationPage = lazy(
+  () => import("./pages/dashboard/AdminVerificationPage"),
+);
+const AdminUsersPage = lazy(() => import("./pages/dashboard/AdminUsersPage"));
+const BranchManagerAgenciesPage = lazy(
+  () => import("./pages/dashboard/BranchManagerAgenciesPage"),
+);
+const BranchManagerAgencyOnboardingPage = lazy(
+  () => import("./pages/dashboard/BranchManagerAgencyOnboardingPage"),
+);
+
+const PropertiesPage = lazy(() => import("./pages/properties/PropertiesPage"));
+const MyPropertiesPage = lazy(
+  () => import("./pages/properties/MyPropertiesPage"),
+);
+const PropertyFormPage = lazy(
+  () => import("./pages/properties/PropertyFormPage"),
+);
+const PropertyDetailPage = lazy(
+  () => import("./pages/properties/PropertyDetailPage"),
+);
+
+const SettingsPage = lazy(() => import("./pages/settings/SettingsPage"));
+const MaintenanceRequestFormPage = lazy(
+  () => import("./pages/maintenance/MaintenanceRequestFormPage"),
+);
+const MyMaintenanceRequestsPage = lazy(
+  () => import("./pages/maintenance/MyMaintenanceRequestsPage"),
+);
+const ServiceProviderMaintenancePage = lazy(
+  () => import("./pages/maintenance/ServiceProviderMaintenancePage"),
+);
+
+function RouteLoadingFallback() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "40vh",
+      }}
+    >
+      Loading...
+    </div>
+  );
+}
 
 function getSettingsTabTitle(search: string): string {
   const tab = new URLSearchParams(search).get("tab");
@@ -170,9 +203,7 @@ function App() {
       let resolvedPreferences = getUserPreferences(user.id);
 
       try {
-        const serverPreferences = await import("./services").then((m) =>
-          m.authService.getPreferences(),
-        );
+        const serverPreferences = await authService.getPreferences();
         if (!isCancelled) {
           setUserPreferences(user.id, serverPreferences);
           resolvedPreferences = serverPreferences;
@@ -208,243 +239,248 @@ function App() {
           Skip to main content
         </a>
       )}
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/design/palette" element={<PaletteDemoPage />} />
-        <Route
-          path="/login"
-          element={
-            isAuthenticated ? (
-              <Navigate to="/dashboard" replace />
-            ) : (
-              <LoginPage />
-            )
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            isAuthenticated ? (
-              <Navigate to="/dashboard" replace />
-            ) : (
-              <RegisterPage />
-            )
-          }
-        />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/verify-email" element={<VerifyEmailPage />} />
-        <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
-        <Route
-          path="/auth/facebook/callback"
-          element={<FacebookCallbackPage />}
-        />
+      <Suspense fallback={<RouteLoadingFallback />}>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/design/palette" element={<PaletteDemoPage />} />
+          <Route
+            path="/login"
+            element={
+              isAuthenticated ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <LoginPage />
+              )
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              isAuthenticated ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <RegisterPage />
+              )
+            }
+          />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route
+            path="/auth/google/callback"
+            element={<GoogleCallbackPage />}
+          />
+          <Route
+            path="/auth/facebook/callback"
+            element={<FacebookCallbackPage />}
+          />
 
-        {/* Protected Routes */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <DashboardPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/sessions"
-          element={
-            <ProtectedRoute>
-              <Navigate to="/settings?tab=sessions" replace />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/verification"
-          element={
-            <ProtectedRoute>
-              <VerificationPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/applications"
-          element={
-            <ProtectedRoute>
-              {isTenant(user) ? (
-                <TenantApplicationsPage />
-              ) : (
-                <Navigate to="/dashboard" replace />
-              )}
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/applications/review"
-          element={
-            <ProtectedRoute>
-              {canReviewApplications(user) ? (
-                <ApplicationsReviewPage />
-              ) : (
-                <Navigate to="/dashboard" replace />
-              )}
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/super-administrator/verifications"
-          element={
-            <ProtectedRoute>
-              {canReviewVerifications(user) ? (
-                <AdminVerificationPage />
-              ) : (
-                <Navigate to="/dashboard" replace />
-              )}
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/super-administrator/users"
-          element={
-            <ProtectedRoute>
-              {canAccessAdminUsers(user) ? (
-                <AdminUsersPage />
-              ) : (
-                <Navigate to="/dashboard" replace />
-              )}
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/branch-manager/agencies"
-          element={
-            <ProtectedRoute>
-              {canManageAgencyOnboarding(user) ? (
-                <BranchManagerAgenciesPage />
-              ) : (
-                <Navigate to="/dashboard" replace />
-              )}
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/branch-manager/agencies/new"
-          element={
-            <ProtectedRoute>
-              {canManageAgencyOnboarding(user) ? (
-                <BranchManagerAgencyOnboardingPage />
-              ) : (
-                <Navigate to="/dashboard" replace />
-              )}
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <Navigate to="/settings?tab=account" replace />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute>
-              <SettingsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/security/2fa"
-          element={
-            <ProtectedRoute>
-              <Navigate to="/settings?tab=security" replace />
-            </ProtectedRoute>
-          }
-        />
+          {/* Protected Routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sessions"
+            element={
+              <ProtectedRoute>
+                <Navigate to="/settings?tab=sessions" replace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/verification"
+            element={
+              <ProtectedRoute>
+                <VerificationPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/applications"
+            element={
+              <ProtectedRoute>
+                {isTenant(user) ? (
+                  <TenantApplicationsPage />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/applications/review"
+            element={
+              <ProtectedRoute>
+                {canReviewApplications(user) ? (
+                  <ApplicationsReviewPage />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/super-administrator/verifications"
+            element={
+              <ProtectedRoute>
+                {canReviewVerifications(user) ? (
+                  <AdminVerificationPage />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/super-administrator/users"
+            element={
+              <ProtectedRoute>
+                {canAccessAdminUsers(user) ? (
+                  <AdminUsersPage />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/branch-manager/agencies"
+            element={
+              <ProtectedRoute>
+                {canManageAgencyOnboarding(user) ? (
+                  <BranchManagerAgenciesPage />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/branch-manager/agencies/new"
+            element={
+              <ProtectedRoute>
+                {canManageAgencyOnboarding(user) ? (
+                  <BranchManagerAgencyOnboardingPage />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Navigate to="/settings?tab=account" replace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <SettingsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/security/2fa"
+            element={
+              <ProtectedRoute>
+                <Navigate to="/settings?tab=security" replace />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Properties Routes */}
-        <Route path="/properties" element={<PropertiesPage />} />
-        <Route
-          path="/properties/mine"
-          element={
-            <ProtectedRoute>
-              {canManageProperties(user) ? (
-                <MyPropertiesPage />
-              ) : (
-                <Navigate to="/properties" replace />
-              )}
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/properties/new"
-          element={
-            <ProtectedRoute>
-              {canCreateProperties(user) ? (
-                <PropertyFormPage />
-              ) : (
-                <Navigate to="/properties" replace />
-              )}
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/properties/:id" element={<PropertyDetailPage />} />
-        <Route
-          path="/properties/:id/edit"
-          element={
-            <ProtectedRoute>
-              {canManageProperties(user) ? (
-                <PropertyFormPage />
-              ) : (
-                <Navigate to="/properties" replace />
-              )}
-            </ProtectedRoute>
-          }
-        />
+          {/* Properties Routes */}
+          <Route path="/properties" element={<PropertiesPage />} />
+          <Route
+            path="/properties/mine"
+            element={
+              <ProtectedRoute>
+                {canManageProperties(user) ? (
+                  <MyPropertiesPage />
+                ) : (
+                  <Navigate to="/properties" replace />
+                )}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/properties/new"
+            element={
+              <ProtectedRoute>
+                {canCreateProperties(user) ? (
+                  <PropertyFormPage />
+                ) : (
+                  <Navigate to="/properties" replace />
+                )}
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/properties/:id" element={<PropertyDetailPage />} />
+          <Route
+            path="/properties/:id/edit"
+            element={
+              <ProtectedRoute>
+                {canManageProperties(user) ? (
+                  <PropertyFormPage />
+                ) : (
+                  <Navigate to="/properties" replace />
+                )}
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/maintenance/requests/new"
-          element={
-            <ProtectedRoute>
-              {canCreateMaintenanceRequest(user) ? (
-                <MaintenanceRequestFormPage />
-              ) : (
-                <Navigate to="/dashboard" replace />
-              )}
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/maintenance/requests/new"
+            element={
+              <ProtectedRoute>
+                {canCreateMaintenanceRequest(user) ? (
+                  <MaintenanceRequestFormPage />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )}
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/maintenance/requests/mine"
-          element={
-            <ProtectedRoute>
-              {canTrackMaintenanceRequests(user) ? (
-                <MyMaintenanceRequestsPage />
-              ) : (
-                <Navigate to="/dashboard" replace />
-              )}
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/maintenance/requests/mine"
+            element={
+              <ProtectedRoute>
+                {canTrackMaintenanceRequests(user) ? (
+                  <MyMaintenanceRequestsPage />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )}
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/maintenance/requests/assigned"
-          element={
-            <ProtectedRoute>
-              {canManageAssignedMaintenance(user) ? (
-                <ServiceProviderMaintenancePage />
-              ) : (
-                <Navigate to="/dashboard" replace />
-              )}
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/maintenance/requests/assigned"
+            element={
+              <ProtectedRoute>
+                {canManageAssignedMaintenance(user) ? (
+                  <ServiceProviderMaintenancePage />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )}
+              </ProtectedRoute>
+            }
+          />
 
-        {/* 404 - Redirect to home */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          {/* 404 - Redirect to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
       <PreferencesOnboardingModal />
       {isAuthenticated && <PushNotificationTestButton />}
     </>

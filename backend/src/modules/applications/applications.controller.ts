@@ -150,7 +150,7 @@ export class ApplicationsController {
 
   @Get('received')
   @Roles(...APPLICATION_REVIEW_ROLES)
-  @ApiOperation({ summary: 'View applications received by owner/manager' })
+  @ApiOperation({ summary: 'View applications assigned to manager/admin' })
   @ApiQuery({ name: 'status', required: false, enum: ApplicationStatus })
   @ApiQuery({ name: 'propertyId', required: false, type: String })
   @ApiQuery({ name: 'page', required: false, type: Number })

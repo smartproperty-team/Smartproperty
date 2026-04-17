@@ -4,6 +4,7 @@ import {
   canCreateMaintenanceRequest,
   canManageAgencyOnboarding,
   canManageAssignedMaintenance,
+  prefetchRoute,
   canReviewApplications,
   canReviewVerifications,
   canTrackMaintenanceRequests,
@@ -204,6 +205,8 @@ export default function AppSidebar() {
                       setMobileOpen(false);
                       navigate(link.to);
                     }}
+                    onMouseEnter={() => prefetchRoute(link.to)}
+                    onFocus={() => prefetchRoute(link.to)}
                     aria-current={active ? "page" : undefined}
                     className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                       active
