@@ -18,8 +18,8 @@ import {
 } from "../../services/property.service";
 import type {
   CreatePropertyDto,
-  PropertyCategory,
   Property,
+  PropertyCategory,
   PropertyStatus,
   PropertyType,
 } from "../../types/property";
@@ -678,7 +678,9 @@ export default function PropertyFormPage() {
                   value={formData.category}
                   onChange={handleChange}
                 >
-                  <option value="rental">{t.properties.form.labels.rent}</option>
+                  <option value="rental">
+                    {t.properties.form.labels.rent}
+                  </option>
                   <option value="sale">{t.properties.form.labels.sale}</option>
                 </select>
               </div>

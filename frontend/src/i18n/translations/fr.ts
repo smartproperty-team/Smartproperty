@@ -283,12 +283,10 @@ export const fr: Translations = {
         applied: "Description mise à jour",
         close: "Fermer",
         words: "{{count}} mots",
-        errorEmpty:
-          "Sélectionnez au moins une longueur et une langue cible.",
+        errorEmpty: "Sélectionnez au moins une longueur et une langue cible.",
         errorGeneric:
           "La génération IA a échoué. Veuillez réessayer dans quelques instants.",
-        errorTimeout:
-          "Le délai de génération IA a expiré. Veuillez réessayer.",
+        errorTimeout: "Le délai de génération IA a expiré. Veuillez réessayer.",
         noVariants: "Aucune variante générée.",
       },
       image: {
@@ -423,7 +421,8 @@ export const fr: Translations = {
     aiDescription: {
       cta: "Générer une description IA",
       title: "Générateur de description IA",
-      subtitle: "Créez du contenu marketing en différentes longueurs et langues.",
+      subtitle:
+        "Créez du contenu marketing en différentes longueurs et langues.",
       tone: "Ton",
       lengths: "Longueurs",
       sourceLanguage: "Langue source",
