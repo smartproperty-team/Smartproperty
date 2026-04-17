@@ -22,13 +22,7 @@ import {
   VerifyEmailPage,
 } from "./pages/auth";
 import { HomePage, PaletteDemoPage } from "./pages/home";
-import {
-  MaintenanceRequestFormPage,
-  MyMaintenanceRequestsPage,
-  ServiceProviderMaintenancePage,
-} from "./pages/maintenance";
 import { PreferencesOnboardingModal } from "./pages/onboarding";
-import { SettingsPage } from "./pages/settings";
 import authService from "./services/auth.service";
 import { pushNotificationService } from "./services/push-notification.service";
 import { useAuthStore, usePreferencesStore } from "./store";
@@ -67,6 +61,17 @@ const PropertyFormPage = lazy(
 );
 const PropertyDetailPage = lazy(
   () => import("./pages/properties/PropertyDetailPage"),
+);
+
+const SettingsPage = lazy(() => import("./pages/settings/SettingsPage"));
+const MaintenanceRequestFormPage = lazy(
+  () => import("./pages/maintenance/MaintenanceRequestFormPage"),
+);
+const MyMaintenanceRequestsPage = lazy(
+  () => import("./pages/maintenance/MyMaintenanceRequestsPage"),
+);
+const ServiceProviderMaintenancePage = lazy(
+  () => import("./pages/maintenance/ServiceProviderMaintenancePage"),
 );
 
 function RouteLoadingFallback() {
