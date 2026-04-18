@@ -238,6 +238,44 @@ export class PropertiesService {
     return Array.from(new Set(owners.map((owner) => owner.id)));
   }
 
+  private async mapPropertiesWithOwnerSummary(properties: Property[]) {
+    if (!properties.length) {
+      return [];
+    }
+
+    const ownerIds = Array.from(
+      new Set(properties.map((property) => property.ownerId).filter(Boolean)),
+    ).filter((ownerId) => ObjectId.isValid(ownerId));
+
+    const owners = await this.usersRepository.find({
+      where: {
+        _id: { $in: ownerIds.map((ownerId) => new ObjectId(ownerId)) } as any,
+      },
+    });
+
+    const ownersById = new Map(
+      owners.map((owner) => [
+        owner.id,
+        {
+          id: owner.id,
+          name: owner.fullName,
+          email: owner.email,
+        },
+      ]),
+    );
+
+    return properties.map((property) => {
+      const json = property.toJSON() as any;
+      const owner = ownersById.get(property.ownerId);
+
+      if (owner) {
+        json.owner = owner;
+      }
+
+      return json;
+    });
+  }
+
   // ===========================================
   // Helpers
   // ===========================================
@@ -996,8 +1034,11 @@ export class PropertiesService {
       const total = filtered.length;
       const properties = filtered.slice(skip, skip + limit);
 
+      const serializedProperties =
+        await this.mapPropertiesWithOwnerSummary(properties);
+
       return {
-        properties: properties.map((property) => property.toJSON() as Property),
+        properties: serializedProperties as Property[],
         total,
         page,
         limit,
@@ -1011,8 +1052,11 @@ export class PropertiesService {
       order: { createdAt: 'DESC' },
     });
 
+    const serializedProperties =
+      await this.mapPropertiesWithOwnerSummary(properties);
+
     return {
-      properties: properties.map((property) => property.toJSON() as Property),
+      properties: serializedProperties as Property[],
       total,
       page,
       limit,

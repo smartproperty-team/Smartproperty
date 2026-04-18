@@ -410,7 +410,8 @@ export default function DashboardPage() {
       }
 
       const existing = ownerMap.get(ownerId);
-      const ownerName = property.owner?.name || `Owner ${ownerId.slice(-6)}`;
+      const ownerName =
+        property.owner?.name?.trim() || "Owner name unavailable";
 
       if (!existing) {
         ownerMap.set(ownerId, {
