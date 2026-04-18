@@ -43,6 +43,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       id: user._id.toHexString(),
       email: user.email,
       role: user.role,
+      agencyId: user.agencyId,
       firstName: user.firstName,
       lastName: user.lastName,
       fullName: `${user.firstName} ${user.lastName}`,
