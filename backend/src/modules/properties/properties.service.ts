@@ -336,11 +336,11 @@ export class PropertiesService {
     );
   }
 
-  private buildScopedWhere(
+  private async buildScopedWhere(
     currentUserId: string,
     currentUserRole: UserRole,
     scope?: 'owner' | 'manager' | 'all',
-  ): Record<string, any> {
+  ): Promise<Record<string, any>> {
     const where: Record<string, any> = {
       deletedAt: null,
     };
@@ -367,7 +367,28 @@ export class PropertiesService {
       currentUserRole === UserRole.REAL_ESTATE_AGENT ||
       currentUserRole === UserRole.RENTAL_MANAGER
     ) {
-      where.managerId = currentUserId;
+      const agencyOwnerIds =
+        await this.getAgencyOwnerIdsForManager(currentUserId);
+
+      if (scope === 'owner') {
+        if (agencyOwnerIds.length > 0) {
+          where.ownerId = { $in: agencyOwnerIds };
+        } else {
+          where.ownerId = '__none__';
+        }
+
+        return where;
+      }
+
+      if (agencyOwnerIds.length > 0) {
+        where.$or = [
+          { managerId: currentUserId },
+          { ownerId: { $in: agencyOwnerIds } },
+        ];
+      } else {
+        where.managerId = currentUserId;
+      }
+
       return where;
     }
 
@@ -1178,7 +1199,7 @@ export class PropertiesService {
       throw new ForbiddenException('You do not have access to portfolio data');
     }
 
-    const scopedWhere = this.buildScopedWhere(
+    const scopedWhere = await this.buildScopedWhere(
       currentUserId,
       currentUserRole,
       filters.scope,
@@ -1293,7 +1314,7 @@ export class PropertiesService {
       throw new ForbiddenException('You do not have access to portfolio data');
     }
 
-    const scopedWhere = this.buildScopedWhere(
+    const scopedWhere = await this.buildScopedWhere(
       currentUserId,
       currentUserRole,
       filters.scope,
@@ -1376,7 +1397,7 @@ export class PropertiesService {
       throw new ForbiddenException('You do not have access to portfolio data');
     }
 
-    const scopedWhere = this.buildScopedWhere(
+    const scopedWhere = await this.buildScopedWhere(
       currentUserId,
       currentUserRole,
       filters.scope,
@@ -1627,7 +1648,7 @@ export class PropertiesService {
       );
     }
 
-    const scopedWhere = this.buildScopedWhere(
+    const scopedWhere = await this.buildScopedWhere(
       currentUserId,
       currentUserRole,
       payload.scope,
