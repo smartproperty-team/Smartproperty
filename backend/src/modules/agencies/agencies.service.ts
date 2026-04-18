@@ -11,8 +11,9 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { ObjectId } from 'mongodb';
-import { MongoRepository } from 'typeorm';
+import { MongoRepository, Repository } from 'typeorm';
 import { generateTemporaryPassword } from '../../common/utils/password.generator';
+import { Property } from '../properties/entities/property.entity';
 import {
   AuthProvider,
   User,
@@ -63,6 +64,8 @@ export class AgenciesService {
     private readonly agenciesRepository: MongoRepository<Agency>,
     @InjectRepository(User)
     private readonly usersRepository: MongoRepository<User>,
+    @InjectRepository(Property)
+    private readonly propertiesRepository: Repository<Property>,
     private readonly mailerService: MailerService,
     private readonly configService: ConfigService,
   ) {}
@@ -233,6 +236,13 @@ export class AgenciesService {
   async searchAgencies(query?: string) {
     const normalizedQuery = query?.trim();
 
+    const exactAgencyById =
+      normalizedQuery && ObjectId.isValid(normalizedQuery)
+        ? await this.agenciesRepository.findOne({
+            where: { _id: new ObjectId(normalizedQuery) },
+          })
+        : null;
+
     const where =
       normalizedQuery && normalizedQuery.length > 0
         ? {
@@ -250,11 +260,35 @@ export class AgenciesService {
       take: 20,
     });
 
-    return agencies.map((agency) => ({
+    const mergedAgencies = [exactAgencyById, ...agencies].filter(
+      (agency, index, self): agency is Agency =>
+        !!agency && self.findIndex((item) => item?.id === agency.id) === index,
+    );
+
+    const managerObjectIds = Array.from(
+      new Set(
+        mergedAgencies
+          .map((agency) => agency.createdBy)
+          .filter((value) => ObjectId.isValid(value)),
+      ),
+    ).map((value) => new ObjectId(value));
+
+    const managers = managerObjectIds.length
+      ? await this.usersRepository.find({
+          where: { _id: { $in: managerObjectIds } as any },
+        })
+      : [];
+
+    const managerNameById = new Map<string, string>(
+      managers.map((manager) => [manager.id, manager.fullName]),
+    );
+
+    return mergedAgencies.map((agency) => ({
       id: agency.id,
       name: agency.name,
       slug: agency.slug,
       region: agency.region,
+      managerName: managerNameById.get(agency.createdBy),
     }));
   }
 
@@ -303,6 +337,10 @@ export class AgenciesService {
     owner.agencyId = agency.id;
     owner.updatedAt = new Date();
     const savedOwner = await this.usersRepository.save(owner);
+    await this.syncOwnerPropertiesAgencyManager(
+      savedOwner.id,
+      agency.createdBy,
+    );
 
     return {
       agencyId: agency.id,
@@ -336,6 +374,7 @@ export class AgenciesService {
         $set: { updatedAt: new Date() },
       },
     );
+    await this.syncOwnerPropertiesAgencyManager(owner.id, null);
 
     return {
       agencyId: agency.id,
@@ -355,6 +394,10 @@ export class AgenciesService {
     owner.agencyId = agency.id;
     owner.updatedAt = new Date();
     const savedOwner = await this.usersRepository.save(owner);
+    await this.syncOwnerPropertiesAgencyManager(
+      savedOwner.id,
+      agency.createdBy,
+    );
 
     return {
       agencyId: agency.id,
@@ -387,6 +430,7 @@ export class AgenciesService {
         $set: { updatedAt: new Date() },
       },
     );
+    await this.syncOwnerPropertiesAgencyManager(owner.id, null);
 
     return {
       agencyId: agency.id,
@@ -433,6 +477,19 @@ export class AgenciesService {
         'Only the branch manager who created the agency can manage owner links',
       );
     }
+  }
+
+  private async syncOwnerPropertiesAgencyManager(
+    ownerId: string,
+    managerId: string | null,
+  ): Promise<void> {
+    await this.propertiesRepository.update(
+      { ownerId, deletedAt: null as any },
+      {
+        managerId: managerId ?? (null as any),
+        updatedAt: new Date(),
+      } as Partial<Property>,
+    );
   }
 
   private async ensureUniqueAgency(slug: string, name: string): Promise<void> {

@@ -11,9 +11,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { ObjectId } from 'mongodb';
 import * as QRCode from 'qrcode';
-import { Repository } from 'typeorm';
+import { MongoRepository, Repository } from 'typeorm';
 import * as XLSX from 'xlsx';
-import { UserRole } from '../users/entities/user.entity';
+import { Agency } from '../agencies/entities/agency.entity';
+import { User, UserRole } from '../users/entities/user.entity';
 import { hasPlatformAdminRole } from '../users/role-groups';
 import {
   PortfolioConnectorId,
@@ -162,7 +163,37 @@ export class PropertiesService {
   constructor(
     @InjectRepository(Property)
     private readonly propertyRepository: Repository<Property>,
+    @InjectRepository(User)
+    private readonly usersRepository: MongoRepository<User>,
+    @InjectRepository(Agency)
+    private readonly agenciesRepository: MongoRepository<Agency>,
   ) {}
+
+  private async getAgencyManagerIdForOwner(
+    ownerId: string,
+  ): Promise<string | undefined> {
+    if (!ObjectId.isValid(ownerId)) {
+      return undefined;
+    }
+
+    const owner = await this.usersRepository.findOne({
+      where: { _id: new ObjectId(ownerId) },
+    });
+
+    if (!owner?.agencyId || !ObjectId.isValid(owner.agencyId)) {
+      return undefined;
+    }
+
+    const agency = await this.agenciesRepository.findOne({
+      where: { _id: new ObjectId(owner.agencyId) },
+    });
+
+    if (!agency?.createdBy) {
+      return undefined;
+    }
+
+    return agency.createdBy;
+  }
 
   // ===========================================
   // Helpers
@@ -754,9 +785,13 @@ export class PropertiesService {
       currentUserRole === UserRole.REAL_ESTATE_AGENT ||
       currentUserRole === UserRole.RENTAL_MANAGER;
 
-    const managerId =
+    let managerId =
       requestedManagerId ||
       (shouldAutoAssignManager ? currentUserId : undefined);
+
+    if (!managerId && currentUserRole === UserRole.OWNER) {
+      managerId = await this.getAgencyManagerIdForOwner(currentUserId);
+    }
 
     // Build a clean object without undefined values – MongoDB's $jsonSchema
     // validator does not recognise "undefined" as a BSON type, so sending

@@ -207,6 +207,9 @@ export class LeasesService {
     ]
       .filter(Boolean)
       .join(' - ');
+    const tenantLabel = lease.tenantName?.trim() || 'N/A';
+    const ownerLabel = lease.ownerName?.trim() || 'N/A';
+    const managerLabel = lease.managerName?.trim() || 'N/A';
     const customTerms = lease.customTerms || [];
     const terms =
       lease.terms?.trim() || 'Standard residential lease terms apply.';
@@ -218,10 +221,10 @@ export class LeasesService {
     return [
       'LEASE AGREEMENT',
       '',
-      `Property: ${propertyLine || lease.propertyId || 'N/A'}`,
-      `Tenant: ${lease.tenantName || lease.tenantId || 'N/A'}`,
-      `Owner: ${lease.ownerName || lease.ownerId || 'N/A'}`,
-      `Manager: ${lease.managerName || lease.managerId || 'N/A'}`,
+      `Property: ${propertyLine || 'N/A'}`,
+      `Tenant: ${tenantLabel}`,
+      `Owner: ${ownerLabel}`,
+      `Manager: ${managerLabel}`,
       `Start date: ${lease.startDate ? lease.startDate.toISOString() : 'N/A'}`,
       `End date: ${lease.endDate ? lease.endDate.toISOString() : 'N/A'}`,
       `Monthly rent: ${lease.monthlyRent ?? 'N/A'} ${lease.currency || ''}`.trim(),

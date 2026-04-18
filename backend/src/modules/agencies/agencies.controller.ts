@@ -83,30 +83,6 @@ export class AgenciesController {
     return this.agenciesService.findById(id);
   }
 
-  @Post(':id/owners/:ownerId')
-  @Roles(UserRole.BRANCH_MANAGER)
-  @ApiOperation({ summary: 'Link an owner account to an agency' })
-  @ApiResponse({ status: 200, description: 'Owner linked to agency' })
-  linkOwner(
-    @Param('id') id: string,
-    @Param('ownerId') ownerId: string,
-    @CurrentUser('id') currentUserId: string,
-  ) {
-    return this.agenciesService.linkOwner(id, ownerId, currentUserId);
-  }
-
-  @Delete(':id/owners/:ownerId')
-  @Roles(UserRole.BRANCH_MANAGER)
-  @ApiOperation({ summary: 'Unlink an owner account from an agency' })
-  @ApiResponse({ status: 200, description: 'Owner unlinked from agency' })
-  unlinkOwner(
-    @Param('id') id: string,
-    @Param('ownerId') ownerId: string,
-    @CurrentUser('id') currentUserId: string,
-  ) {
-    return this.agenciesService.unlinkOwner(id, ownerId, currentUserId);
-  }
-
   @Post(':id/owners/me')
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Link current owner account to an agency' })
@@ -130,5 +106,29 @@ export class AgenciesController {
     @CurrentUser('id') currentUserId: string,
   ) {
     return this.agenciesService.unlinkCurrentOwner(id, currentUserId);
+  }
+
+  @Post(':id/owners/:ownerId')
+  @Roles(UserRole.BRANCH_MANAGER)
+  @ApiOperation({ summary: 'Link an owner account to an agency' })
+  @ApiResponse({ status: 200, description: 'Owner linked to agency' })
+  linkOwner(
+    @Param('id') id: string,
+    @Param('ownerId') ownerId: string,
+    @CurrentUser('id') currentUserId: string,
+  ) {
+    return this.agenciesService.linkOwner(id, ownerId, currentUserId);
+  }
+
+  @Delete(':id/owners/:ownerId')
+  @Roles(UserRole.BRANCH_MANAGER)
+  @ApiOperation({ summary: 'Unlink an owner account from an agency' })
+  @ApiResponse({ status: 200, description: 'Owner unlinked from agency' })
+  unlinkOwner(
+    @Param('id') id: string,
+    @Param('ownerId') ownerId: string,
+    @CurrentUser('id') currentUserId: string,
+  ) {
+    return this.agenciesService.unlinkOwner(id, ownerId, currentUserId);
   }
 }

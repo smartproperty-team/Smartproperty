@@ -83,6 +83,9 @@ export default function DashboardPage() {
     useState(false);
   const [ownerAgencyIdInput, setOwnerAgencyIdInput] = useState("");
   const [ownerLinkedAgencyId, setOwnerLinkedAgencyId] = useState("");
+  const [ownerLinkedAgencyName, setOwnerLinkedAgencyName] = useState("");
+  const [ownerLinkedAgencyManagerName, setOwnerLinkedAgencyManagerName] =
+    useState("");
   const [ownerAgencyQuery, setOwnerAgencyQuery] = useState("");
   const [ownerAgencySuggestions, setOwnerAgencySuggestions] = useState<
     AgencySearchItem[]
@@ -252,6 +255,8 @@ export default function DashboardPage() {
     if (user?.role !== UserRole.OWNER) {
       setOwnerAgencyIdInput("");
       setOwnerLinkedAgencyId("");
+      setOwnerLinkedAgencyName("");
+      setOwnerLinkedAgencyManagerName("");
       setOwnerAgencyMessage(null);
       return;
     }
@@ -261,6 +266,32 @@ export default function DashboardPage() {
     setOwnerAgencyIdInput((previous) => previous || currentAgencyId);
     setOwnerAgencyQuery((previous) => previous || currentAgencyId);
   }, [user?.agencyId, user?.role]);
+
+  useEffect(() => {
+    if (user?.role !== UserRole.OWNER || !ownerLinkedAgencyId) {
+      return;
+    }
+
+    const loadLinkedAgencyInfo = async () => {
+      try {
+        const agencies =
+          await agencyOnboardingService.searchAgencies(ownerLinkedAgencyId);
+        const linkedAgency =
+          agencies.find((agency) => agency.id === ownerLinkedAgencyId) ||
+          agencies[0];
+
+        if (linkedAgency) {
+          setOwnerLinkedAgencyName(linkedAgency.name);
+          setOwnerLinkedAgencyManagerName(linkedAgency.managerName || "");
+        }
+      } catch {
+        setOwnerLinkedAgencyName("");
+        setOwnerLinkedAgencyManagerName("");
+      }
+    };
+
+    void loadLinkedAgencyInfo();
+  }, [ownerLinkedAgencyId, user?.role]);
 
   useEffect(() => {
     if (user?.role !== UserRole.OWNER) {
@@ -935,6 +966,13 @@ export default function DashboardPage() {
         await agencyOnboardingService.linkCurrentOwnerToAgency(agencyId);
       setOwnerLinkedAgencyId(response.agencyId);
       setOwnerAgencyIdInput(response.agencyId);
+      const selectedAgency = ownerAgencySuggestions.find(
+        (agency) => agency.id === response.agencyId,
+      );
+      if (selectedAgency) {
+        setOwnerLinkedAgencyName(selectedAgency.name);
+        setOwnerLinkedAgencyManagerName(selectedAgency.managerName || "");
+      }
       setOwnerAgencyMessage({
         type: "success",
         text: "You are now linked to this agency.",
@@ -969,6 +1007,8 @@ export default function DashboardPage() {
       await agencyOnboardingService.unlinkCurrentOwnerFromAgency(agencyId);
       setOwnerLinkedAgencyId("");
       setOwnerAgencyIdInput("");
+      setOwnerLinkedAgencyName("");
+      setOwnerLinkedAgencyManagerName("");
       setOwnerAgencyMessage({
         type: "success",
         text: "Your agency link has been removed.",
@@ -1771,6 +1811,14 @@ export default function DashboardPage() {
                               <p className="mt-1 text-sm text-indigo-600">
                                 {property.price.toLocaleString()}{" "}
                                 {property.currency}
+                              </p>
+                              <p className="mt-1 text-xs text-gray-500">
+                                Managed by:{" "}
+                                {ownerLinkedAgencyName
+                                  ? `${ownerLinkedAgencyName}${ownerLinkedAgencyManagerName ? ` / ${ownerLinkedAgencyManagerName}` : ""}`
+                                  : property.managerId
+                                    ? "Assigned manager"
+                                    : "Owner direct"}
                               </p>
                             </div>
                           </div>

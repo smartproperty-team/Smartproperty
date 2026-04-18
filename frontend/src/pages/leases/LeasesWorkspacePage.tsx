@@ -5,12 +5,13 @@ import { useAuthStore } from "@/store";
 import { ApplicationStatus, type Application } from "@/types/application";
 import {
   LeaseDepositStatus,
+  LeaseDocumentType,
   LeaseSignatureMethod,
   LeaseStatus,
   type Lease,
 } from "@/types/lease";
 import { canManageLeases, isOwner, isPlatformAdmin } from "@/utils";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 
 const LEASE_WORKSPACE_DRAFT_PREFIX = "lease-workspace-draft";
@@ -96,6 +97,81 @@ function toDisplayDate(value?: string): string {
   return parsed.toLocaleDateString();
 }
 
+function toDisplayDateFr(value?: string): string {
+  if (!value) {
+    return "-";
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleDateString("fr-FR");
+}
+
+function toDisplayMoney(amount?: number, currency?: string): string {
+  if (typeof amount !== "number" || Number.isNaN(amount)) {
+    return "-";
+  }
+
+  return `${amount} ${currency || ""}`.trim();
+}
+
+function toDisplayMoneyFr(amount?: number, currency?: string): string {
+  if (typeof amount !== "number" || Number.isNaN(amount)) {
+    return "-";
+  }
+
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: currency || "EUR",
+    currencyDisplay: "symbol",
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function looksLikeObjectId(value: string): boolean {
+  return /^[a-fA-F0-9]{24}$/.test(value.trim());
+}
+
+function toReadableTemplate(lease: Lease): string {
+  const raw =
+    lease.generatedTemplate || "No generated contract template available yet.";
+  const lines = raw.split("\n");
+
+  const replaceLine = (prefix: string, nextValue?: string) => {
+    const index = lines.findIndex((line) => line.startsWith(prefix));
+    if (index === -1 || !nextValue?.trim()) {
+      return;
+    }
+
+    const currentValue = lines[index].slice(prefix.length).trim();
+    if (looksLikeObjectId(currentValue) || currentValue === "N/A") {
+      lines[index] = `${prefix}${nextValue.trim()}`;
+    }
+  };
+
+  replaceLine(
+    "Property: ",
+    lease.propertyTitle || lease.propertyAddress || lease.propertyLocation,
+  );
+  replaceLine("Tenant: ", lease.tenantName);
+  replaceLine("Owner: ", lease.ownerName);
+  replaceLine("Manager: ", lease.managerName);
+
+  return lines.join("\n");
+}
+
 function getApiErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null && "response" in error) {
     const response = (
@@ -173,6 +249,9 @@ export default function LeasesWorkspacePage() {
   const [signatureProofFile, setSignatureProofFile] = useState<File | null>(
     null,
   );
+  const [isDrawingSignature, setIsDrawingSignature] = useState(false);
+  const [hasDrawnSignature, setHasDrawnSignature] = useState(false);
+  const signaturePadRef = useRef<HTMLCanvasElement | null>(null);
 
   const [renewalForm, setRenewalForm] = useState({
     endDate: "",
@@ -216,6 +295,190 @@ export default function LeasesWorkspacePage() {
 
   const canOwnerValidate =
     !!user && (isOwner(user) || isPlatformAdmin(user)) && !!selectedLease;
+
+  const latestSignatureProofDocument = useMemo(() => {
+    if (!selectedLease?.documents?.length) {
+      return undefined;
+    }
+
+    return selectedLease.documents
+      .filter((document) => document.type === LeaseDocumentType.SIGNATURE_PROOF)
+      .at(-1);
+  }, [selectedLease]);
+
+  const ownerSignature = useMemo(() => {
+    if (!selectedLease?.signatures?.length) {
+      return undefined;
+    }
+
+    return selectedLease.signatures
+      .filter((signature) => signature.signerId === selectedLease.ownerId)
+      .at(-1);
+  }, [selectedLease]);
+
+  const tenantSignature = useMemo(() => {
+    if (!selectedLease?.signatures?.length) {
+      return undefined;
+    }
+
+    return selectedLease.signatures
+      .filter((signature) => signature.signerId === selectedLease.tenantId)
+      .at(-1);
+  }, [selectedLease]);
+
+  const bothPartiesSigned = useMemo(() => {
+    if (!selectedLease?.signatures?.length) {
+      return false;
+    }
+
+    const normalizedOwnerId = (selectedLease.ownerId || "").toString();
+    const normalizedTenantId = (selectedLease.tenantId || "").toString();
+
+    const signedByOwner = selectedLease.signatures.some((signature) => {
+      const signerId = (signature.signerId || "").toString();
+      const signerRole = (signature.signerRole || "").toString().toLowerCase();
+      return signerId === normalizedOwnerId || signerRole === "owner";
+    });
+
+    const signedByTenant = selectedLease.signatures.some((signature) => {
+      const signerId = (signature.signerId || "").toString();
+      const signerRole = (signature.signerRole || "").toString().toLowerCase();
+      return signerId === normalizedTenantId || signerRole === "tenant";
+    });
+
+    return signedByOwner && signedByTenant;
+  }, [selectedLease]);
+
+  const showOwnerDecisionForm =
+    canOwnerValidate &&
+    !!selectedLease &&
+    !bothPartiesSigned &&
+    selectedLease.status === LeaseStatus.PENDING_OWNER_APPROVAL;
+
+  const initializeSignaturePad = () => {
+    const canvas = signaturePadRef.current;
+    if (!canvas) {
+      return;
+    }
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return;
+    }
+
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.lineJoin = "round";
+    context.lineCap = "round";
+    context.strokeStyle = "#111827";
+    context.lineWidth = 2;
+  };
+
+  const getCanvasPoint = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = signaturePadRef.current;
+    if (!canvas) {
+      return null;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    return {
+      x: (event.clientX - rect.left) * scaleX,
+      y: (event.clientY - rect.top) * scaleY,
+    };
+  };
+
+  const clearSignaturePad = () => {
+    initializeSignaturePad();
+    setHasDrawnSignature(false);
+    setSignatureProofFile(null);
+  };
+
+  const handleSignaturePointerDown = (
+    event: React.PointerEvent<HTMLCanvasElement>,
+  ) => {
+    const canvas = signaturePadRef.current;
+    if (!canvas) {
+      return;
+    }
+
+    const context = canvas.getContext("2d");
+    const point = getCanvasPoint(event);
+    if (!context || !point) {
+      return;
+    }
+
+    event.preventDefault();
+    canvas.setPointerCapture(event.pointerId);
+    context.beginPath();
+    context.moveTo(point.x, point.y);
+    setIsDrawingSignature(true);
+    setHasDrawnSignature(true);
+  };
+
+  const handleSignaturePointerMove = (
+    event: React.PointerEvent<HTMLCanvasElement>,
+  ) => {
+    if (!isDrawingSignature) {
+      return;
+    }
+
+    const context = signaturePadRef.current?.getContext("2d");
+    const point = getCanvasPoint(event);
+    if (!context || !point) {
+      return;
+    }
+
+    event.preventDefault();
+    context.lineTo(point.x, point.y);
+    context.stroke();
+  };
+
+  const handleSignaturePointerUp = (
+    event: React.PointerEvent<HTMLCanvasElement>,
+  ) => {
+    if (!isDrawingSignature) {
+      return;
+    }
+
+    const canvas = signaturePadRef.current;
+    if (canvas?.hasPointerCapture(event.pointerId)) {
+      canvas.releasePointerCapture(event.pointerId);
+    }
+
+    setIsDrawingSignature(false);
+  };
+
+  const canvasToSignatureFile = async (): Promise<File | null> => {
+    const canvas = signaturePadRef.current;
+    if (!canvas || !hasDrawnSignature) {
+      return null;
+    }
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((result) => resolve(result), "image/png");
+    });
+
+    if (!blob) {
+      return null;
+    }
+
+    const signerSlug = signatureForm.signerName
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+
+    return new File(
+      [blob],
+      `lease-signature-${signerSlug || "signer"}-${Date.now()}.png`,
+      {
+        type: "image/png",
+      },
+    );
+  };
 
   useEffect(() => {
     const draft = readDraft(draftStorageKey);
@@ -300,6 +563,27 @@ export default function LeasesWorkspacePage() {
     viewMode,
   ]);
 
+  useEffect(() => {
+    if (!user || signatureForm.signerName?.trim()) {
+      return;
+    }
+
+    const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim();
+    if (!fullName) {
+      return;
+    }
+
+    setSignatureForm((previous) => ({
+      ...previous,
+      signerName: fullName,
+    }));
+  }, [signatureForm.signerName, user]);
+
+  useEffect(() => {
+    initializeSignaturePad();
+    setHasDrawnSignature(false);
+  }, [selectedLeaseId]);
+
   const loadLeases = async () => {
     setLoading(true);
     try {
@@ -313,8 +597,11 @@ export default function LeasesWorkspacePage() {
         response.items.some((lease) => lease.id === leaseIdFromQuery)
       ) {
         setSelectedLeaseId(leaseIdFromQuery);
-      } else if (response.items.length > 0 && !selectedLeaseId) {
-        setSelectedLeaseId(response.items[0].id);
+      } else if (
+        selectedLeaseId &&
+        !response.items.some((lease) => lease.id === selectedLeaseId)
+      ) {
+        setSelectedLeaseId("");
       }
       setError(null);
     } catch (loadError) {
@@ -380,6 +667,15 @@ export default function LeasesWorkspacePage() {
       return;
     }
 
+    if (
+      createForm.startDate &&
+      createForm.endDate &&
+      new Date(createForm.endDate) <= new Date(createForm.startDate)
+    ) {
+      setError("End date must be after start date.");
+      return;
+    }
+
     try {
       await leaseService.createFromApprovedApplication(
         createForm.applicationId,
@@ -441,11 +737,13 @@ export default function LeasesWorkspacePage() {
 
     try {
       let signatureProofDocumentId: string | undefined;
+      const generatedSignatureFile = await canvasToSignatureFile();
+      const proofFileToUpload = signatureProofFile || generatedSignatureFile;
 
-      if (signatureProofFile) {
+      if (proofFileToUpload) {
         const leaseWithUploadedProof = await leaseService.uploadDocument(
           selectedLease.id,
-          signatureProofFile,
+          proofFileToUpload,
           LeaseDocumentType.SIGNATURE_PROOF,
           `Signature proof uploaded by ${signatureForm.signerName.trim()}`,
         );
@@ -465,6 +763,12 @@ export default function LeasesWorkspacePage() {
       });
       setNotice("Lease signature recorded.");
       setError(null);
+      setSignatureForm((previous) => ({
+        ...previous,
+        note: "",
+        acceptedTerms: false,
+      }));
+      clearSignaturePad();
       setSignatureProofFile(null);
       await loadLeases();
     } catch (signError) {
@@ -478,39 +782,175 @@ export default function LeasesWorkspacePage() {
     }
 
     const contractText =
-      selectedLease.generatedTemplate ||
-      "No generated contract template available yet.";
+      toReadableTemplate(selectedLease) ||
+      "Aucun modèle de contrat généré pour le moment.";
+
+    const findLatestProofForUser = (userId?: string) => {
+      if (!userId || !selectedLease.documents?.length) {
+        return undefined;
+      }
+
+      return selectedLease.documents
+        .filter(
+          (document) =>
+            document.type === LeaseDocumentType.SIGNATURE_PROOF &&
+            document.uploadedBy === userId,
+        )
+        .at(-1);
+    };
+
+    const renderSignatureBlock = (
+      title: string,
+      signerName?: string,
+      signedAt?: string,
+      proof?: {
+        name: string;
+        url: string;
+        mimeType: string;
+      },
+    ) => {
+      const proofMarkup = proof
+        ? proof.mimeType?.startsWith("image/")
+          ? `<img src="${escapeHtml(proof.url)}" alt="${escapeHtml(title)}" />`
+          : `<p>Justificatif: ${escapeHtml(proof.name)}</p><p>${escapeHtml(proof.url)}</p>`
+        : "<p>Aucune preuve de signature jointe.</p>";
+
+      return `
+        <div class="signature-party">
+          <p class="signature-title">${escapeHtml(title)}</p>
+          <p>Nom: ${escapeHtml(signerName || "Non signé")}</p>
+          <p>Date de signature: ${escapeHtml(toDisplayDateFr(signedAt))}</p>
+          <div class="signature-proof">${proofMarkup}</div>
+        </div>
+      `;
+    };
+
+    const ownerProof = findLatestProofForUser(selectedLease.ownerId);
+    const tenantProof = findLatestProofForUser(selectedLease.tenantId);
+
+    const ownerSignatureBlock = renderSignatureBlock(
+      "Signature du propriétaire",
+      ownerSignature?.signerName ||
+        selectedLease.ownerName ||
+        selectedLease.ownerId,
+      ownerSignature?.signedAt,
+      ownerProof,
+    );
+
+    const tenantSignatureBlock = renderSignatureBlock(
+      "Signature du locataire",
+      tenantSignature?.signerName ||
+        selectedLease.tenantName ||
+        selectedLease.tenantId,
+      tenantSignature?.signedAt,
+      tenantProof,
+    );
+
     const printableHtml = `
       <html>
         <head>
-          <title>Lease Contract ${selectedLease.leaseNumber || selectedLease.id}</title>
+          <title>Contrat de bail ${selectedLease.leaseNumber || selectedLease.id}</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 32px; color: #111827; }
-            h1 { margin-bottom: 4px; }
-            .meta { color: #4b5563; margin-bottom: 24px; }
-            .box { border: 1px solid #d1d5db; border-radius: 8px; padding: 16px; white-space: pre-wrap; }
+            @page { size: A4; margin: 18mm; }
+            body { font-family: "Times New Roman", serif; color: #111827; line-height: 1.4; }
+            h1 { margin: 0 0 6px; text-align: center; letter-spacing: 0.5px; font-size: 22px; }
+            h2 { margin: 18px 0 8px; font-size: 16px; border-bottom: 1px solid #9ca3af; padding-bottom: 2px; }
+            p { margin: 6px 0; font-size: 13px; }
+            .meta { text-align: center; color: #4b5563; margin-bottom: 14px; }
+            .article { margin-top: 10px; }
+            .article-title { font-weight: 700; text-transform: uppercase; }
+            .box { border: 1px solid #9ca3af; padding: 12px; white-space: pre-wrap; background: #fafafa; }
+            .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+            .party { border: 1px solid #d1d5db; padding: 10px; }
+            .signatures { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+            .signature-party { border: 1px solid #9ca3af; padding: 10px; min-height: 180px; }
+            .signature-title { margin: 0 0 6px; font-weight: 700; font-size: 13px; }
+            .signature-proof { margin-top: 8px; }
+            .signature-proof img { max-width: 100%; max-height: 120px; border: 1px solid #d1d5db; display: block; }
+            .footer { margin-top: 18px; font-size: 11px; color: #4b5563; text-align: center; }
           </style>
         </head>
         <body>
-          <h1>Lease Contract</h1>
-          <p class="meta">${selectedLease.leaseNumber || selectedLease.id}</p>
-          <div class="box">${contractText.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+          <h1>CONTRAT DE BAIL D'HABITATION</h1>
+          <p class="meta">Référence: ${escapeHtml(selectedLease.leaseNumber || selectedLease.id)}</p>
+
+          <h2>Identification des parties</h2>
+          <div class="parties">
+            <div class="party">
+              <p><strong>Bailleur (Propriétaire)</strong></p>
+              <p>Nom: ${escapeHtml(selectedLease.ownerName || selectedLease.ownerId)}</p>
+              <p>Rôle: Propriétaire</p>
+            </div>
+            <div class="party">
+              <p><strong>Preneur (Locataire)</strong></p>
+              <p>Nom: ${escapeHtml(selectedLease.tenantName || selectedLease.tenantId)}</p>
+              <p>Rôle: Locataire</p>
+            </div>
+          </div>
+
+          <h2>Désignation du bien loué</h2>
+          <p>Bien: ${escapeHtml(selectedLease.propertyTitle || selectedLease.propertyId)}</p>
+          <p>Adresse: ${escapeHtml(selectedLease.propertyAddress || selectedLease.propertyLocation || "-")}</p>
+
+          <h2>Conditions financières et durée</h2>
+          <p>Loyer mensuel: ${escapeHtml(toDisplayMoneyFr(selectedLease.monthlyRent, selectedLease.currency))}</p>
+          <p>Dépôt de garantie: ${escapeHtml(toDisplayMoneyFr(selectedLease.securityDeposit, selectedLease.currency))}</p>
+          <p>Date de début: ${escapeHtml(toDisplayDateFr(selectedLease.startDate))}</p>
+          <p>Date de fin: ${escapeHtml(toDisplayDateFr(selectedLease.endDate))}</p>
+
+          <h2>Clauses contractuelles</h2>
+          <div class="box">${escapeHtml(contractText)}</div>
+
+          <h2>Signatures des parties</h2>
+          <div class="signatures">
+            ${ownerSignatureBlock}
+            ${tenantSignatureBlock}
+          </div>
+
+          <p class="footer">Document généré depuis SmartProperty. Veuillez choisir "Enregistrer en PDF" dans la boîte d'impression.</p>
           <script>window.onload = function() { window.print(); };</script>
         </body>
       </html>
     `;
 
-    const printWindow = window.open("", "_blank", "noopener,noreferrer");
-    if (!printWindow) {
-      setError(
-        "Unable to open print window. Please allow popups and try again.",
-      );
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.setAttribute("aria-hidden", "true");
+    document.body.appendChild(iframe);
+
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setNotice(
+          'Boîte d\'impression ouverte. Choisissez "Enregistrer en PDF".',
+        );
+      } catch {
+        setError(
+          "Impossible d'ouvrir l'impression automatiquement. Utilisez Ctrl+P.",
+        );
+      } finally {
+        window.setTimeout(() => {
+          iframe.remove();
+        }, 1500);
+      }
+    };
+
+    const documentRef = iframe.contentDocument;
+    if (!documentRef) {
+      iframe.remove();
+      setError("Impossible de préparer le document PDF.");
       return;
     }
 
-    printWindow.document.open();
-    printWindow.document.write(printableHtml);
-    printWindow.document.close();
+    documentRef.open();
+    documentRef.write(printableHtml);
+    documentRef.close();
   };
 
   const handleActivate = async () => {
@@ -690,6 +1130,12 @@ export default function LeasesWorkspacePage() {
             Your workspace is auto-saved as draft in this browser. Refresh will
             not lose form progress.
           </p>
+          {!selectedLease && (
+            <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Select a specific lease to display decision, signature, and
+              management sections.
+            </p>
+          )}
 
           {loading ? (
             <p className="text-sm text-gray-600">Loading leases...</p>
@@ -732,7 +1178,10 @@ export default function LeasesWorkspacePage() {
                             Status: {lease.status}
                           </p>
                           <p className="text-xs text-gray-600">
-                            Property: {lease.propertyId}
+                            Property: {lease.propertyTitle || lease.propertyId}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            Tenant: {lease.tenantName || lease.tenantId}
                           </p>
                         </button>
                       );
@@ -786,26 +1235,80 @@ export default function LeasesWorkspacePage() {
                     {selectedLease.status}
                   </p>
                   <p className="text-sm text-gray-700">
-                    Property: {selectedLease.propertyId} | Tenant:{" "}
-                    {selectedLease.tenantId}
+                    Property:{" "}
+                    {selectedLease.propertyTitle || selectedLease.propertyId}
+                    {selectedLease.propertyLocation
+                      ? ` (${selectedLease.propertyLocation})`
+                      : ""}
                   </p>
                   <p className="text-sm text-gray-700">
-                    Rent: {selectedLease.monthlyRent ?? "-"}{" "}
-                    {selectedLease.currency || ""}
+                    Tenant: {selectedLease.tenantName || selectedLease.tenantId}{" "}
+                    | Owner: {selectedLease.ownerName || selectedLease.ownerId}
+                    {selectedLease.managerId
+                      ? ` | Manager: ${selectedLease.managerName || selectedLease.managerId}`
+                      : ""}
+                  </p>
+                  <p className="text-sm text-gray-700">
+                    Period: {toDisplayDate(selectedLease.startDate)} to{" "}
+                    {toDisplayDate(selectedLease.endDate)}
+                  </p>
+                  <p className="text-sm text-gray-700">
+                    Rent:{" "}
+                    {toDisplayMoney(
+                      selectedLease.monthlyRent,
+                      selectedLease.currency,
+                    )}
                   </p>
                   <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
                     <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-600">
                       Personalized Contract Draft
                     </p>
                     <pre className="whitespace-pre-wrap text-xs text-gray-700">
-                      {selectedLease.generatedTemplate ||
-                        "No generated contract template available yet."}
+                      {toReadableTemplate(selectedLease)}
                     </pre>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={handleExportContractPdf}
+                      className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Export Contract PDF
+                    </button>
+                  </div>
+                  <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                      Latest Signature Proof
+                    </p>
+                    {latestSignatureProofDocument ? (
+                      latestSignatureProofDocument.mimeType?.startsWith(
+                        "image/",
+                      ) ? (
+                        <img
+                          src={latestSignatureProofDocument.url}
+                          alt="Latest signature proof"
+                          className="max-h-24 rounded border border-gray-200"
+                        />
+                      ) : (
+                        <a
+                          href={latestSignatureProofDocument.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm text-indigo-600 hover:text-indigo-700"
+                        >
+                          {latestSignatureProofDocument.name}
+                        </a>
+                      )
+                    ) : (
+                      <p className="text-xs text-gray-600">
+                        No signature proof attached yet.
+                      </p>
+                    )}
                   </div>
                 </section>
               )}
 
-              {managementEnabled && (
+              {managementEnabled && !selectedLease && (
                 <section className="mb-6 rounded-xl border border-gray-200 p-4">
                   <h2 className="mb-3 text-lg font-semibold text-gray-900">
                     Create Lease From Approved Application
@@ -948,7 +1451,7 @@ export default function LeasesWorkspacePage() {
                 </section>
               )}
 
-              {canOwnerValidate && selectedLease && (
+              {showOwnerDecisionForm && selectedLease && (
                 <section className="mb-6 rounded-xl border border-gray-200 p-4">
                   <h2 className="mb-3 text-lg font-semibold text-gray-900">
                     Owner Decision
@@ -1003,60 +1506,156 @@ export default function LeasesWorkspacePage() {
                   <h2 className="mb-3 text-lg font-semibold text-gray-900">
                     Sign Lease
                   </h2>
-                  <form
-                    className="grid gap-3 md:grid-cols-2"
-                    onSubmit={handleSign}
-                  >
-                    <label className="text-sm text-gray-700">
-                      Signature Method
-                      <select
-                        value={signatureForm.method}
-                        onChange={(event) =>
-                          setSignatureForm((previous) => ({
-                            ...previous,
-                            method: event.target.value as LeaseSignatureMethod,
-                          }))
-                        }
-                        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
-                      >
-                        {Object.values(LeaseSignatureMethod).map((method) => (
-                          <option key={method} value={method}>
-                            {method}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="text-sm text-gray-700">
-                      Note
-                      <input
-                        value={signatureForm.note}
-                        onChange={(event) =>
-                          setSignatureForm((previous) => ({
-                            ...previous,
-                            note: event.target.value,
-                          }))
-                        }
-                        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
-                      />
-                    </label>
-                    <div className="md:col-span-2 flex gap-2">
-                      <button
-                        type="submit"
-                        className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-                      >
-                        Sign
-                      </button>
-                      {managementEnabled && (
-                        <button
-                          type="button"
-                          onClick={() => void handleActivate()}
-                          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                        >
-                          Activate Lease
-                        </button>
-                      )}
+                  {bothPartiesSigned ? (
+                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                      <p className="text-sm font-semibold text-emerald-900">
+                        Lease signed by both parties.
+                      </p>
+                      <p className="mt-1 text-sm text-emerald-800">
+                        Owner signed on{" "}
+                        {toDisplayDate(ownerSignature?.signedAt)}. Tenant signed
+                        on {toDisplayDate(tenantSignature?.signedAt)}.
+                      </p>
+                      {managementEnabled &&
+                        selectedLease.status !== LeaseStatus.ACTIVE && (
+                          <button
+                            type="button"
+                            onClick={() => void handleActivate()}
+                            className="mt-3 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                          >
+                            Activate Lease
+                          </button>
+                        )}
                     </div>
-                  </form>
+                  ) : (
+                    <form
+                      className="grid gap-3 md:grid-cols-2"
+                      onSubmit={handleSign}
+                    >
+                      <label className="text-sm text-gray-700">
+                        Full Name
+                        <input
+                          value={signatureForm.signerName || ""}
+                          onChange={(event) =>
+                            setSignatureForm((previous) => ({
+                              ...previous,
+                              signerName: event.target.value,
+                            }))
+                          }
+                          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+                          placeholder="Type your legal full name"
+                          required
+                        />
+                      </label>
+                      <label className="text-sm text-gray-700">
+                        Signature Method
+                        <select
+                          value={signatureForm.method}
+                          onChange={(event) =>
+                            setSignatureForm((previous) => ({
+                              ...previous,
+                              method: event.target
+                                .value as LeaseSignatureMethod,
+                            }))
+                          }
+                          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+                        >
+                          {Object.values(LeaseSignatureMethod).map((method) => (
+                            <option key={method} value={method}>
+                              {method}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="text-sm text-gray-700">
+                        Note
+                        <input
+                          value={signatureForm.note}
+                          onChange={(event) =>
+                            setSignatureForm((previous) => ({
+                              ...previous,
+                              note: event.target.value,
+                            }))
+                          }
+                          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+                        />
+                      </label>
+                      <label className="text-sm text-gray-700 md:col-span-2">
+                        Signature Proof (optional)
+                        <input
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={(event) =>
+                            setSignatureProofFile(
+                              event.target.files?.[0] ?? null,
+                            )
+                          }
+                          className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2"
+                        />
+                      </label>
+                      <div className="text-sm text-gray-700 md:col-span-2">
+                        <div className="mb-1 flex items-center justify-between">
+                          <span>Draw Signature (mouse or touch)</span>
+                          <button
+                            type="button"
+                            onClick={clearSignaturePad}
+                            className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100"
+                          >
+                            Clear Signature
+                          </button>
+                        </div>
+                        <canvas
+                          ref={signaturePadRef}
+                          width={900}
+                          height={220}
+                          onPointerDown={handleSignaturePointerDown}
+                          onPointerMove={handleSignaturePointerMove}
+                          onPointerUp={handleSignaturePointerUp}
+                          onPointerLeave={handleSignaturePointerUp}
+                          style={{ touchAction: "none" }}
+                          className="w-full rounded-md border border-gray-300 bg-white"
+                        />
+                        <p className="mt-1 text-xs text-gray-500">
+                          If you draw here, it will be uploaded as signature
+                          proof and shown in the exported PDF.
+                        </p>
+                      </div>
+                      <label className="flex items-start gap-2 text-sm text-gray-700 md:col-span-2">
+                        <input
+                          type="checkbox"
+                          checked={!!signatureForm.acceptedTerms}
+                          onChange={(event) =>
+                            setSignatureForm((previous) => ({
+                              ...previous,
+                              acceptedTerms: event.target.checked,
+                            }))
+                          }
+                          className="mt-1"
+                        />
+                        <span>
+                          I confirm I have reviewed the contract terms and I
+                          agree to sign this lease.
+                        </span>
+                      </label>
+                      <div className="md:col-span-2 flex gap-2">
+                        <button
+                          type="submit"
+                          className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                        >
+                          Sign
+                        </button>
+                        {managementEnabled && (
+                          <button
+                            type="button"
+                            onClick={() => void handleActivate()}
+                            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                          >
+                            Activate Lease
+                          </button>
+                        )}
+                      </div>
+                    </form>
+                  )}
                 </section>
               )}
 

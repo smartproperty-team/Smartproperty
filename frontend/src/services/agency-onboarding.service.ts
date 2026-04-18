@@ -75,6 +75,7 @@ export interface AgencySearchItem {
   name: string;
   slug: string;
   region: string;
+  managerName?: string;
 }
 
 export interface OwnerAgencyLinkResponse {
