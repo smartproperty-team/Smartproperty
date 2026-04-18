@@ -212,6 +212,32 @@ export class PropertiesService {
     return agency.createdBy;
   }
 
+  private async getAgencyOwnerIdsForManager(
+    managerId?: string,
+  ): Promise<string[]> {
+    if (!managerId || !ObjectId.isValid(managerId)) {
+      return [];
+    }
+
+    const manager = await this.usersRepository.findOne({
+      where: { _id: new ObjectId(managerId) },
+    });
+
+    if (!manager?.agencyId || !ObjectId.isValid(manager.agencyId)) {
+      return [];
+    }
+
+    const owners = await this.usersRepository.find({
+      where: {
+        agencyId: manager.agencyId,
+        role: UserRole.OWNER,
+        deletedAt: null as any,
+      },
+    });
+
+    return Array.from(new Set(owners.map((owner) => owner.id)));
+  }
+
   // ===========================================
   // Helpers
   // ===========================================
@@ -863,6 +889,10 @@ export class PropertiesService {
       deletedAt: null,
     };
 
+    const managerAgencyOwnerIds = await this.getAgencyOwnerIdsForManager(
+      options.managerId,
+    );
+
     if (options.type) {
       where.type = options.type;
     }
@@ -919,11 +949,36 @@ export class PropertiesService {
       ];
     }
 
+    let effectiveWhere: Record<string, any> = where;
+
+    if (options.managerId && managerAgencyOwnerIds.length > 0) {
+      const managerScopeOr = [
+        { managerId: options.managerId },
+        { ownerId: { $in: managerAgencyOwnerIds } },
+      ];
+
+      const baseWhere = { ...where };
+      const existingSearchOr = baseWhere.$or;
+      delete baseWhere.$or;
+      delete baseWhere.managerId;
+
+      if (existingSearchOr) {
+        effectiveWhere = {
+          $and: [baseWhere, { $or: existingSearchOr }, { $or: managerScopeOr }],
+        };
+      } else {
+        effectiveWhere = {
+          ...baseWhere,
+          $or: managerScopeOr,
+        };
+      }
+    }
+
     const hasNearbyFilter = nearLat !== undefined && nearLng !== undefined;
 
     if (hasNearbyFilter) {
       const allMatching = await this.propertyRepository.find({
-        where,
+        where: effectiveWhere,
         order: { createdAt: 'DESC' },
       });
 
@@ -950,7 +1005,7 @@ export class PropertiesService {
     }
 
     const [properties, total] = await this.propertyRepository.findAndCount({
-      where,
+      where: effectiveWhere,
       skip,
       take: limit,
       order: { createdAt: 'DESC' },
