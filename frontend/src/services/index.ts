@@ -9,6 +9,7 @@ export {
 } from "./api";
 export { default as applicationService } from "./application.service";
 export { default as authService } from "./auth.service";
+export { default as leaseService } from "./lease.service";
 export { default as maintenanceService } from "./maintenance.service";
 export { default as notificationService } from "./notification.service";
 export { default as propertyService } from "./property.service";

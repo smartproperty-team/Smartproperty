@@ -46,6 +46,10 @@ flowchart TD
   OW -->|Approve strategic actions| PROP
   TE -->|Search/view/apply| PROP
 
+  RM -->|Create/activate/renew lease| LEASE[Leases]
+  OW -->|Validate lease terms and renewals| LEASE
+  TE -->|Review, sign, and track lease| LEASE
+
   TE -->|Application uploads| UP[Uploads]
   AG -->|Listing media uploads| UP
   OW -->|Legal docs uploads| UP
@@ -55,6 +59,7 @@ flowchart TD
   PROP --> NOTIF[Notifications]
   VER --> NOTIF
   UP --> NOTIF
+  LEASE --> NOTIF
 
   AI[AI Matching/Pricing] -->|Price range + confidence| AG
   AI -->|Decision support| BM
@@ -691,6 +696,16 @@ Legend: **Allowed** = full access in role scope, **Limited** = conditional/scope
 3. Agent/Rental Manager sees recommendation support during application review.
 4. Branch Manager and Owner consume confidence bands for pricing/decision validation.
 5. Super Admin monitors model governance, drift, and threshold breaches.
+
+### 6) Lease Handoff and Lifecycle
+
+1. Rental Manager creates a lease from an approved application and prepares the lease template.
+2. Owner validates the lease terms and renewal conditions.
+3. Tenant reviews the lease, uploads any missing supporting documents, and signs digitally.
+4. Owner or Rental Manager countersigns and activates the lease.
+5. Move-in inventory is recorded with photos; notifications are sent to tenant, owner, and manager.
+6. Before expiry, renewal reminders are issued and the Owner decides whether to renew, revise, or terminate.
+7. On move-out, the final inventory and security deposit handling are recorded before the lease is closed.
 
 ## Open Questions / Assumptions
 

@@ -22,12 +22,14 @@ import {
   VerifyEmailPage,
 } from "./pages/auth";
 import { HomePage, PaletteDemoPage } from "./pages/home";
+import { LeasesWorkspacePage } from "./pages/leases";
 import { PreferencesOnboardingModal } from "./pages/onboarding";
 import authService from "./services/auth.service";
 import { pushNotificationService } from "./services/push-notification.service";
 import { useAuthStore, usePreferencesStore } from "./store";
 import {
   canAccessAdminUsers,
+  canAccessLeases,
   canCreateMaintenanceRequest,
   canCreateProperties,
   canManageAgencyOnboarding,
@@ -40,7 +42,9 @@ import {
 } from "./utils";
 
 const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage"));
-const VerificationPage = lazy(() => import("./pages/dashboard/VerificationPage"));
+const VerificationPage = lazy(
+  () => import("./pages/dashboard/VerificationPage"),
+);
 const AdminVerificationPage = lazy(
   () => import("./pages/dashboard/AdminVerificationPage"),
 );
@@ -128,6 +132,7 @@ function getPageTitle(path: string, search: string): string {
     "/verification": "Verification",
     "/applications": "My Applications",
     "/applications/review": "Review Applications",
+    "/leases": "Leases",
     "/super-administrator/verifications": "Admin Verifications",
     "/super-administrator/users": "Admin Users",
     "/branch-manager/agencies": "My Agencies",
@@ -164,7 +169,7 @@ function App() {
   const { openOnboarding, getUserPreferences, setUserPreferences } =
     usePreferencesStore();
   const promptedUserRef = useRef<string | null>(null);
- 
+
   // Check if user is authenticated on app load
   useEffect(() => {
     checkAuth();
@@ -319,6 +324,30 @@ function App() {
               <ProtectedRoute>
                 {canReviewApplications(user) ? (
                   <ApplicationsReviewPage />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/leases"
+            element={
+              <ProtectedRoute>
+                {canAccessLeases(user) ? (
+                  <LeasesWorkspacePage />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/leases/:leaseId"
+            element={
+              <ProtectedRoute>
+                {canAccessLeases(user) ? (
+                  <LeasesWorkspacePage />
                 ) : (
                   <Navigate to="/dashboard" replace />
                 )}

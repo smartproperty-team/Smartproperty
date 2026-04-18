@@ -24,6 +24,7 @@ const validation_schema_1 = require("./config/validation.schema");
 const agencies_module_1 = require("./modules/agencies/agencies.module");
 const applications_module_1 = require("./modules/applications/applications.module");
 const auth_module_1 = require("./modules/auth/auth.module");
+const leases_module_1 = require("./modules/leases/leases.module");
 const maintenance_module_1 = require("./modules/maintenance/maintenance.module");
 const notifications_module_1 = require("./modules/notifications/notifications.module");
 const properties_module_1 = require("./modules/properties/properties.module");
@@ -126,6 +127,7 @@ AppModule = __decorate([
             auth_module_1.AuthModule,
             agencies_module_1.AgenciesModule,
             applications_module_1.ApplicationsModule,
+            leases_module_1.LeasesModule,
             users_module_1.UsersModule,
             properties_module_1.PropertiesModule,
             maintenance_module_1.MaintenanceModule,

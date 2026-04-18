@@ -1,14 +1,15 @@
 import { useAuthStore } from "@/store";
 import {
   canAccessAdminUsers,
+  canAccessLeases,
   canCreateMaintenanceRequest,
   canManageAgencyOnboarding,
   canManageAssignedMaintenance,
-  prefetchRoute,
   canReviewApplications,
   canReviewVerifications,
   canTrackMaintenanceRequests,
   isTenant,
+  prefetchRoute,
 } from "@/utils";
 import {
   ArrowLeft,
@@ -57,6 +58,15 @@ export default function AppSidebar() {
             {
               label: "Review Applications",
               to: "/applications/review",
+              icon: ClipboardList,
+            },
+          ]
+        : []),
+      ...(canAccessLeases(user)
+        ? [
+            {
+              label: "Leases",
+              to: "/leases",
               icon: ClipboardList,
             },
           ]

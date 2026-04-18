@@ -51,6 +51,19 @@ const APPLICATION_REVIEW_ROLES: UserRole[] = [
   UserRole.RENTAL_MANAGER,
 ];
 
+const LEASE_MANAGEMENT_ROLES: UserRole[] = [
+  UserRole.SUPER_ADMIN,
+  UserRole.OWNER,
+  UserRole.BRANCH_MANAGER,
+  UserRole.REAL_ESTATE_AGENT,
+  UserRole.RENTAL_MANAGER,
+];
+
+const LEASE_PARTICIPANT_ROLES: UserRole[] = [
+  UserRole.TENANT,
+  ...LEASE_MANAGEMENT_ROLES,
+];
+
 const MAINTENANCE_INTAKE_ROLES: UserRole[] = [
   UserRole.OWNER,
   UserRole.BRANCH_MANAGER,
@@ -126,6 +139,20 @@ export function canReviewVerifications(user: User | null | undefined): boolean {
  */
 export function canReviewApplications(user: User | null | undefined): boolean {
   return hasRole(user, APPLICATION_REVIEW_ROLES);
+}
+
+/**
+ * Can access lease workspace pages.
+ */
+export function canAccessLeases(user: User | null | undefined): boolean {
+  return hasRole(user, LEASE_PARTICIPANT_ROLES);
+}
+
+/**
+ * Can perform lease management actions.
+ */
+export function canManageLeases(user: User | null | undefined): boolean {
+  return hasRole(user, LEASE_MANAGEMENT_ROLES);
 }
 
 /**

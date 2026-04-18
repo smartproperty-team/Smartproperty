@@ -14,6 +14,7 @@ import {
 import {
   applicationService,
   authService,
+  leaseService,
   notificationService,
   propertyService,
   verificationService,
@@ -32,6 +33,7 @@ import type {
 import { VerificationStatus } from "@/types/verification";
 import {
   canAccessAdminUsers,
+  canAccessLeases,
   canCreateMaintenanceRequest,
   canManageAgencyOnboarding,
   canManageAssignedMaintenance,
@@ -441,10 +443,22 @@ export default function DashboardPage() {
 
     const loadStats = async () => {
       let notificationCount = 0;
+      let leaseCount = 0;
       try {
         notificationCount = await notificationService.getUnreadCount();
       } catch {
         notificationCount = 0;
+      }
+
+      if (canAccessLeases(user)) {
+        try {
+          const leaseResponse = canManageProperties(user)
+            ? await leaseService.getManaged({ page: 1, limit: 1 })
+            : await leaseService.getMine({ page: 1, limit: 1 });
+          leaseCount = leaseResponse.total;
+        } catch {
+          leaseCount = 0;
+        }
       }
 
       if (isTenant(user)) {
@@ -474,7 +488,7 @@ export default function DashboardPage() {
         setStats({
           first: browsedCount,
           second: applicationCount,
-          leases: 0,
+          leases: leaseCount,
           notifications: notificationCount,
         });
         return;
@@ -517,7 +531,7 @@ export default function DashboardPage() {
         setStats({
           first: propertyCount,
           second: tenantCount,
-          leases: 0,
+          leases: leaseCount,
           notifications: notificationCount,
         });
         return;
@@ -526,7 +540,7 @@ export default function DashboardPage() {
       setStats({
         first: 0,
         second: 0,
-        leases: 0,
+        leases: leaseCount,
         notifications: notificationCount,
       });
     };
@@ -819,6 +833,12 @@ export default function DashboardPage() {
     }
   };
 
+  const handleLeaseCardClick = () => {
+    if (canAccessLeases(user)) {
+      navigate("/leases");
+    }
+  };
+
   return (
     <>
       <AppSidebar />
@@ -1096,7 +1116,26 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card
+              className={
+                canAccessLeases(user)
+                  ? "cursor-pointer transition hover:shadow-md"
+                  : ""
+              }
+              onClick={handleLeaseCardClick}
+              onKeyDown={(event) => {
+                if (
+                  (event.key === "Enter" || event.key === " ") &&
+                  canAccessLeases(user)
+                ) {
+                  event.preventDefault();
+                  handleLeaseCardClick();
+                }
+              }}
+              role={canAccessLeases(user) ? "button" : undefined}
+              tabIndex={canAccessLeases(user) ? 0 : undefined}
+              aria-label={canAccessLeases(user) ? "Open leases" : undefined}
+            >
               <CardContent className="flex items-center p-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
                   <FileText className="h-6 w-6 text-blue-600" />

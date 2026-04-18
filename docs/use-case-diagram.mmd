@@ -2,6 +2,7 @@ graph TB
     %% Actors on top row
     T(("Tenant"))
     O(("Owner"))
+    RM(("Rental Manager"))
     A(("Admin"))
     AI(("AI System"))
 
@@ -63,6 +64,12 @@ graph TB
     O --- UC12
     O --- UC15
 
+    %% Rental Manager
+    RM --- UC5
+    RM --- UC6
+    RM --- UC7
+    RM --- UC10
+
     %% Admin
     A --- UC1
     A --- UC16
@@ -83,5 +90,6 @@ graph TB
 
     style T fill:#fff,stroke:#333,stroke-width:2px,font-size:16px
     style O fill:#fff,stroke:#333,stroke-width:2px,font-size:16px
+    style RM fill:#fff,stroke:#333,stroke-width:2px,font-size:16px
     style A fill:#fff,stroke:#333,stroke-width:2px,font-size:16px
     style AI fill:#fff,stroke:#333,stroke-width:2px,font-size:16px
