@@ -19,6 +19,11 @@ redis_client = RedisClient()
 
 async def connect_to_redis():
     """Connect to Redis."""
+    if not settings.redis_enabled:
+        logger.info("Redis is disabled (REDIS_ENABLED=false); skipping connection.")
+        redis_client.client = None
+        return
+
     try:
         logger.info("Connecting to Redis...")
         redis_client.client = redis.Redis(
@@ -40,6 +45,9 @@ async def connect_to_redis():
 
 async def close_redis_connection():
     """Close Redis connection."""
+    if not settings.redis_enabled:
+        return
+
     if redis_client.client:
         await redis_client.client.close()
         logger.info("Closed Redis connection")

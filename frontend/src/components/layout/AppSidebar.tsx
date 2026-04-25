@@ -1,6 +1,7 @@
 import { useAuthStore } from "@/store";
 import {
   canAccessAdminUsers,
+  canAccessLeases,
   canCreateMaintenanceRequest,
   canManageAgencyOnboarding,
   canManageAssignedMaintenance,
@@ -8,6 +9,7 @@ import {
   canReviewVerifications,
   canTrackMaintenanceRequests,
   isTenant,
+  prefetchRoute,
 } from "@/utils";
 import {
   ArrowLeft,
@@ -56,6 +58,15 @@ export default function AppSidebar() {
             {
               label: "Review Applications",
               to: "/applications/review",
+              icon: ClipboardList,
+            },
+          ]
+        : []),
+      ...(canAccessLeases(user)
+        ? [
+            {
+              label: "Leases",
+              to: "/leases",
               icon: ClipboardList,
             },
           ]
@@ -204,6 +215,8 @@ export default function AppSidebar() {
                       setMobileOpen(false);
                       navigate(link.to);
                     }}
+                    onMouseEnter={() => prefetchRoute(link.to)}
+                    onFocus={() => prefetchRoute(link.to)}
                     aria-current={active ? "page" : undefined}
                     className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                       active

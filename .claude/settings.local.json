@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc:*)",
-      "Bash(findstr /i \"PropertyMapView\\\\|PropertiesPage\")"
+      "Bash(findstr /i \"PropertyMapView\\\\|PropertiesPage\")",
+      "Bash(.venv/Scripts/python -c \"import click; print\\(click.__version__\\); print\\(hasattr\\(click, 'Choice'\\)\\)\")",
+      "Bash(.venv/Scripts/python -c \"from uvicorn.main import LEVEL_CHOICES; print\\('OK'\\)\")",
+      "Bash(.venv/Scripts/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000)",
+      "Bash(where pdftotext:*)",
+      "Bash(pdftotext \"E:/IntelliJ IDEA/Project-10-_SMARTPROPERTY_en.pdf\" -)",
+      "Bash(grep:*)",
+      "Bash(xargs cat:*)",
+      "Bash(npm run:*)",
+      "Bash(npx vite:*)",
+      "Bash(docker exec smartproperty-jenkins:*)"
     ]
   }
 }

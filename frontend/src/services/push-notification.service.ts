@@ -123,7 +123,9 @@ class PushNotificationService {
       // Subscribe to push
       const subscription = await this.registration!.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: this.urlBase64ToUint8Array(this.vapidPublicKey),
+        applicationServerKey: this.urlBase64ToUint8Array(
+          this.vapidPublicKey,
+        ) as BufferSource,
       });
 
       console.log('✅ Push Notification: Subscribed to push');
@@ -184,20 +186,6 @@ class PushNotificationService {
     }
 
     return outputArray;
-  }
-
-  /**
-   * Convert ArrayBuffer to base64
-   */
-  private arrayBufferToBase64(buffer: ArrayBuffer): string {
-    const bytes = new Uint8Array(buffer);
-    let binary = '';
-
-    for (let i = 0; i < bytes.byteLength; i += 1) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-
-    return window.btoa(binary);
   }
 
   /**

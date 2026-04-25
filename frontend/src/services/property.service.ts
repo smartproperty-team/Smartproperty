@@ -353,7 +353,56 @@ export const propertyService = {
     );
     return response.data;
   },
+
+  /**
+   * Get AI price suggestion for a Tunisian property.
+   */
+  async suggestPrice(
+    request: SuggestPriceRequest,
+  ): Promise<PriceSuggestionResponse> {
+    const response = await api.post<PriceSuggestionResponse>(
+      "/properties/ai/pricing/suggest",
+      request,
+      { timeout: 30_000 },
+    );
+    return response.data;
+  },
 };
+
+// ===========================================
+// AI pricing types
+// ===========================================
+
+export interface SuggestPriceRequest {
+  propertyType: string;
+  city: string;
+  governorate?: string;
+  areaSqm: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  parkingSpaces?: number;
+  furnished?: boolean;
+  petFriendly?: boolean;
+  amenities?: string[];
+}
+
+export interface PriceSuggestionResponse {
+  predictedPrice: number;
+  rentalPrice: number;
+  salePrice: number;
+  currency: string;
+  confidence: number;
+  priceRange: { low: number; high: number };
+  salePriceRange: { low: number; high: number };
+  baseRatePerSqm: number;
+  method: string;
+  factors: Array<{
+    factor: string;
+    impact: string;
+    direction: string;
+    description: string;
+  }>;
+}
 
 // ===========================================
 // AI description types

@@ -339,18 +339,18 @@ US-3.2.2 Automatic analysis of the candidate file (Actor: AI System)
 ### Tenant Features
 
 - [X]  Submit rental application
-- [ ]  Upload required documents
+- [X]  Upload required documents
 - [X]  Track application status
 - [X]  Withdraw application
 - [X]  View application history
 
 ### Owner/Manager Features
 
-- [ ]  View received applications
-- [ ]  Review application details
+- [X]  View received applications
+- [X]  Review application details
 - [ ]  Request additional documents
-- [ ]  Approve application
-- [ ]  Reject application (with reason)
+- [X]  Approve application
+- [X]  Reject application (with reason)
 - [ ]  Schedule property viewing
 
 ### Notifications

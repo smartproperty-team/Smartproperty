@@ -8,7 +8,13 @@ import {
 } from "@/services";
 import type { Notification } from "@/services/notification.service";
 import { useAuthStore, usePreferencesStore } from "@/store";
-import { isOwner, isTenant } from "@/utils";
+import {
+  canManageFavorites,
+  canModerateReviews,
+  isOwner,
+  isTenant,
+  prefetchRoute,
+} from "@/utils";
 import {
   BellRing,
   ChevronDown,
@@ -22,7 +28,6 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { io, type Socket } from "socket.io-client";
-import ReadAloudWidget from "../accessibility/ReadAloudWidget";
 
 const resolveSocketBaseUrl = () => {
   const configuredApiUrl = import.meta.env.VITE_API_URL as string | undefined;
@@ -63,6 +68,10 @@ export default function HomeNavbar() {
     { to: "/blog", label: t.nav.blog, hasDropdown: true },
     { to: "/contact", label: t.nav.contact, hasDropdown: false },
   ];
+
+  const handleRoutePrefetch = useCallback((path: string) => {
+    prefetchRoute(path);
+  }, []);
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
@@ -443,6 +452,8 @@ export default function HomeNavbar() {
                 <Link
                   key={link.to}
                   to={link.to}
+                  onMouseEnter={() => handleRoutePrefetch(link.to)}
+                  onFocus={() => handleRoutePrefetch(link.to)}
                   className={`inline-flex whitespace-nowrap items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-semibold tracking-[0.01em] transition-colors ${
                     isActive
                       ? "bg-[#FFC570] text-[#1A3263]"
@@ -463,114 +474,181 @@ export default function HomeNavbar() {
             })}
           </div>
 
+          {user ? (
+            <div className="relative" ref={userDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setShowUserDropdown(!showUserDropdown)}
+                className="inline-flex items-center gap-2 rounded-full border border-[#FFC570] bg-[#FFC570] px-2.5 py-1.5 text-[#1A3263] transition-colors hover:bg-[#f2b75e]"
+                aria-label={`Account: ${user.fullName || user.firstName}`}
+                aria-expanded={showUserDropdown}
+                aria-haspopup="menu"
+                aria-controls="user-menu"
+              >
+                <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/75 text-[#1A3263]">
+                  {user.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={user.fullName || user.firstName || "User avatar"}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <User className="h-4 w-4" />
+                  )}
+                </div>
+                <span className="hidden max-w-24 truncate text-[13px] font-bold text-[#1A3263] 2xl:inline">
+                  {user.fullName || user.firstName}
+                </span>
+                <ChevronDown className="h-4 w-4 text-[#1A3263]" />
+              </button>
 
-
-            {user ? (
-              <div className="relative" ref={userDropdownRef}>
-                <button
-                  type="button"
-                  onClick={() => setShowUserDropdown(!showUserDropdown)}
-                  className="inline-flex items-center gap-2 rounded-full border border-[#FFC570] bg-[#FFC570] px-2.5 py-1.5 text-[#1A3263] transition-colors hover:bg-[#f2b75e]"
-                  aria-label={`Account: ${user.fullName || user.firstName}`}
-                  aria-expanded={showUserDropdown}
-                  aria-haspopup="menu"
-                  aria-controls="user-menu"
+              {showUserDropdown && (
+                <div
+                  id="user-menu"
+                  className="absolute right-0 z-50 mt-2 w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
                 >
-                  <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/75 text-[#1A3263]">
-                    {user.avatar ? (
-                      <img
-                        src={user.avatar}
-                        alt={user.fullName || user.firstName || "User avatar"}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <User className="h-4 w-4" />
-                    )}
+                  <div className="border-b border-gray-100 px-4 py-3">
+                    <p className="text-sm font-medium text-gray-900">
+                      {user.fullName || user.firstName}
+                    </p>
+                    <p className="text-xs text-gray-500">{user.email}</p>
                   </div>
-                  <span className="hidden max-w-24 truncate text-[13px] font-bold text-[#1A3263] 2xl:inline">
-                    {user.fullName || user.firstName}
-                  </span>
-                  <ChevronDown className="h-4 w-4 text-[#1A3263]" />
-                </button>
-
-                {showUserDropdown && (
-                  <div
-                    id="user-menu"
-                    className="absolute right-0 z-50 mt-2 w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUserDropdown(false);
+                      navigate("/profile");
+                    }}
+                    onMouseEnter={() => handleRoutePrefetch("/profile")}
+                    onFocus={() => handleRoutePrefetch("/profile")}
+                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                   >
-                    <div className="border-b border-gray-100 px-4 py-3">
-                      <p className="text-sm font-medium text-gray-900">
-                        {user.fullName || user.firstName}
-                      </p>
-                      <p className="text-xs text-gray-500">{user.email}</p>
-                    </div>
+                    <span className="mr-3 flex h-4 w-4 items-center justify-center overflow-hidden rounded-full bg-indigo-100 text-indigo-600">
+                      {user.avatar ? (
+                        <img
+                          src={user.avatar}
+                          alt={user.fullName || user.firstName || "User avatar"}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <User className="h-3 w-3" />
+                      )}
+                    </span>
+                    {t.nav.profile}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUserDropdown(false);
+                      navigate("/dashboard");
+                    }}
+                    onMouseEnter={() => handleRoutePrefetch("/dashboard")}
+                    onFocus={() => handleRoutePrefetch("/dashboard")}
+                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <Monitor className="mr-3 h-4 w-4" />
+                    {t.nav.dashboard}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUserDropdown(false);
+                      navigate("/settings");
+                    }}
+                    onMouseEnter={() => handleRoutePrefetch("/settings")}
+                    onFocus={() => handleRoutePrefetch("/settings")}
+                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <Settings className="mr-3 h-4 w-4" />
+                    {t.nav.settings}
+                  </button>
+                  {canManageFavorites(user) && (
                     <button
                       type="button"
                       onClick={() => {
                         setShowUserDropdown(false);
-                        navigate("/profile");
+                        navigate("/favorites");
                       }}
+                      onMouseEnter={() => handleRoutePrefetch("/favorites")}
+                      onFocus={() => handleRoutePrefetch("/favorites")}
                       className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                     >
-                      <span className="mr-3 flex h-4 w-4 items-center justify-center overflow-hidden rounded-full bg-indigo-100 text-indigo-600">
-                        {user.avatar ? (
-                          <img
-                            src={user.avatar}
-                            alt={
-                              user.fullName || user.firstName || "User avatar"
-                            }
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <User className="h-3 w-3" />
-                        )}
-                      </span>
-                      {t.nav.profile}
+                      <span className="mr-3">★</span>
+                      My Favorites
                     </button>
+                  )}
+                  {canModerateReviews(user) && (
                     <button
                       type="button"
                       onClick={() => {
                         setShowUserDropdown(false);
-                        navigate("/dashboard");
+                        navigate("/reviews/moderation");
                       }}
+                      onMouseEnter={() =>
+                        handleRoutePrefetch("/reviews/moderation")
+                      }
+                      onFocus={() => handleRoutePrefetch("/reviews/moderation")}
                       className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                     >
-                      <Monitor className="mr-3 h-4 w-4" />
-                      {t.nav.dashboard}
+                      <span className="mr-3">🛡</span>
+                      Review Moderation
                     </button>
+                  )}
+                  <div className="border-t border-gray-100">
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         setShowUserDropdown(false);
-                        navigate("/settings");
+                        await logout();
+                        navigate("/login");
                       }}
-                      className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                     >
-                      <Settings className="mr-3 h-4 w-4" />
-                      {t.nav.settings}
+                      <LogOut className="mr-3 h-4 w-4" />
+                      {t.nav.signOut}
                     </button>
-                    <div className="border-t border-gray-100">
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          setShowUserDropdown(false);
-                          await logout();
-                          navigate("/login");
-                        }}
-                        className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                      >
-                        <LogOut className="mr-3 h-4 w-4" />
-                        {t.nav.signOut}
-                      </button>
-                    </div>
                   </div>
-                )}
-              </div>
-            ) : (
-              <Link
-                to="/login"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#FFC570] bg-[#FFC570] text-[#1A3263] transition-colors hover:bg-[#f2b75e]"
-                aria-label="User account"
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link
+              to="/login"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#FFC570] bg-[#FFC570] text-[#1A3263] transition-colors hover:bg-[#f2b75e]"
+              aria-label="User account"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                aria-hidden="true"
+              >
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </Link>
+          )}
+
+          {user && (
+            <div className="relative" ref={notifPanelRef}>
+              <button
+                type="button"
+                className={`inline-flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-full border px-3 transition-colors ${
+                  unreadCount > 0
+                    ? "border-red-300 bg-red-500/25 text-red-100 hover:bg-red-500/35"
+                    : "border-white/45 bg-white/15 text-white hover:bg-white/25"
+                }`}
+                aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
+                title="Notifications"
+                onClick={() => {
+                  void handleNotificationPanelToggle();
+                }}
+                aria-expanded={showNotifPanel}
+                aria-controls="notifications-panel"
+                aria-haspopup="dialog"
               >
                 <svg
                   width="20"
@@ -579,174 +657,142 @@ export default function HomeNavbar() {
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                   aria-hidden="true"
                 >
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                 </svg>
-              </Link>
-            )}
+                <span className="text-xs font-bold leading-none text-white">
+                  {unreadCount}
+                </span>
+              </button>
 
-            {user && (
-              <div className="relative" ref={notifPanelRef}>
-                <button
-                  type="button"
-                  className={`inline-flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-full border px-3 transition-colors ${
-                    unreadCount > 0
-                      ? "border-red-300 bg-red-500/25 text-red-100 hover:bg-red-500/35"
-                      : "border-white/45 bg-white/15 text-white hover:bg-white/25"
-                  }`}
-                  aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
-                  title="Notifications"
-                  onClick={() => {
-                    void handleNotificationPanelToggle();
-                  }}
-                  aria-expanded={showNotifPanel}
-                  aria-controls="notifications-panel"
-                  aria-haspopup="dialog"
+              {showNotifPanel && (
+                <div
+                  id="notifications-panel"
+                  className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-[#547792]/30 bg-white shadow-xl"
                 >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                  </svg>
-                  <span className="text-xs font-bold leading-none text-white">
-                    {unreadCount}
-                  </span>
-                </button>
-
-                {showNotifPanel && (
-                  <div
-                    id="notifications-panel"
-                    className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-[#547792]/30 bg-white shadow-xl"
-                  >
-                    <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-                      <h3 className="text-sm font-semibold text-[#1A3263]">
-                        {t.nav.notifications}
-                      </h3>
-                      <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+                    <h3 className="text-sm font-semibold text-[#1A3263]">
+                      {t.nav.notifications}
+                    </h3>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-[#1A3263] hover:text-[#547792]"
+                        onClick={() =>
+                          setNotificationsAutoRefreshEnabled((prev) => !prev)
+                        }
+                      >
+                        {notificationsAutoRefreshEnabled
+                          ? t.nav.pauseLiveUpdates
+                          : t.nav.resumeLiveUpdates}
+                      </button>
+                      {unreadCount > 0 && (
                         <button
                           type="button"
                           className="text-xs font-semibold text-[#1A3263] hover:text-[#547792]"
-                          onClick={() =>
-                            setNotificationsAutoRefreshEnabled((prev) => !prev)
-                          }
+                          onClick={async () => {
+                            await notificationService.markAllAsRead();
+                            await fetchNotifications();
+                          }}
                         >
-                          {notificationsAutoRefreshEnabled
-                            ? t.nav.pauseLiveUpdates
-                            : t.nav.resumeLiveUpdates}
+                          {t.nav.markAllRead}
                         </button>
-                        {unreadCount > 0 && (
-                          <button
-                            type="button"
-                            className="text-xs font-semibold text-[#1A3263] hover:text-[#547792]"
-                            onClick={async () => {
-                              await notificationService.markAllAsRead();
-                              await fetchNotifications();
-                            }}
-                          >
-                            {t.nav.markAllRead}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <div className="max-h-80 overflow-y-auto">
-                      {notifications.length === 0 ? (
-                        <div className="flex flex-col items-center gap-2 p-5 text-[#547792]">
-                          <svg
-                            width="32"
-                            height="32"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            aria-hidden="true"
-                          >
-                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                          </svg>
-                          <p className="text-sm">{t.nav.noNotifications}</p>
-                        </div>
-                      ) : (
-                        notifications.map((n) => (
-                          <button
-                            type="button"
-                            key={n.id}
-                            className={`flex w-full items-start gap-3 border-b border-gray-100 px-4 py-3 text-left transition-colors hover:bg-palette-background ${
-                              !n.isRead ? "bg-[#EFD2B0]/45" : "bg-white"
-                            }`}
-                            onClick={async () => {
-                              if (!n.isRead) {
-                                await notificationService.markAsRead(n.id);
-                                await fetchNotifications();
-                              }
-                              if (n.link) {
-                                navigate(n.link);
-                                setShowNotifPanel(false);
-                              }
-                            }}
-                            aria-label={`Notification: ${n.title}`}
-                          >
-                            <div className="pt-0.5 text-base">
-                              {n.type === "verification_approved"
-                                ? "✅"
-                                : n.type === "verification_rejected"
-                                  ? "❌"
-                                  : "🔔"}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-semibold text-[#1A3263]">
-                                {n.title}
-                              </p>
-                              <p className="mt-0.5 line-clamp-2 text-xs text-[#547792]">
-                                {n.message}
-                              </p>
-                              <span className="mt-1 inline-block text-[11px] text-gray-500">
-                                {new Date(n.createdAt).toLocaleDateString(
-                                  "en-US",
-                                  {
-                                    month: "short",
-                                    day: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  },
-                                )}
-                              </span>
-                            </div>
-                          </button>
-                        ))
                       )}
                     </div>
                   </div>
-                )}
-              </div>
-            )}
+                  <div className="max-h-80 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="flex flex-col items-center gap-2 p-5 text-[#547792]">
+                        <svg
+                          width="32"
+                          height="32"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          aria-hidden="true"
+                        >
+                          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                        </svg>
+                        <p className="text-sm">{t.nav.noNotifications}</p>
+                      </div>
+                    ) : (
+                      notifications.map((n) => (
+                        <button
+                          type="button"
+                          key={n.id}
+                          className={`flex w-full items-start gap-3 border-b border-gray-100 px-4 py-3 text-left transition-colors hover:bg-palette-background ${
+                            !n.isRead ? "bg-[#EFD2B0]/45" : "bg-white"
+                          }`}
+                          onClick={async () => {
+                            if (!n.isRead) {
+                              await notificationService.markAsRead(n.id);
+                              await fetchNotifications();
+                            }
+                            if (n.link) {
+                              navigate(n.link);
+                              setShowNotifPanel(false);
+                            }
+                          }}
+                          aria-label={`Notification: ${n.title}`}
+                        >
+                          <div className="pt-0.5 text-base">
+                            {n.type === "verification_approved"
+                              ? "✅"
+                              : n.type === "verification_rejected"
+                                ? "❌"
+                                : "🔔"}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-[#1A3263]">
+                              {n.title}
+                            </p>
+                            <p className="mt-0.5 line-clamp-2 text-xs text-[#547792]">
+                              {n.message}
+                            </p>
+                            <span className="mt-1 inline-block text-[11px] text-gray-500">
+                              {new Date(n.createdAt).toLocaleDateString(
+                                "en-US",
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                },
+                              )}
+                            </span>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
-            {isOwner(user) && (
-              <Link
-                to="/properties/new"
-                className="inline-flex items-center gap-2 rounded-full bg-[#FFC570] px-4 py-2 text-xs font-bold uppercase tracking-wide text-[#1A3263] transition-colors hover:bg-[#f2b75e]"
-              >
-                <span>ADD LISTING</span>
-                <span aria-hidden="true">+</span>
-              </Link>
-            )}
+          {isOwner(user) && (
+            <Link
+              to="/properties/new"
+              onMouseEnter={() => handleRoutePrefetch("/properties/new")}
+              onFocus={() => handleRoutePrefetch("/properties/new")}
+              className="inline-flex items-center gap-2 rounded-full bg-[#FFC570] px-4 py-2 text-xs font-bold uppercase tracking-wide text-[#1A3263] transition-colors hover:bg-[#f2b75e]"
+            >
+              <span>ADD LISTING</span>
+              <span aria-hidden="true">+</span>
+            </Link>
+          )}
 
-            <LanguageToggle
-              variant="pill"
-              className="border-white/55 bg-white/10 text-white hover:border-[#FFC570] hover:bg-white/20 hover:text-[#FFC570]"
-            />
-          </div>
-       
+          <LanguageToggle
+            variant="pill"
+            className="border-white/55 bg-white/10 text-white hover:border-[#FFC570] hover:bg-white/20 hover:text-[#FFC570]"
+          />
+        </div>
 
         <div
           id="mobile-menu"
@@ -761,6 +807,7 @@ export default function HomeNavbar() {
               <Link
                 key={`mobile-${link.to}`}
                 to={link.to}
+                onFocus={() => handleRoutePrefetch(link.to)}
                 className="block rounded-lg px-3 py-2.5 text-base font-semibold text-white/95 transition-colors hover:bg-white/10 hover:text-[#FFC570]"
                 onClick={() => setMobileMenuOpen(false)}
                 tabIndex={mobileMenuOpen ? 0 : -1}

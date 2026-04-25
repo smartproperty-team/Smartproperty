@@ -20,6 +20,7 @@ services:
       - APP_ENV=development
       - DEBUG=true
       - MONGODB_URI=mongodb://smartproperty:smartproperty123@mongodb:27017/smartproperty?authSource=admin
+      - REDIS_ENABLED=true
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=smartproperty_redis_secret

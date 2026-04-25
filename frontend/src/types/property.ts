@@ -67,6 +67,13 @@ export interface Property {
   virtualTour?: string;
   ownerId: string;
   managerId?: string;
+  agencyId?: string;
+  agency?: {
+    id: string;
+    name: string;
+    slug?: string;
+    region?: string;
+  };
   owner?: {
     id: string;
     name: string;

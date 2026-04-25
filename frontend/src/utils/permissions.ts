@@ -51,6 +51,19 @@ const APPLICATION_REVIEW_ROLES: UserRole[] = [
   UserRole.RENTAL_MANAGER,
 ];
 
+const LEASE_MANAGEMENT_ROLES: UserRole[] = [
+  UserRole.SUPER_ADMIN,
+  UserRole.OWNER,
+  UserRole.BRANCH_MANAGER,
+  UserRole.REAL_ESTATE_AGENT,
+  UserRole.RENTAL_MANAGER,
+];
+
+const LEASE_PARTICIPANT_ROLES: UserRole[] = [
+  UserRole.TENANT,
+  ...LEASE_MANAGEMENT_ROLES,
+];
+
 const MAINTENANCE_INTAKE_ROLES: UserRole[] = [
   UserRole.OWNER,
   UserRole.BRANCH_MANAGER,
@@ -59,6 +72,16 @@ const MAINTENANCE_INTAKE_ROLES: UserRole[] = [
 const MAINTENANCE_PROVIDER_ROLES: UserRole[] = [UserRole.SERVICE_PROVIDER];
 
 const AGENCY_ONBOARDING_ROLES: UserRole[] = [UserRole.BRANCH_MANAGER];
+
+const FAVORITES_ROLES: UserRole[] = [UserRole.TENANT];
+
+const REVIEW_MODERATION_ROLES: UserRole[] = [
+  UserRole.SUPER_ADMIN,
+  UserRole.OWNER,
+  UserRole.BRANCH_MANAGER,
+  UserRole.REAL_ESTATE_AGENT,
+  UserRole.RENTAL_MANAGER,
+];
 
 function hasRole(
   user: User | null | undefined,
@@ -129,6 +152,20 @@ export function canReviewApplications(user: User | null | undefined): boolean {
 }
 
 /**
+ * Can access lease workspace pages.
+ */
+export function canAccessLeases(user: User | null | undefined): boolean {
+  return hasRole(user, LEASE_PARTICIPANT_ROLES);
+}
+
+/**
+ * Can perform lease management actions.
+ */
+export function canManageLeases(user: User | null | undefined): boolean {
+  return hasRole(user, LEASE_MANAGEMENT_ROLES);
+}
+
+/**
  * Can submit owner/branch manager maintenance intake requests.
  */
 export function canCreateMaintenanceRequest(
@@ -162,6 +199,20 @@ export function canManageAgencyOnboarding(
   user: User | null | undefined,
 ): boolean {
   return hasRole(user, AGENCY_ONBOARDING_ROLES);
+}
+
+/**
+ * Can access favorites workspace.
+ */
+export function canManageFavorites(user: User | null | undefined): boolean {
+  return hasRole(user, FAVORITES_ROLES);
+}
+
+/**
+ * Can access review moderation workflows.
+ */
+export function canModerateReviews(user: User | null | undefined): boolean {
+  return hasRole(user, REVIEW_MODERATION_ROLES);
 }
 
 /**

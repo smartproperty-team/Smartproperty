@@ -12,11 +12,14 @@ import {
   CardTitle,
 } from "@/components/ui";
 import {
+  agencyOnboardingService,
   applicationService,
   authService,
+  leaseService,
   notificationService,
   propertyService,
   verificationService,
+  type AgencySearchItem,
 } from "@/services";
 import { useAuthStore } from "@/store";
 import { ApplicationStatus, type Application } from "@/types/application";
@@ -32,6 +35,7 @@ import type {
 import { VerificationStatus } from "@/types/verification";
 import {
   canAccessAdminUsers,
+  canAccessLeases,
   canCreateMaintenanceRequest,
   canManageAgencyOnboarding,
   canManageAssignedMaintenance,
@@ -53,7 +57,7 @@ import {
   Users,
   Wrench,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const ACTIVE_APPLICATION_STATUSES = new Set<ApplicationStatus>([
@@ -77,6 +81,31 @@ export default function DashboardPage() {
   const [ownerProperties, setOwnerProperties] = useState<Property[]>([]);
   const [isLoadingOwnerProperties, setIsLoadingOwnerProperties] =
     useState(false);
+  const [managedAgencyProperties, setManagedAgencyProperties] = useState<
+    Property[]
+  >([]);
+  const [
+    isLoadingManagedAgencyProperties,
+    setIsLoadingManagedAgencyProperties,
+  ] = useState(false);
+  const [selectedManagedOwnerId, setSelectedManagedOwnerId] = useState("");
+  const [ownerAgencyIdInput, setOwnerAgencyIdInput] = useState("");
+  const [ownerLinkedAgencyId, setOwnerLinkedAgencyId] = useState("");
+  const [ownerLinkedAgencyName, setOwnerLinkedAgencyName] = useState("");
+  const [ownerLinkedAgencyManagerName, setOwnerLinkedAgencyManagerName] =
+    useState("");
+  const [ownerAgencyQuery, setOwnerAgencyQuery] = useState("");
+  const [ownerAgencySuggestions, setOwnerAgencySuggestions] = useState<
+    AgencySearchItem[]
+  >([]);
+  const [ownerAgencySearchLoading, setOwnerAgencySearchLoading] =
+    useState(false);
+  const [ownerAgencyActionLoading, setOwnerAgencyActionLoading] =
+    useState(false);
+  const [ownerAgencyMessage, setOwnerAgencyMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [tenantApplications, setTenantApplications] = useState<Application[]>(
     [],
   );
@@ -168,6 +197,8 @@ export default function DashboardPage() {
   const canAccessPortfolioDashboard =
     canManageProperties(user) ||
     user?.role === UserRole.ACCOUNTANT_ADMIN_ASSISTANT;
+  const canViewAgencyOwnersPanel =
+    canManageProperties(user) && user?.role !== UserRole.OWNER;
   const canRequestMaintenance = canCreateMaintenanceRequest(user);
   const canTrackOwnMaintenance = canTrackMaintenanceRequests(user);
   const canManageMaintenanceAsProvider = canManageAssignedMaintenance(user);
@@ -211,7 +242,97 @@ export default function DashboardPage() {
     });
   };
 
+  const getApiErrorMessage = (error: unknown, fallback: string): string => {
+    const message = (
+      error as {
+        response?: { data?: { message?: string | string[] } };
+      }
+    )?.response?.data?.message;
+
+    if (Array.isArray(message) && typeof message[0] === "string") {
+      return message[0];
+    }
+
+    if (typeof message === "string" && message.trim().length > 0) {
+      return message;
+    }
+
+    return fallback;
+  };
+
   // Fetch verification status for tenants
+  useEffect(() => {
+    if (user?.role !== UserRole.OWNER) {
+      setOwnerAgencyIdInput("");
+      setOwnerLinkedAgencyId("");
+      setOwnerLinkedAgencyName("");
+      setOwnerLinkedAgencyManagerName("");
+      setOwnerAgencyMessage(null);
+      return;
+    }
+
+    const currentAgencyId = user?.agencyId || "";
+    setOwnerLinkedAgencyId(currentAgencyId);
+    setOwnerAgencyIdInput((previous) => previous || currentAgencyId);
+    setOwnerAgencyQuery((previous) => previous || currentAgencyId);
+  }, [user?.agencyId, user?.role]);
+
+  useEffect(() => {
+    if (user?.role !== UserRole.OWNER || !ownerLinkedAgencyId) {
+      return;
+    }
+
+    const loadLinkedAgencyInfo = async () => {
+      try {
+        const agencies =
+          await agencyOnboardingService.searchAgencies(ownerLinkedAgencyId);
+        const linkedAgency =
+          agencies.find((agency) => agency.id === ownerLinkedAgencyId) ||
+          agencies[0];
+
+        if (linkedAgency) {
+          setOwnerLinkedAgencyName(linkedAgency.name);
+          setOwnerLinkedAgencyManagerName(linkedAgency.managerName || "");
+        }
+      } catch {
+        setOwnerLinkedAgencyName("");
+        setOwnerLinkedAgencyManagerName("");
+      }
+    };
+
+    void loadLinkedAgencyInfo();
+  }, [ownerLinkedAgencyId, user?.role]);
+
+  useEffect(() => {
+    if (user?.role !== UserRole.OWNER) {
+      setOwnerAgencySuggestions([]);
+      setOwnerAgencySearchLoading(false);
+      return;
+    }
+
+    const searchText = ownerAgencyQuery.trim();
+    if (!searchText || searchText.length < 2) {
+      setOwnerAgencySuggestions([]);
+      setOwnerAgencySearchLoading(false);
+      return;
+    }
+
+    const timeout = window.setTimeout(async () => {
+      setOwnerAgencySearchLoading(true);
+      try {
+        const results =
+          await agencyOnboardingService.searchAgencies(searchText);
+        setOwnerAgencySuggestions(results);
+      } catch {
+        setOwnerAgencySuggestions([]);
+      } finally {
+        setOwnerAgencySearchLoading(false);
+      }
+    }, 250);
+
+    return () => window.clearTimeout(timeout);
+  }, [ownerAgencyQuery, user?.role]);
+
   useEffect(() => {
     if (isTenant(user)) {
       verificationService
@@ -245,6 +366,80 @@ export default function DashboardPage() {
 
     void loadOwnerProperties();
   }, [user?.id, user?.role]);
+
+  useEffect(() => {
+    if (!canViewAgencyOwnersPanel || !user?.id) {
+      setManagedAgencyProperties([]);
+      setSelectedManagedOwnerId("");
+      return;
+    }
+
+    const loadManagedAgencyProperties = async () => {
+      setIsLoadingManagedAgencyProperties(true);
+      try {
+        const response = await propertyService.getProperties({
+          managerId: user.id,
+          page: 1,
+          limit: 200,
+        });
+        setManagedAgencyProperties(response.properties);
+      } catch {
+        setManagedAgencyProperties([]);
+      } finally {
+        setIsLoadingManagedAgencyProperties(false);
+      }
+    };
+
+    void loadManagedAgencyProperties();
+  }, [canViewAgencyOwnersPanel, user?.id]);
+
+  const managedOwners = useMemo(() => {
+    const ownerMap = new Map<
+      string,
+      {
+        ownerId: string;
+        ownerName: string;
+        properties: Property[];
+      }
+    >();
+
+    managedAgencyProperties.forEach((property) => {
+      const ownerId = property.ownerId;
+      if (!ownerId) {
+        return;
+      }
+
+      const existing = ownerMap.get(ownerId);
+      const ownerName =
+        property.owner?.name?.trim() || "Owner name unavailable";
+
+      if (!existing) {
+        ownerMap.set(ownerId, {
+          ownerId,
+          ownerName,
+          properties: [property],
+        });
+        return;
+      }
+
+      existing.properties.push(property);
+    });
+
+    return Array.from(ownerMap.values()).sort((a, b) =>
+      a.ownerName.localeCompare(b.ownerName),
+    );
+  }, [managedAgencyProperties]);
+
+  const selectedManagedOwner = useMemo(() => {
+    if (!selectedManagedOwnerId) {
+      return null;
+    }
+
+    return (
+      managedOwners.find((owner) => owner.ownerId === selectedManagedOwnerId) ||
+      null
+    );
+  }, [managedOwners, selectedManagedOwnerId]);
 
   useEffect(() => {
     if (!isTenant(user)) {
@@ -441,10 +636,22 @@ export default function DashboardPage() {
 
     const loadStats = async () => {
       let notificationCount = 0;
+      let leaseCount = 0;
       try {
         notificationCount = await notificationService.getUnreadCount();
       } catch {
         notificationCount = 0;
+      }
+
+      if (canAccessLeases(user)) {
+        try {
+          const leaseResponse = canManageProperties(user)
+            ? await leaseService.getManaged({ page: 1, limit: 1 })
+            : await leaseService.getMine({ page: 1, limit: 1 });
+          leaseCount = leaseResponse.total;
+        } catch {
+          leaseCount = 0;
+        }
       }
 
       if (isTenant(user)) {
@@ -474,7 +681,7 @@ export default function DashboardPage() {
         setStats({
           first: browsedCount,
           second: applicationCount,
-          leases: 0,
+          leases: leaseCount,
           notifications: notificationCount,
         });
         return;
@@ -517,7 +724,7 @@ export default function DashboardPage() {
         setStats({
           first: propertyCount,
           second: tenantCount,
-          leases: 0,
+          leases: leaseCount,
           notifications: notificationCount,
         });
         return;
@@ -526,7 +733,7 @@ export default function DashboardPage() {
       setStats({
         first: 0,
         second: 0,
-        leases: 0,
+        leases: leaseCount,
         notifications: notificationCount,
       });
     };
@@ -819,6 +1026,90 @@ export default function DashboardPage() {
     }
   };
 
+  const handleLeaseCardClick = () => {
+    if (canAccessLeases(user)) {
+      navigate("/leases");
+    }
+  };
+
+  const handleOwnerLinkAgency = async () => {
+    const agencyId = ownerAgencyIdInput.trim();
+    if (!agencyId) {
+      setOwnerAgencyMessage({
+        type: "error",
+        text: "Please paste your agency ID first.",
+      });
+      return;
+    }
+
+    setOwnerAgencyActionLoading(true);
+    setOwnerAgencyMessage(null);
+
+    try {
+      const response =
+        await agencyOnboardingService.linkCurrentOwnerToAgency(agencyId);
+      setOwnerLinkedAgencyId(response.agencyId);
+      setOwnerAgencyIdInput(response.agencyId);
+      const selectedAgency = ownerAgencySuggestions.find(
+        (agency) => agency.id === response.agencyId,
+      );
+      if (selectedAgency) {
+        setOwnerLinkedAgencyName(selectedAgency.name);
+        setOwnerLinkedAgencyManagerName(selectedAgency.managerName || "");
+      }
+      setOwnerAgencyMessage({
+        type: "success",
+        text: "You are now linked to this agency.",
+      });
+    } catch (error) {
+      setOwnerAgencyMessage({
+        type: "error",
+        text: getApiErrorMessage(
+          error,
+          "Unable to link your account to the agency.",
+        ),
+      });
+    } finally {
+      setOwnerAgencyActionLoading(false);
+    }
+  };
+
+  const handleOwnerUnlinkAgency = async () => {
+    const agencyId = ownerLinkedAgencyId || ownerAgencyIdInput.trim();
+    if (!agencyId) {
+      setOwnerAgencyMessage({
+        type: "error",
+        text: "No linked agency found to remove.",
+      });
+      return;
+    }
+
+    setOwnerAgencyActionLoading(true);
+    setOwnerAgencyMessage(null);
+
+    try {
+      await agencyOnboardingService.unlinkCurrentOwnerFromAgency(agencyId);
+      setOwnerLinkedAgencyId("");
+      setOwnerAgencyIdInput("");
+      setOwnerLinkedAgencyName("");
+      setOwnerLinkedAgencyManagerName("");
+      setOwnerAgencyMessage({
+        type: "success",
+        text: "Your agency link has been removed.",
+      });
+    } catch (error) {
+      setOwnerAgencyMessage({
+        type: "error",
+        text: getApiErrorMessage(
+          error,
+          "Unable to remove your agency link right now.",
+        ),
+      });
+    } finally {
+      setOwnerAgencyActionLoading(false);
+    }
+  };
+
   return (
     <>
       <AppSidebar />
@@ -1096,7 +1387,26 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card
+              className={
+                canAccessLeases(user)
+                  ? "cursor-pointer transition hover:shadow-md"
+                  : ""
+              }
+              onClick={handleLeaseCardClick}
+              onKeyDown={(event) => {
+                if (
+                  (event.key === "Enter" || event.key === " ") &&
+                  canAccessLeases(user)
+                ) {
+                  event.preventDefault();
+                  handleLeaseCardClick();
+                }
+              }}
+              role={canAccessLeases(user) ? "button" : undefined}
+              tabIndex={canAccessLeases(user) ? 0 : undefined}
+              aria-label={canAccessLeases(user) ? "Open leases" : undefined}
+            >
               <CardContent className="flex items-center p-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
                   <FileText className="h-6 w-6 text-blue-600" />
@@ -1434,6 +1744,99 @@ export default function DashboardPage() {
 
           {user?.role === UserRole.OWNER && (
             <Card className="mb-8">
+              <CardHeader className="border-b border-gray-100">
+                <CardTitle className="flex items-center">
+                  <Building2 className="mr-2 h-5 w-5 text-emerald-600" />
+                  Agency Connection
+                </CardTitle>
+                <p className="text-sm text-gray-600">
+                  Search by agency name, select it, then click Join. No
+                  technical setup needed.
+                </p>
+              </CardHeader>
+              <CardContent className="pt-4">
+                {ownerAgencyMessage && (
+                  <div className="mb-3">
+                    <Alert
+                      type={ownerAgencyMessage.type}
+                      message={ownerAgencyMessage.text}
+                      onClose={() => setOwnerAgencyMessage(null)}
+                    />
+                  </div>
+                )}
+
+                <div className="grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-end">
+                  <label className="text-sm text-gray-700">
+                    Agency Name or ID
+                    <input
+                      value={ownerAgencyQuery}
+                      onChange={(event) => {
+                        setOwnerAgencyQuery(event.target.value);
+                        setOwnerAgencyIdInput(event.target.value.trim());
+                      }}
+                      placeholder="Type agency name (example: Alpha Immo)"
+                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+                    />
+                    {ownerAgencySearchLoading && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        Searching agencies...
+                      </p>
+                    )}
+                    {ownerAgencySuggestions.length > 0 && (
+                      <div className="mt-2 max-h-44 overflow-auto rounded-md border border-gray-200 bg-white">
+                        {ownerAgencySuggestions.map((agency) => (
+                          <button
+                            key={agency.id}
+                            type="button"
+                            className="block w-full border-b border-gray-100 px-3 py-2 text-left text-sm last:border-b-0 hover:bg-gray-50"
+                            onClick={() => {
+                              setOwnerAgencyIdInput(agency.id);
+                              setOwnerAgencyQuery(
+                                `${agency.name} (${agency.region})`,
+                              );
+                              setOwnerAgencySuggestions([]);
+                            }}
+                          >
+                            <span className="font-medium text-gray-900">
+                              {agency.name}
+                            </span>
+                            <span className="ml-2 text-xs text-gray-500">
+                              {agency.region}
+                            </span>
+                            <p className="text-xs text-gray-500">
+                              ID: {agency.id}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </label>
+                  <Button
+                    onClick={() => void handleOwnerLinkAgency()}
+                    disabled={ownerAgencyActionLoading}
+                  >
+                    {ownerAgencyActionLoading
+                      ? "Please wait..."
+                      : "Join Agency"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => void handleOwnerUnlinkAgency()}
+                    disabled={ownerAgencyActionLoading || !ownerLinkedAgencyId}
+                  >
+                    Leave Agency
+                  </Button>
+                </div>
+
+                <p className="mt-3 text-xs text-gray-500">
+                  Current link: {ownerLinkedAgencyId || "Not linked yet"}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {user?.role === UserRole.OWNER && (
+            <Card className="mb-8">
               <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle className="flex items-center">
                   <Home className="mr-2 h-5 w-5 text-indigo-600" />
@@ -1493,6 +1896,14 @@ export default function DashboardPage() {
                                 {property.price.toLocaleString()}{" "}
                                 {property.currency}
                               </p>
+                              <p className="mt-1 text-xs text-gray-500">
+                                Managed by:{" "}
+                                {ownerLinkedAgencyName
+                                  ? `${ownerLinkedAgencyName}${ownerLinkedAgencyManagerName ? ` / ${ownerLinkedAgencyManagerName}` : ""}`
+                                  : property.managerId
+                                    ? "Assigned manager"
+                                    : "Owner direct"}
+                              </p>
                             </div>
                           </div>
                           <div className="flex flex-wrap items-center gap-2">
@@ -1524,6 +1935,146 @@ export default function DashboardPage() {
                         </div>
                       );
                     })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {canViewAgencyOwnersPanel && (
+            <Card className="mb-8">
+              <CardHeader className="border-b border-gray-100">
+                <CardTitle className="flex items-center">
+                  <Users className="mr-2 h-5 w-5 text-indigo-600" />
+                  Agency Owners & Properties
+                </CardTitle>
+                <p className="text-sm text-gray-600">
+                  Click an owner name to display all properties linked to that
+                  owner.
+                </p>
+              </CardHeader>
+              <CardContent className="pt-4">
+                {isLoadingManagedAgencyProperties ? (
+                  <p className="text-sm text-gray-600">
+                    Loading agency owners and properties...
+                  </p>
+                ) : managedOwners.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-600">
+                    No owner properties found for your agency yet.
+                  </div>
+                ) : (
+                  <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+                    <div className="space-y-2 rounded-lg border border-gray-200 p-3">
+                      {managedOwners.map((owner) => {
+                        const isSelected =
+                          selectedManagedOwnerId === owner.ownerId;
+
+                        return (
+                          <button
+                            key={owner.ownerId}
+                            type="button"
+                            onClick={() =>
+                              setSelectedManagedOwnerId(owner.ownerId)
+                            }
+                            className={`w-full rounded-md border px-3 py-2 text-left text-sm transition ${
+                              isSelected
+                                ? "border-indigo-300 bg-indigo-50 text-indigo-900"
+                                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                            }`}
+                          >
+                            <p className="font-medium">{owner.ownerName}</p>
+                            <p className="text-xs text-gray-500">
+                              {owner.properties.length} propert
+                              {owner.properties.length > 1 ? "ies" : "y"}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="rounded-lg border border-gray-200 p-4">
+                      {!selectedManagedOwner ? (
+                        <p className="text-sm text-gray-600">
+                          Select an owner from the list to show properties.
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          <p className="text-sm font-semibold text-gray-900">
+                            {selectedManagedOwner.ownerName} -{" "}
+                            {selectedManagedOwner.properties.length} propert
+                            {selectedManagedOwner.properties.length > 1
+                              ? "ies"
+                              : "y"}
+                          </p>
+
+                          {selectedManagedOwner.properties.map((property) => {
+                            const propertyId = property.id || property._id;
+                            const primaryImage =
+                              property.images?.find((img) => img.isPrimary) ||
+                              property.images?.[0];
+                            const imageUrl =
+                              primaryImage?.url || "/placeholder-property.svg";
+
+                            return (
+                              <div
+                                key={propertyId}
+                                className="flex flex-col gap-3 rounded-lg border border-gray-200 p-3 sm:flex-row sm:items-center sm:justify-between"
+                              >
+                                <div className="flex min-w-0 items-center gap-3">
+                                  <img
+                                    src={imageUrl}
+                                    alt={property.title}
+                                    className="h-14 w-20 rounded-md object-cover"
+                                    onError={(event) => {
+                                      (
+                                        event.currentTarget as HTMLImageElement
+                                      ).src = "/placeholder-property.svg";
+                                    }}
+                                  />
+                                  <div className="min-w-0">
+                                    <p className="truncate font-medium text-gray-900">
+                                      {property.title}
+                                    </p>
+                                    <p className="truncate text-sm text-gray-600">
+                                      {property.address.city},{" "}
+                                      {property.address.country}
+                                    </p>
+                                    <p className="mt-1 text-sm text-indigo-600">
+                                      {property.price.toLocaleString()}{" "}
+                                      {property.currency}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {propertyId && (
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() =>
+                                        navigate(`/properties/${propertyId}`)
+                                      }
+                                    >
+                                      View
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      onClick={() =>
+                                        navigate(
+                                          `/properties/${propertyId}/edit`,
+                                        )
+                                      }
+                                    >
+                                      Edit
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </CardContent>

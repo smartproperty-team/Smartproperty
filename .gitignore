@@ -106,3 +106,4 @@ backend/dist/main.d.ts
 backend/dist/tsconfig.build.tsbuildinfo
 /backend/dist
 /backend/dist
+/.venv311

@@ -36,9 +36,11 @@ import { validationSchema } from './config/validation.schema';
 import { AgenciesModule } from './modules/agencies/agencies.module';
 import { ApplicationsModule } from './modules/applications/applications.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { LeasesModule } from './modules/leases/leases.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PropertiesModule } from './modules/properties/properties.module';
+import { ReviewsFavoritesModule } from './modules/reviews-favorites/reviews-favorites.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { UsersModule } from './modules/users/users.module';
 import { VerificationModule } from './modules/verification/verification.module';
@@ -168,8 +170,10 @@ import { VerificationModule } from './modules/verification/verification.module';
     AuthModule,
     AgenciesModule,
     ApplicationsModule,
+    LeasesModule,
     UsersModule,
     PropertiesModule,
+    ReviewsFavoritesModule,
     MaintenanceModule,
     UploadModule,
     VerificationModule,

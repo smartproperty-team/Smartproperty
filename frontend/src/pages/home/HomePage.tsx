@@ -11,7 +11,7 @@ import { useAuthStore, usePreferencesStore } from "@/store";
 import { UserRole } from "@/types/auth";
 import type { Property as BackendProperty } from "@/types/property";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./home3.css";
 
 // City data - Famous cities in Tunisia
@@ -44,6 +44,8 @@ function PropertyCard({ property }: { property: BackendProperty }) {
           src={imageUrl}
           alt={`${property.title} at ${property.address.city}, ${property.address.country}`}
           loading="lazy"
+          width={400}
+          height={220}
           onError={(e) => {
             (e.target as HTMLImageElement).src = "/placeholder-property.svg";
           }}
@@ -173,7 +175,7 @@ function CityCard({ city }: { city: (typeof cities)[0] }) {
       className="city-card"
       aria-label={`Browse ${city.properties} properties in ${city.name}`}
     >
-      <img src={city.image} alt={`${city.name} cityscape`} loading="lazy" />
+      <img src={city.image} alt={`${city.name} cityscape`} loading="lazy" width={400} height={300} />
       <div className="city-overlay">
         <h4>{city.name}</h4>
         <span>{city.properties} Properties</span>
@@ -207,6 +209,8 @@ function RentalPropertyCard({ property }: { property: BackendProperty }) {
           src={primaryImage}
           alt={property.title}
           loading="lazy"
+          width={400}
+          height={220}
           onError={(e) => {
             (e.currentTarget as HTMLImageElement).src =
               "/tq_1s1jvryd0n-ta2j-1500h.png";
@@ -325,17 +329,16 @@ function RentalPropertyCard({ property }: { property: BackendProperty }) {
 
 export default function HomePage() {
   const t = useTranslation();
-  const { isAuthenticated, user } = useAuthStore();
-  const currentUserPreferences = usePreferencesStore((state) =>
-    user?.id ? state.preferencesByUser[user.id] : undefined,
-  );
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"sale" | "rent">("sale");
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [propertyType, setPropertyType] = useState("");
   const [roomFilter, setRoomFilter] = useState("");
   const [priceFilter, setPriceFilter] = useState("");
   const [properties, setProperties] = useState<BackendProperty[]>([]);
   const mainContentRef = useRef<HTMLElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [rentalProperties, setRentalProperties] = useState<BackendProperty[]>(
     [],
   );
@@ -343,7 +346,17 @@ export default function HomePage() {
   const [rentalLoading, setRentalLoading] = useState(true);
   const [rentalError, setRentalError] = useState<string | null>(null);
 
-  // Fetch personalized recommendations first, fallback to recent rentals.
+  // Debounced search input handler (INP optimization - reduces re-renders)
+  const handleSearchInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchInput(value);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setSearchQuery(value);
+    }, 300);
+  }, []);
+
+  // Fetch rental properties from backend
   useEffect(() => {
     const fetchRentals = async () => {
       try {
@@ -435,7 +448,7 @@ export default function HomePage() {
       if (searchQuery) params.set("search", searchQuery);
       if (roomFilter) params.set("bedrooms", roomFilter);
       if (priceFilter) params.set("priceRange", priceFilter);
-      window.location.href = `/properties?${params.toString()}`;
+      navigate(`/properties?${params.toString()}`);
     },
     [activeTab, priceFilter, propertyType, roomFilter, searchQuery],
   );
@@ -517,8 +530,8 @@ export default function HomePage() {
                   id="search-location"
                   type="text"
                   placeholder={t.home.locationPlaceholder}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={searchInput}
+                  onChange={handleSearchInput}
                   aria-label="Enter location"
                 />
               </div>
@@ -916,6 +929,8 @@ export default function HomePage() {
                 src="/tq_n6jpin4sea-6ofk-1500h.png"
                 alt="Happy family in their new home"
                 loading="lazy"
+                width={600}
+                height={400}
               />
             </div>
           </div>

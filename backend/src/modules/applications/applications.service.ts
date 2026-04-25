@@ -89,11 +89,49 @@ export class ApplicationsService {
     });
   }
 
-  private canReviewApplication(
+  private async getAgencyReviewerIdsForOwner(
+    ownerId: string,
+  ): Promise<string[]> {
+    const owner = await this.findUserByLooseId(ownerId);
+    const ownerAgencyId = owner?.agencyId;
+
+    if (!ownerAgencyId) {
+      return [];
+    }
+
+    const reviewers = await this.userRepo.find({
+      where: {
+        agencyId: ownerAgencyId,
+        role: {
+          $in: Array.from(ApplicationsService.REVIEWER_ROLES),
+        } as any,
+        deletedAt: null as any,
+      },
+    });
+
+    return Array.from(new Set(reviewers.map((reviewer) => reviewer.id)));
+  }
+
+  private async getMemberIdsForAgency(agencyId?: string): Promise<string[]> {
+    if (!agencyId) {
+      return [];
+    }
+
+    const members = await this.userRepo.find({
+      where: {
+        agencyId,
+        deletedAt: null as any,
+      },
+    });
+
+    return Array.from(new Set(members.map((member) => member.id)));
+  }
+
+  private async canReviewApplication(
     application: Application,
     userId: string,
     role: UserRole,
-  ): boolean {
+  ): Promise<boolean> {
     if (hasPlatformAdminRole(role)) {
       return true;
     }
@@ -104,7 +142,37 @@ export class ApplicationsService {
 
     const managerId = this.normalizeId(application.managerId);
 
-    return managerId === userId;
+    if (managerId === userId) {
+      return true;
+    }
+
+    const reviewer = await this.findUserByLooseId(userId);
+
+    if (!reviewer?.agencyId) {
+      return false;
+    }
+
+    // Check if the owner belongs to the same agency
+    const owner = await this.findUserByLooseId(application.ownerId);
+
+    if (owner?.agencyId && reviewer.agencyId === owner.agencyId) {
+      return true;
+    }
+
+    // Check if the property itself belongs to the reviewer's agency
+    if (application.propertyId) {
+      const property = await this.propertyRepo.findOne({
+        where: {
+          _id: new ObjectId(application.propertyId),
+        },
+      });
+
+      if (property?.agencyId && reviewer.agencyId === property.agencyId) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private toStatusEvent(
@@ -126,14 +194,16 @@ export class ApplicationsService {
     message: string,
     type: NotificationType = NotificationType.APPLICATION_STATUS_CHANGED,
   ) {
-    const reviewerIds = Array.from(
-      new Set(
-        [
-          this.normalizeId(application.managerId),
-          this.normalizeId(application.ownerId),
-        ].filter((id): id is string => !!id),
-      ),
+    const reviewerIds = await this.getAgencyReviewerIdsForOwner(
+      application.ownerId,
     );
+
+    if (!reviewerIds.length) {
+      const fallbackManagerId = this.normalizeId(application.managerId);
+      if (fallbackManagerId) {
+        reviewerIds.push(fallbackManagerId);
+      }
+    }
 
     await Promise.all(
       reviewerIds.map((userId) =>
@@ -289,7 +359,11 @@ export class ApplicationsService {
     const application = await this.findById(applicationId);
 
     const isTenantOwner = application.tenantId === userId;
-    const isReviewer = this.canReviewApplication(application, userId, role);
+    const isReviewer = await this.canReviewApplication(
+      application,
+      userId,
+      role,
+    );
 
     if (!isTenantOwner && !isReviewer) {
       throw new ForbiddenException(
@@ -517,16 +591,48 @@ export class ApplicationsService {
     };
 
     if (!hasPlatformAdminRole(role)) {
-      const idFilters: Array<Record<string, unknown>> = [
-        { managerId: reviewerId },
-      ];
+      const reviewer = await this.findUserByLooseId(reviewerId);
+      const agencyMemberIds = await this.getMemberIdsForAgency(
+        reviewer?.agencyId,
+      );
 
-      if (ObjectId.isValid(reviewerId)) {
-        const reviewerObjectId = new ObjectId(reviewerId);
-        idFilters.push({ managerId: reviewerObjectId });
+      // Also include properties that belong to this agency directly
+      const agencyProperties = reviewer?.agencyId
+        ? await this.propertyRepo.find({
+            where: {
+              agencyId: reviewer.agencyId,
+              deletedAt: null,
+            } as any,
+            select: ['_id'],
+          })
+        : [];
+
+      const agencyPropertyIds = agencyProperties.map((p) => p.id);
+
+      if (!agencyMemberIds.length && !agencyPropertyIds.length) {
+        return {
+          applications: [],
+          total: 0,
+          page,
+          limit,
+        };
       }
 
-      where.$or = idFilters;
+      const ownerOrPropertyConditions: Record<string, unknown>[] = [];
+
+      if (agencyMemberIds.length) {
+        ownerOrPropertyConditions.push({
+          ownerId: { $in: agencyMemberIds },
+        });
+      }
+
+      if (agencyPropertyIds.length) {
+        ownerOrPropertyConditions.push({
+          propertyId: { $in: agencyPropertyIds },
+        });
+      }
+
+      where.$or = ownerOrPropertyConditions;
     }
 
     if (query.status) {
@@ -622,7 +728,7 @@ export class ApplicationsService {
 
     const canView =
       application.tenantId === userId ||
-      this.canReviewApplication(application, userId, role);
+      (await this.canReviewApplication(application, userId, role));
 
     if (!canView) {
       throw new ForbiddenException(
@@ -641,7 +747,7 @@ export class ApplicationsService {
   ): Promise<Application> {
     const application = await this.findById(applicationId);
 
-    if (!this.canReviewApplication(application, reviewerId, role)) {
+    if (!(await this.canReviewApplication(application, reviewerId, role))) {
       throw new ForbiddenException(
         'You do not have access to this application',
       );
@@ -695,7 +801,7 @@ export class ApplicationsService {
   ): Promise<Application> {
     const application = await this.findById(applicationId);
 
-    if (!this.canReviewApplication(application, reviewerId, role)) {
+    if (!(await this.canReviewApplication(application, reviewerId, role))) {
       throw new ForbiddenException(
         'You do not have access to this application',
       );
@@ -727,7 +833,7 @@ export class ApplicationsService {
   ): Promise<Application> {
     const application = await this.findById(applicationId);
 
-    if (!this.canReviewApplication(application, reviewerId, role)) {
+    if (!(await this.canReviewApplication(application, reviewerId, role))) {
       throw new ForbiddenException(
         'You do not have access to this application',
       );
@@ -759,7 +865,7 @@ export class ApplicationsService {
   ): Promise<Application> {
     const application = await this.findById(applicationId);
 
-    if (!this.canReviewApplication(application, reviewerId, role)) {
+    if (!(await this.canReviewApplication(application, reviewerId, role))) {
       throw new ForbiddenException(
         'You do not have access to this application',
       );

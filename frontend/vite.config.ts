@@ -6,6 +6,59 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react()],
 
+  build: {
+    // Enable minification for JS and CSS (improves FCP & LCP)
+    minify: true,
+    cssMinify: true,
+    // Target modern browsers for smaller output
+    target: "es2020",
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) {
+            return undefined;
+          }
+
+          if (
+            id.includes("react") ||
+            id.includes("react-dom") ||
+            id.includes("react-router")
+          ) {
+            return "react-vendor";
+          }
+
+          if (
+            id.includes("@react-three") ||
+            id.includes("three") ||
+            id.includes("mapbox-gl") ||
+            id.includes("leaflet")
+          ) {
+            return "maps-3d-vendor";
+          }
+
+          if (
+            id.includes("@radix-ui") ||
+            id.includes("framer-motion") ||
+            id.includes("lucide-react") ||
+            id.includes("recharts")
+          ) {
+            return "ui-vendor";
+          }
+
+          if (
+            id.includes("zustand") ||
+            id.includes("jotai") ||
+            id.includes("@tanstack")
+          ) {
+            return "state-query-vendor";
+          }
+
+          return "vendor";
+        },
+      },
+    },
+  },
+
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

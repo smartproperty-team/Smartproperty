@@ -5,7 +5,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { authService, clearTokens, getAccessToken } from "../services";
-import type { Session, User } from "../types/auth";
+import type { RegisterData, Session, User } from "../types/auth";
 
 interface AuthState {
   user: User | null;
@@ -29,16 +29,7 @@ interface AuthState {
     twoFactorCode?: string,
     reactivateAccount?: boolean,
   ) => Promise<void>;
-  register: (data: {
-    email: string;
-    password: string;
-    confirmPassword: string;
-    firstName: string;
-    lastName: string;
-    phone?: string;
-    role?: string;
-    captchaToken?: string;
-  }) => Promise<void>;
+  register: (data: RegisterData) => Promise<void>;
   logout: (refreshToken?: string) => Promise<void>;
   logoutAll: (currentSessionId?: string) => Promise<void>;
   checkAuth: () => Promise<void>;

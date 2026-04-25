@@ -6,7 +6,9 @@ export const TENANT_ONLY_ROLES: UserRole[] = [UserRole.TENANT];
 
 export const PROPERTY_CREATOR_ROLES: UserRole[] = [
   UserRole.OWNER,
+  UserRole.BRANCH_MANAGER,
   UserRole.REAL_ESTATE_AGENT,
+  UserRole.RENTAL_MANAGER,
   ...PLATFORM_ADMIN_ROLES,
 ];
 
@@ -36,6 +38,28 @@ export const APPLICATION_REVIEW_ROLES: UserRole[] = [
   UserRole.REAL_ESTATE_AGENT,
   UserRole.RENTAL_MANAGER,
   ...PLATFORM_ADMIN_ROLES,
+];
+
+export const LEASE_MANAGEMENT_ROLES: UserRole[] = [
+  UserRole.OWNER,
+  UserRole.BRANCH_MANAGER,
+  UserRole.REAL_ESTATE_AGENT,
+  UserRole.RENTAL_MANAGER,
+  ...PLATFORM_ADMIN_ROLES,
+];
+
+export const LEASE_PARTICIPANT_ROLES: UserRole[] = [
+  UserRole.TENANT,
+  ...LEASE_MANAGEMENT_ROLES,
+];
+
+export const FAVORITES_ROLES: UserRole[] = [UserRole.TENANT];
+
+export const REVIEW_AUTHOR_ROLES: UserRole[] = [UserRole.TENANT];
+
+export const REVIEW_MODERATION_ROLES: UserRole[] = [
+  UserRole.OWNER,
+  ...APPLICATION_REVIEW_ROLES,
 ];
 
 export const SELF_REGISTRABLE_ROLES: UserRole[] = [

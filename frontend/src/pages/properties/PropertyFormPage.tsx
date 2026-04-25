@@ -14,10 +14,12 @@ import { useTranslation } from "../../i18n";
 import {
   propertyService,
   type AiPropertySnapshot,
+  type PriceSuggestionResponse,
 } from "../../services/property.service";
 import type {
   CreatePropertyDto,
   Property,
+  PropertyCategory,
   PropertyStatus,
   PropertyType,
 } from "../../types/property";
@@ -105,6 +107,7 @@ interface FormData {
   title: string;
   description: string;
   type: PropertyType;
+  category: PropertyCategory;
   status: PropertyStatus;
   price: string;
   currency: string;
@@ -124,6 +127,7 @@ const initialFormData: FormData = {
   title: "",
   description: "",
   type: "apartment",
+  category: "rental",
   status: "available",
   price: "",
   currency: "TND",
@@ -153,6 +157,8 @@ const WIZARD_STEP_IDS = [
   "photos",
 ] as const;
 
+const PRICING_STEP_INDEX = WIZARD_STEP_IDS.indexOf("pricing");
+
 // ===========================================
 // Main Property Form Page
 // ===========================================
@@ -179,6 +185,12 @@ export default function PropertyFormPage() {
     }
   >({});
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [priceSuggestion, setPriceSuggestion] =
+    useState<PriceSuggestionResponse | null>(null);
+  const [priceSuggestLoading, setPriceSuggestLoading] = useState(false);
+  const [priceSuggestError, setPriceSuggestError] = useState<string | null>(
+    null,
+  );
 
   const buildAiSnapshot = useCallback((): AiPropertySnapshot => {
     const amenitiesList = formData.amenities
@@ -205,6 +217,63 @@ export default function PropertyFormPage() {
     };
   }, [formData]);
 
+  const handleSuggestPrice = async () => {
+    if (!formData.address.city) {
+      setPriceSuggestError("Please fill in the city first.");
+      return;
+    }
+    if (!formData.area || Number(formData.area) < 10) {
+      setPriceSuggestError("Please enter the area (min 10 m\u00b2).");
+      return;
+    }
+
+    setPriceSuggestLoading(true);
+    setPriceSuggestError(null);
+    setPriceSuggestion(null);
+
+    try {
+      const amenitiesList = formData.amenities
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean);
+
+      const result = await propertyService.suggestPrice({
+        propertyType: formData.type,
+        city: formData.address.city,
+        areaSqm: Number(formData.area),
+        bedrooms: formData.bedrooms ? Number(formData.bedrooms) : undefined,
+        bathrooms: formData.bathrooms ? Number(formData.bathrooms) : undefined,
+        parkingSpaces: formData.parkingSpaces
+          ? Number(formData.parkingSpaces)
+          : undefined,
+        furnished: formData.furnished,
+        petFriendly: formData.petFriendly,
+        amenities: amenitiesList.length ? amenitiesList : undefined,
+      });
+
+      setPriceSuggestion(result);
+
+      // Auto-fill with rental estimate by default.
+      setFormData((prev) => ({
+        ...prev,
+        price: (result.rentalPrice ?? result.predictedPrice).toString(),
+        currency: result.currency,
+      }));
+    } catch (err: unknown) {
+      const typedError = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      setPriceSuggestError(
+        typedError.response?.data?.message ||
+          typedError.message ||
+          "AI service unavailable",
+      );
+    } finally {
+      setPriceSuggestLoading(false);
+    }
+  };
+
   const wizardSteps: StepperStep[] = [
     { id: "details", label: t.properties.form.steps.details },
     { id: "address", label: t.properties.form.steps.address },
@@ -224,6 +293,7 @@ export default function PropertyFormPage() {
         title: property.title,
         description: property.description || "",
         type: property.type,
+        category: property.category || "rental",
         status: property.status,
         price: property.price.toString(),
         currency: property.currency,
@@ -419,6 +489,10 @@ export default function PropertyFormPage() {
     setCurrentStep((prev) => Math.max(prev - 1, 0));
   };
 
+  const jumpToPricingStep = () => {
+    setCurrentStep(PRICING_STEP_INDEX);
+  };
+
   const handleNextStep = () => {
     if (!validateCurrentStep()) return;
     setCurrentStep((prev) => Math.min(prev + 1, wizardSteps.length - 1));
@@ -448,6 +522,7 @@ export default function PropertyFormPage() {
         title: formData.title,
         description: formData.description || undefined,
         type: formData.type,
+        category: formData.category,
         status: formData.status,
         price: parseFloat(formData.price),
         currency: formData.currency,
@@ -590,6 +665,23 @@ export default function PropertyFormPage() {
                     {t.properties.maintenance}
                   </option>
                   <option value="unlisted">{t.properties.unlisted}</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="category">
+                  {t.properties.form.labels.category}
+                </label>
+                <select
+                  id="category"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                >
+                  <option value="rental">
+                    {t.properties.form.labels.rent}
+                  </option>
+                  <option value="sale">{t.properties.form.labels.sale}</option>
                 </select>
               </div>
             </div>
@@ -773,6 +865,171 @@ export default function PropertyFormPage() {
                   <option value="EUR">EUR</option>
                   <option value="USD">USD</option>
                 </select>
+              </div>
+
+              {/* AI Price Suggestion */}
+              <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+                <button
+                  type="button"
+                  onClick={handleSuggestPrice}
+                  disabled={priceSuggestLoading}
+                  className="btn-ai-trigger"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  {priceSuggestLoading ? (
+                    <>
+                      <span
+                        className="spinner"
+                        style={{
+                          width: 16,
+                          height: 16,
+                          border: "2px solid currentColor",
+                          borderTopColor: "transparent",
+                          borderRadius: "50%",
+                          display: "inline-block",
+                          animation: "spin 0.6s linear infinite",
+                        }}
+                      />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>Predict price (AI)</>
+                  )}
+                </button>
+
+                {priceSuggestError && (
+                  <span
+                    className="error-message"
+                    style={{ display: "block", marginTop: "0.5rem" }}
+                  >
+                    {priceSuggestError}
+                  </span>
+                )}
+
+                {priceSuggestion && (
+                  <div
+                    style={{
+                      marginTop: "0.75rem",
+                      padding: "1rem",
+                      borderRadius: "8px",
+                      background: "var(--bg-secondary, #f4f6fa)",
+                      border: "1px solid var(--border-color, #e2e8f0)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        flexWrap: "wrap",
+                        gap: "0.5rem",
+                      }}
+                    >
+                      <div>
+                        <strong
+                          style={{ fontSize: "1.25rem", display: "block" }}
+                        >
+                          Rent:{" "}
+                          {(
+                            priceSuggestion.rentalPrice ??
+                            priceSuggestion.predictedPrice
+                          ).toLocaleString()}{" "}
+                          {priceSuggestion.currency}/mo
+                        </strong>
+                        <strong
+                          style={{
+                            display: "block",
+                            fontSize: "1.05rem",
+                            marginTop: "0.2rem",
+                          }}
+                        >
+                          Sale: {priceSuggestion.salePrice.toLocaleString()}{" "}
+                          {priceSuggestion.currency}
+                        </strong>
+                      </div>
+                      <span style={{ fontSize: "0.85rem", opacity: 0.7 }}>
+                        Confidence:{" "}
+                        {Math.round(priceSuggestion.confidence * 100)}%
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.85rem",
+                        marginTop: "0.35rem",
+                        opacity: 0.7,
+                      }}
+                    >
+                      Range: {priceSuggestion.priceRange.low.toLocaleString()} -{" "}
+                      {priceSuggestion.priceRange.high.toLocaleString()}{" "}
+                      {priceSuggestion.currency}/mo | Sale range:{" "}
+                      {priceSuggestion.salePriceRange.low.toLocaleString()} -{" "}
+                      {priceSuggestion.salePriceRange.high.toLocaleString()}{" "}
+                      {priceSuggestion.currency} | Base rate:{" "}
+                      {priceSuggestion.baseRatePerSqm} TND/m&sup2;
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: "0.6rem",
+                        display: "flex",
+                        gap: "0.5rem",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="btn-cancel"
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            category: "rental",
+                            price: (
+                              priceSuggestion.rentalPrice ??
+                              priceSuggestion.predictedPrice
+                            ).toString(),
+                            currency: priceSuggestion.currency,
+                          }))
+                        }
+                      >
+                        Use rent price
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-cancel"
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            category: "sale",
+                            price: priceSuggestion.salePrice.toString(),
+                            currency: priceSuggestion.currency,
+                          }))
+                        }
+                      >
+                        Use sale price
+                      </button>
+                    </div>
+                    {priceSuggestion.factors.length > 0 && (
+                      <ul
+                        style={{
+                          margin: "0.5rem 0 0",
+                          paddingLeft: "1.25rem",
+                          fontSize: "0.85rem",
+                        }}
+                      >
+                        {priceSuggestion.factors.map((f, i) => (
+                          <li key={i}>
+                            <strong>{f.factor}</strong>: {f.description} (
+                            {f.impact})
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="form-group">
@@ -980,6 +1237,15 @@ export default function PropertyFormPage() {
                   {t.common.cancel}
                 </Link>
                 <div className="wizard-nav-primary">
+                  {currentStep !== PRICING_STEP_INDEX && (
+                    <button
+                      type="button"
+                      className="btn-ai-trigger"
+                      onClick={jumpToPricingStep}
+                    >
+                      Predict price (AI)
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="btn-cancel"

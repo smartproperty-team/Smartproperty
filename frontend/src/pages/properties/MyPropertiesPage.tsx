@@ -292,6 +292,15 @@ export default function MyPropertiesPage() {
   const t = useTranslation();
   const canAdd =
     canCreateProperties(user) && user?.role !== UserRole.BRANCH_MANAGER;
+  const isAgencyScopedView =
+    !isPlatformAdmin(user) &&
+    !!user?.agencyId &&
+    [
+      UserRole.OWNER,
+      UserRole.BRANCH_MANAGER,
+      UserRole.REAL_ESTATE_AGENT,
+      UserRole.RENTAL_MANAGER,
+    ].includes(user.role as UserRole);
   const [searchParams, setSearchParams] = useSearchParams();
   const parsePositiveIntegerParam = (
     value: string | null,
@@ -422,10 +431,12 @@ export default function MyPropertiesPage() {
     setError(null);
 
     try {
-      // Admin sees all properties, owner/manager see only their own
+      // Admin sees all properties. Agency-linked roles see agency properties.
       const queryFilters: PropertyFilters = { ...filters };
       if (isPlatformAdmin(user)) {
         // Admin manages all — no ownerId filter
+      } else if (isAgencyScopedView) {
+        queryFilters.managerId = user.id;
       } else {
         queryFilters.ownerId = user.id;
       }
@@ -440,7 +451,7 @@ export default function MyPropertiesPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters, user]);
+  }, [filters, isAgencyScopedView, user]);
 
   useEffect(() => {
     loadProperties();
@@ -675,8 +686,16 @@ export default function MyPropertiesPage() {
                 <BackIcon />
                 {t.properties.backToAll}
               </Link>
-              <h1>{t.properties.myProperties}</h1>
-              <p>{t.properties.myPropertiesDesc}</p>
+              <h1>
+                {isAgencyScopedView
+                  ? t.properties.myAgencyProperties
+                  : t.properties.myProperties}
+              </h1>
+              <p>
+                {isAgencyScopedView
+                  ? t.properties.myAgencyPropertiesDesc
+                  : t.properties.myPropertiesDesc}
+              </p>
               <p className="my-properties-count">
                 {total} {t.properties.title.toLowerCase()} {t.properties.found}
               </p>

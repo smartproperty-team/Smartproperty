@@ -18,9 +18,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "ignoreDeprecations": "6.0",
 
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@components/*": ["./src/components/*"],
@@ -33,5 +31,6 @@
     }
   },
   "include": ["src"],
+  "exclude": ["src/index.tsx"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

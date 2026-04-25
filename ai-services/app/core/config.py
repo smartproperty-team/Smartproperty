@@ -5,11 +5,19 @@
 from functools import lru_cache
 from typing import List
 
+from pydantic_settings import SettingsConfigDict
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        protected_namespaces=("settings_",),
+    )
 
     # Application
     app_name: str = "SmartProperty AI Services"
@@ -24,6 +32,7 @@ class Settings(BaseSettings):
     mongodb_db_name: str = "smartproperty"
 
     # Redis
+    redis_enabled: bool = False
     redis_host: str = "localhost"
     redis_port: int = 6379
     redis_password: str = ""
@@ -69,12 +78,6 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> List[str]:
         """Parse CORS origins string to list."""
         return [origin.strip() for origin in self.cors_origins.split(",")]
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-
 
 @lru_cache()
 def get_settings() -> Settings:

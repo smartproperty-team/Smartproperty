@@ -304,6 +304,49 @@ services:
       timeout: 20s
       retries: 3
 
+  # =====================
+  # Jenkins (CI/CD Server)
+  # =====================
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: smartproperty-jenkins
+    restart: unless-stopped
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - smartproperty-network
+    environment:
+      JAVA_OPTS: "-Xmx1024m"
+
+  # =====================
+  # SonarQube (Code Quality)
+  # =====================
+  sonarqube:
+    image: sonarqube:lts-community
+    container_name: smartproperty-sonarqube
+    restart: unless-stopped
+    ports:
+      - "9092:9000"
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    networks:
+      - smartproperty-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/api/system/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
 # =====================
 # Volumes
 # =====================
@@ -319,6 +362,14 @@ volumes:
   backend_node_modules:
     driver: local
   frontend_node_modules:
+    driver: local
+  jenkins_data:
+    driver: local
+  sonarqube_data:
+    driver: local
+  sonarqube_extensions:
+    driver: local
+  sonarqube_logs:
     driver: local
 
 # =====================

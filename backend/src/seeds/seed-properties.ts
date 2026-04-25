@@ -4,13 +4,18 @@
 
 import { ObjectId } from 'mongodb';
 import { DataSource } from 'typeorm';
+import { Agency } from '../modules/agencies/entities/agency.entity';
 import {
   Property,
   PropertyCategory,
   PropertyStatus,
   PropertyType,
 } from '../modules/properties/entities/property.entity';
-import { User, UserRole } from '../modules/users/entities/user.entity';
+import {
+  User,
+  UserRole,
+  UserStatus,
+} from '../modules/users/entities/user.entity';
 
 async function seedProperties() {
   console.log('Starting property seeding...');
@@ -21,7 +26,7 @@ async function seedProperties() {
       process.env.MONGODB_URI ||
       'mongodb://smartproperty_user:smartproperty_pass_2024@localhost:27017/smartproperty?authSource=admin',
     database: process.env.MONGODB_DATABASE || 'smartproperty',
-    entities: [Property, User],
+    entities: [Property, User, Agency],
     synchronize: false,
   });
 
@@ -31,22 +36,136 @@ async function seedProperties() {
 
     const propertyRepository = dataSource.getMongoRepository(Property);
     const userRepository = dataSource.getMongoRepository(User);
+    const agencyRepository = dataSource.getMongoRepository(Agency);
 
-    const ownerUser =
-      (await userRepository.findOne({ where: { role: UserRole.OWNER } })) ||
-      (await userRepository.findOne({ where: { role: UserRole.SUPER_ADMIN } }));
-    const managerUser = await userRepository.findOne({
-      where: { role: UserRole.RENTAL_MANAGER },
+    const managerRolePriority: UserRole[] = [
+      UserRole.REAL_ESTATE_AGENT,
+      UserRole.RENTAL_MANAGER,
+      UserRole.BRANCH_MANAGER,
+    ];
+
+    const roleRank = (role: UserRole): number => {
+      const idx = managerRolePriority.indexOf(role);
+      return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+    };
+
+    const normalizeUserId = (user: User): string =>
+      user.id || user._id?.toHexString?.() || '';
+
+    const activeOwners = await userRepository.find({
+      where: {
+        role: UserRole.OWNER,
+        status: UserStatus.ACTIVE,
+        deletedAt: null as any,
+      },
+      order: { createdAt: 'ASC' },
     });
 
-    if (!ownerUser) {
+    const fallbackOwnerUser = await userRepository.findOne({
+      where: {
+        role: UserRole.SUPER_ADMIN,
+        status: UserStatus.ACTIVE,
+        deletedAt: null as any,
+      } as any,
+    });
+
+    const responsibleManagers = (
+      await userRepository.find({
+        where: {
+          role: { $in: managerRolePriority } as any,
+          status: UserStatus.ACTIVE,
+          deletedAt: null as any,
+        } as any,
+      })
+    ).sort((a, b) => {
+      const rankDiff = roleRank(a.role) - roleRank(b.role);
+      if (rankDiff !== 0) {
+        return rankDiff;
+      }
+
+      return (a.createdAt?.getTime?.() || 0) - (b.createdAt?.getTime?.() || 0);
+    });
+
+    const ownersForAssignment =
+      activeOwners.length > 0
+        ? activeOwners
+        : fallbackOwnerUser
+          ? [fallbackOwnerUser]
+          : [];
+
+    if (!ownersForAssignment.length) {
       console.log('No owner/super_admin user found. Run seed:users first.');
       await dataSource.destroy();
       return;
     }
 
-    const ownerId = ownerUser.id || ownerUser._id.toHexString();
-    const managerId = managerUser?.id || managerUser?._id?.toHexString();
+    if (!responsibleManagers.length) {
+      console.log(
+        'No active responsible manager/agent found. Seed users with manager roles first.',
+      );
+      await dataSource.destroy();
+      return;
+    }
+
+    const activeAgencies = await agencyRepository.find({
+      where: { deletedAt: null as any },
+    });
+
+    const managersById = new Map(
+      responsibleManagers.map((manager) => [normalizeUserId(manager), manager]),
+    );
+
+    const managersByAgencyId = new Map<string, User[]>();
+    for (const manager of responsibleManagers) {
+      if (!manager.agencyId) {
+        continue;
+      }
+
+      const list = managersByAgencyId.get(manager.agencyId) || [];
+      list.push(manager);
+      managersByAgencyId.set(manager.agencyId, list);
+    }
+
+    const agenciesById = new Map(
+      activeAgencies.map((agency) => [agency.id, agency]),
+    );
+
+    const agencyRoundRobinIndex = new Map<string, number>();
+    let globalManagerCursor = 0;
+
+    const pickResponsibleManagerId = (owner: User): string => {
+      const ownerAgencyId = owner.agencyId;
+
+      if (ownerAgencyId) {
+        const agency = agenciesById.get(ownerAgencyId);
+        const members = agency?.members || [];
+
+        // Prefer agency members by role priority when agency metadata is available.
+        for (const role of managerRolePriority) {
+          const matchedMember = members.find((member) => member.role === role);
+          if (matchedMember?.userId && managersById.has(matchedMember.userId)) {
+            return matchedMember.userId;
+          }
+        }
+
+        const agencyManagers = managersByAgencyId.get(ownerAgencyId) || [];
+        if (agencyManagers.length > 0) {
+          const cursor = agencyRoundRobinIndex.get(ownerAgencyId) || 0;
+          const selected = agencyManagers[cursor % agencyManagers.length];
+          agencyRoundRobinIndex.set(ownerAgencyId, cursor + 1);
+          return normalizeUserId(selected);
+        }
+      }
+
+      const selected =
+        responsibleManagers[globalManagerCursor % responsibleManagers.length];
+      globalManagerCursor += 1;
+      return normalizeUserId(selected);
+    };
+
+    const ownerId = normalizeUserId(ownersForAssignment[0]);
+    const managerId = normalizeUserId(responsibleManagers[0]);
+
     const frontendAssetBaseUrl =
       process.env.FRONTEND_ASSET_BASE_URL || 'http://localhost:5173';
     const now = new Date();
@@ -447,7 +566,18 @@ async function seedProperties() {
     let insertedCount = 0;
     let updatedCount = 0;
 
-    for (const propertyData of properties) {
+    for (const [index, propertyData] of properties.entries()) {
+      const assignedOwner =
+        ownersForAssignment[index % ownersForAssignment.length];
+      const assignedOwnerId = normalizeUserId(assignedOwner);
+      const assignedManagerId = pickResponsibleManagerId(assignedOwner);
+
+      const mergedPropertyData: Partial<Property> = {
+        ...propertyData,
+        ownerId: assignedOwnerId,
+        managerId: assignedManagerId,
+      };
+
       const existing = await propertyRepository.findOne({
         where: { title: propertyData.title },
       });
@@ -455,7 +585,7 @@ async function seedProperties() {
       if (existing) {
         await propertyRepository.save({
           ...existing,
-          ...propertyData,
+          ...mergedPropertyData,
           _id: existing._id,
           createdAt: existing.createdAt || now,
           updatedAt: now,
@@ -463,7 +593,7 @@ async function seedProperties() {
         updatedCount += 1;
       } else {
         await propertyRepository.save({
-          ...propertyData,
+          ...mergedPropertyData,
           _id: new ObjectId(),
           createdAt: now,
           updatedAt: now,

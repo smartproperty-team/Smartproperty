@@ -16,7 +16,7 @@ import type {
   PropertyStatus,
   PropertyType,
 } from "@/types/property";
-import { canManageProperties, isOwner } from "@/utils";
+import { canManageFavorites, canManageProperties, isOwner } from "@/utils";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import "./properties.css";
@@ -319,6 +319,7 @@ export default function PropertiesPage() {
   const t = useTranslation();
   const canAddProperty =
     isOwner(user) && user?.role !== UserRole.BRANCH_MANAGER;
+  const canSeeFavorites = canManageFavorites(user);
   const canManage = canManageProperties(user);
   const canSeeMyPropertiesButton =
     canManage && user?.role !== UserRole.BRANCH_MANAGER;
@@ -716,6 +717,11 @@ export default function PropertiesPage() {
                 <Link to="/properties/mine" className="btn-my-properties">
                   <MyPropertiesIcon />
                   {t.properties.showMyProperties}
+                </Link>
+              )}
+              {canSeeFavorites && (
+                <Link to="/favorites" className="btn-my-properties">
+                  ★ My Favorites
                 </Link>
               )}
               <button

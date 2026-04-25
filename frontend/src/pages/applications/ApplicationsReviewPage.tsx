@@ -1,10 +1,24 @@
 import { AppSidebar, HomeFooter } from "@/components/layout";
 import applicationService from "@/services/application.service";
+import leaseService from "@/services/lease.service";
 import { ApplicationStatus, type Application } from "@/types/application";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+
+const addMonths = (date: Date, months: number): Date => {
+  const clone = new Date(date);
+  clone.setMonth(clone.getMonth() + months);
+  return clone;
+};
+
+const toIsoStartOfDay = (value: Date): string => {
+  const cloned = new Date(value);
+  cloned.setHours(0, 0, 0, 0);
+  return cloned.toISOString();
+};
 
 export default function ApplicationsReviewPage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const targetApplicationId = searchParams.get("applicationId") || "";
 
@@ -161,13 +175,63 @@ export default function ApplicationsReviewPage() {
     }
   }, [targetApplicationId, loading]);
 
-  const handleApprove = async (id: string) => {
+  const handleApprove = async (application: Application) => {
     try {
-      await applicationService.approveApplication(id);
-      setNotice("Application approved.");
+      const approved = await applicationService.approveApplication(
+        application.id,
+      );
+
+      const desiredMoveInDate = application.questionnaire?.desiredMoveInDate
+        ? new Date(application.questionnaire.desiredMoveInDate)
+        : new Date();
+      const startDate = Number.isNaN(desiredMoveInDate.getTime())
+        ? new Date()
+        : desiredMoveInDate;
+      const endDate = addMonths(startDate, 12);
+
+      const monthlyRent =
+        application.propertyPrice ??
+        application.questionnaire?.monthlyBudgetMax ??
+        application.questionnaire?.monthlyBudgetMin ??
+        0;
+
+      const terms = [
+        `Personalized lease for tenant ${application.tenantName || application.tenantEmail || application.tenantId}.`,
+        `Owner account: ${application.ownerName || application.ownerId}.`,
+        application.questionnaire?.reasonForMoving
+          ? `Tenant reason for moving: ${application.questionnaire.reasonForMoving}`
+          : null,
+      ]
+        .filter((value): value is string => !!value)
+        .join(" ");
+
+      const createdLease = await leaseService.createFromApprovedApplication(
+        approved.id,
+        {
+          startDate: toIsoStartOfDay(startDate),
+          endDate: toIsoStartOfDay(endDate),
+          monthlyRent,
+          securityDeposit: monthlyRent,
+          terms,
+          customTerms: [
+            "This contract must be digitally signed by tenant and owner.",
+            application.questionnaire?.hasPets
+              ? "Pets are declared in the tenant questionnaire."
+              : "No pets declared in questionnaire.",
+          ],
+        },
+      );
+
+      setNotice(
+        "Application approved. Personalized lease draft was created and shared for digital signatures.",
+      );
       await loadApplications();
+
+      navigate(
+        `/leases?leaseId=${createdLease.id}&applicationId=${approved.id}`,
+      );
     } catch {
-      setError("Failed to approve application.");
+      setError("Failed to approve application and create lease contract.");
     }
   };
 
@@ -586,7 +650,7 @@ export default function ApplicationsReviewPage() {
                       <button
                         type="button"
                         className="flex-1 rounded-lg bg-emerald-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-emerald-700 active:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-                        onClick={() => void handleApprove(application.id)}
+                        onClick={() => void handleApprove(application)}
                         disabled={!canDecide}
                       >
                         ✅ Approve Application

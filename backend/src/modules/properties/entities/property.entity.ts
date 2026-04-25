@@ -125,6 +125,9 @@ export class Property {
   @Column({ nullable: true })
   managerId?: string;
 
+  @Column({ nullable: true })
+  agencyId?: string;
+
   @CreateDateColumn()
   createdAt!: Date;
 
@@ -162,6 +165,7 @@ export class Property {
       virtualTour: this.virtualTour,
       ownerId: this.ownerId,
       managerId: this.managerId,
+      agencyId: this.agencyId,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };

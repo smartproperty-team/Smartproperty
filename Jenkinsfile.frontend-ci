@@ -1,0 +1,95 @@
+pipeline {
+    agent any
+
+    tools {
+        nodejs 'Node20'
+    }
+
+    environment {
+        SCANNER_HOME = tool 'SonarScanner'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                dir('frontend') {
+                    sh 'node -v && npm -v'
+                    sh 'npm install --legacy-peer-deps'
+                }
+            }
+        }
+
+        stage('Lint') {
+            steps {
+                dir('frontend') {
+                    sh 'npm run lint || true'
+                }
+            }
+        }
+
+        stage('Unit Tests + Coverage') {
+            steps {
+                dir('frontend') {
+                    sh 'npm run test:cov'
+                }
+            }
+            post {
+                always {
+                    publishHTML(target: [
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'frontend/coverage/lcov-report',
+                        reportFiles: 'index.html',
+                        reportName: 'Frontend Coverage Report'
+                    ])
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                dir('frontend') {
+                    withSonarQubeEnv('SonarQube') {
+                        sh """
+                            ${SCANNER_HOME}/bin/sonar-scanner \
+                              -Dsonar.projectKey=smartproperty-frontend \
+                              -Dsonar.projectName=SmartProperty-Frontend \
+                              -Dsonar.sources=src \
+                              -Dsonar.tests=src \
+                              -Dsonar.test.inclusions=**/*.test.ts,**/*.test.tsx \
+                              -Dsonar.exclusions=**/node_modules/** \
+                              -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
+                              -Dsonar.sourceEncoding=UTF-8
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Frontend CI passed - triggering CD pipeline'
+            build job: 'SmartProperty-Frontend-CD', wait: false, propagate: false
+        }
+        failure {
+            echo 'Frontend CI failed'
+        }
+    }
+}

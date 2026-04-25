@@ -4,6 +4,7 @@
 
 import { HomeFooter, Navbar } from "@/components/layout";
 import AiDescriptionPanel from "@/components/properties/AiDescriptionPanel";
+import PropertyReviewsSection from "@/components/reviews/PropertyReviewsSection";
 import { useTranslation } from "@/i18n";
 import applicationService from "@/services/application.service";
 import {
@@ -11,16 +12,27 @@ import {
   type AiPropertySnapshot,
   type PropertyShareData,
 } from "@/services/property.service";
+import reviewsFavoritesService from "@/services/reviews-favorites.service";
 import { useAuthStore } from "@/store";
 import { ApplicationStatus } from "@/types/application";
 import type { Property, PropertyImage } from "@/types/property";
-import { canManageProperties, isTenant } from "@/utils";
+import type {
+  PropertyReview,
+  PropertyReviewSummary,
+} from "@/types/reviews-favorites";
+import { canManageFavorites, canManageProperties, isTenant } from "@/utils";
 import L from "leaflet";
 import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
 import iconUrl from "leaflet/dist/images/marker-icon.png";
 import shadowUrl from "leaflet/dist/images/marker-shadow.png";
 import "leaflet/dist/leaflet.css";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import "./properties.css";
 
@@ -691,6 +703,7 @@ export default function PropertyDetailPage() {
   const { user } = useAuthStore();
   const t = useTranslation();
   const canManage = canManageProperties(user);
+  const canUseFavorites = canManageFavorites(user);
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<"load" | null>(null);
@@ -701,6 +714,22 @@ export default function PropertyDetailPage() {
   const [checkingApplication, setCheckingApplication] = useState(false);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [aiSaveError, setAiSaveError] = useState<string | null>(null);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewSummary, setReviewSummary] = useState<PropertyReviewSummary>({
+    totalReviews: 0,
+    averageRating: 0,
+  });
+  const [approvedReviews, setApprovedReviews] = useState<PropertyReview[]>([]);
+  const [myReview, setMyReview] = useState<PropertyReview | null>(null);
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [reviewForm, setReviewForm] = useState({
+    rating: 5,
+    title: "",
+    comment: "",
+  });
 
   const buildAiSnapshot = useCallback((): AiPropertySnapshot => {
     if (!property) return {};
@@ -741,6 +770,23 @@ export default function PropertyDetailPage() {
     [property, t.propertyDetail.aiDescription.saveError],
   );
 
+  const hydrateReviewForm = useCallback((review: PropertyReview | null) => {
+    if (!review) {
+      setReviewForm({
+        rating: 5,
+        title: "",
+        comment: "",
+      });
+      return;
+    }
+
+    setReviewForm({
+      rating: review.rating,
+      title: review.title || "",
+      comment: review.comment || "",
+    });
+  }, []);
+
   const loadProperty = useCallback(async () => {
     if (!id) return;
 
@@ -761,6 +807,50 @@ export default function PropertyDetailPage() {
   useEffect(() => {
     loadProperty();
   }, [loadProperty]);
+
+  const loadEngagement = useCallback(async () => {
+    const propertyId = property?.id || property?._id;
+
+    if (!propertyId) {
+      return;
+    }
+
+    setReviewsLoading(true);
+    setReviewError(null);
+
+    try {
+      const [publicReviews, mineReview, favoriteStatus] = await Promise.all([
+        reviewsFavoritesService.getPropertyReviews(propertyId),
+        isTenant(user)
+          ? reviewsFavoritesService.getMyPropertyReview(propertyId)
+          : Promise.resolve(null),
+        canUseFavorites
+          ? reviewsFavoritesService.getFavoriteStatus(propertyId)
+          : Promise.resolve(null),
+      ]);
+
+      setReviewSummary(publicReviews.summary);
+      setApprovedReviews(publicReviews.reviews);
+      setMyReview(mineReview);
+      hydrateReviewForm(mineReview);
+      setIsFavorite(!!favoriteStatus?.favorited);
+    } catch (err) {
+      console.error("Failed to load reviews/favorites:", err);
+      setReviewError("Unable to load reviews or favorites right now.");
+      if (!isTenant(user)) {
+        setMyReview(null);
+      }
+      if (!canUseFavorites) {
+        setIsFavorite(false);
+      }
+    } finally {
+      setReviewsLoading(false);
+    }
+  }, [canUseFavorites, hydrateReviewForm, property?._id, property?.id, user]);
+
+  useEffect(() => {
+    void loadEngagement();
+  }, [loadEngagement]);
 
   useEffect(() => {
     const propertyId = property?.id || property?._id;
@@ -793,6 +883,111 @@ export default function PropertyDetailPage() {
 
     void checkApplicationEligibility();
   }, [property?.id, property?._id, user]);
+
+  const handleToggleFavorite = async () => {
+    const propertyId = property?.id || property?._id;
+
+    if (!propertyId || !canUseFavorites) {
+      return;
+    }
+
+    setFavoriteLoading(true);
+
+    try {
+      const response = isFavorite
+        ? await reviewsFavoritesService.removeFavorite(propertyId)
+        : await reviewsFavoritesService.addFavorite(propertyId);
+
+      setIsFavorite(response.favorited);
+    } catch (err) {
+      console.error("Failed to toggle favorite:", err);
+      setReviewError("Unable to update favorites right now.");
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
+
+  const handleSubmitReview = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const propertyId = property?.id || property?._id;
+
+    if (!propertyId || !isTenant(user)) {
+      return;
+    }
+
+    if (!reviewForm.comment.trim()) {
+      setReviewError("Please write a short review comment.");
+      return;
+    }
+
+    setReviewBusy(true);
+    setReviewError(null);
+
+    try {
+      if (myReview) {
+        const updated = await reviewsFavoritesService.updatePropertyReview(
+          myReview.id,
+          {
+            rating: reviewForm.rating,
+            title: reviewForm.title.trim() || undefined,
+            comment: reviewForm.comment.trim(),
+          },
+        );
+        setMyReview(updated);
+      } else {
+        const created = await reviewsFavoritesService.createPropertyReview(
+          propertyId,
+          {
+            rating: reviewForm.rating,
+            title: reviewForm.title.trim() || undefined,
+            comment: reviewForm.comment.trim(),
+          },
+        );
+        setMyReview(created);
+      }
+
+      await loadEngagement();
+    } catch (err: unknown) {
+      const message =
+        typeof err === "object" &&
+        err !== null &&
+        "response" in err &&
+        typeof (err as { response?: { data?: { message?: unknown } } }).response
+          ?.data?.message === "string"
+          ? (err as { response: { data: { message: string } } }).response.data
+              .message
+          : "Unable to submit your review right now.";
+
+      setReviewError(message);
+    } finally {
+      setReviewBusy(false);
+    }
+  };
+
+  const handleDeleteReview = async () => {
+    if (!myReview) {
+      return;
+    }
+
+    if (!window.confirm("Delete your review for this property?")) {
+      return;
+    }
+
+    setReviewBusy(true);
+    setReviewError(null);
+
+    try {
+      await reviewsFavoritesService.deletePropertyReview(myReview.id);
+      setMyReview(null);
+      hydrateReviewForm(null);
+      await loadEngagement();
+    } catch {
+      setReviewError("Unable to delete your review right now.");
+    } finally {
+      setReviewBusy(false);
+    }
+  };
 
   const handleDelete = async () => {
     if (!property) return;
@@ -992,6 +1187,12 @@ export default function PropertyDetailPage() {
               {property.address.state} {property.address.zipCode},{" "}
               {property.address.country}
             </p>
+            {property.agency?.name && (
+              <p className="property-detail-address">
+                <strong>{t.propertyDetail.agency}:</strong>{" "}
+                {property.agency.name}
+              </p>
+            )}
           </div>
           <div className="property-detail-header-meta">
             <div className="property-detail-price">
@@ -1170,6 +1371,20 @@ export default function PropertyDetailPage() {
               </div>
             )}
 
+            <PropertyReviewsSection
+              reviewSummary={reviewSummary}
+              approvedReviews={approvedReviews}
+              reviewError={reviewError}
+              reviewsLoading={reviewsLoading}
+              myReview={myReview}
+              reviewBusy={reviewBusy}
+              canLeaveReview={isTenant(user)}
+              reviewForm={reviewForm}
+              setReviewForm={setReviewForm}
+              onSubmitReview={handleSubmitReview}
+              onDeleteReview={() => void handleDeleteReview()}
+            />
+
             {property.features?.amenities &&
               property.features.amenities.length > 0 && (
                 <div className="property-description">
@@ -1196,6 +1411,33 @@ export default function PropertyDetailPage() {
           </div>
 
           <div className="property-sidebar">
+            {canUseFavorites && (
+              <div className="sidebar-card">
+                <h3>Favorites</h3>
+                <p className="share-description">
+                  Save this property and access it later from your favorites
+                  workspace.
+                </p>
+                <div className="share-actions">
+                  <button
+                    type="button"
+                    className={isFavorite ? "btn-edit" : "btn-view"}
+                    onClick={() => void handleToggleFavorite()}
+                    disabled={favoriteLoading}
+                  >
+                    {favoriteLoading
+                      ? "Updating..."
+                      : isFavorite
+                        ? "Remove from favorites"
+                        : "Add to favorites"}
+                  </button>
+                  <Link to="/favorites" className="btn-share">
+                    Open Favorites
+                  </Link>
+                </div>
+              </div>
+            )}
+
             <div className="sidebar-card">
               <h3>{t.propertyDetail.shareTitle}</h3>
               <p className="share-description">
@@ -1359,6 +1601,12 @@ export default function PropertyDetailPage() {
               <div className="sidebar-card">
                 <h3>{t.propertyDetail.info}</h3>
                 <div className="property-meta-info">
+                  {property.agency?.name && (
+                    <p>
+                      <strong>{t.propertyDetail.agency}:</strong>{" "}
+                      {property.agency.name}
+                    </p>
+                  )}
                   <p>
                     <strong>{t.propertyDetail.propertyId}:</strong>{" "}
                     {property.id || property._id}
