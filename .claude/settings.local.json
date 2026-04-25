@@ -8,7 +8,10 @@
       "Bash(.venv/Scripts/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000)",
       "Bash(where pdftotext:*)",
       "Bash(pdftotext \"E:/IntelliJ IDEA/Project-10-_SMARTPROPERTY_en.pdf\" -)",
-      "Bash(npm uninstall:*)"
+      "Bash(grep:*)",
+      "Bash(xargs cat:*)",
+      "Bash(npm run:*)",
+      "Bash(npx vite:*)"
     ]
   }
 }

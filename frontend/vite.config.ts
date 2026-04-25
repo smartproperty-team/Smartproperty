@@ -7,6 +7,11 @@ export default defineConfig({
   plugins: [react()],
 
   build: {
+    // Enable minification for JS and CSS (improves FCP & LCP)
+    minify: true,
+    cssMinify: true,
+    // Target modern browsers for smaller output
+    target: "es2020",
     rollupOptions: {
       output: {
         manualChunks(id) {
