@@ -112,20 +112,19 @@ export class ApplicationsService {
     return Array.from(new Set(reviewers.map((reviewer) => reviewer.id)));
   }
 
-  private async getOwnerIdsForAgency(agencyId?: string): Promise<string[]> {
+  private async getMemberIdsForAgency(agencyId?: string): Promise<string[]> {
     if (!agencyId) {
       return [];
     }
 
-    const owners = await this.userRepo.find({
+    const members = await this.userRepo.find({
       where: {
         agencyId,
-        role: UserRole.OWNER,
         deletedAt: null as any,
       },
     });
 
-    return Array.from(new Set(owners.map((owner) => owner.id)));
+    return Array.from(new Set(members.map((member) => member.id)));
   }
 
   private async canReviewApplication(
@@ -148,13 +147,32 @@ export class ApplicationsService {
     }
 
     const reviewer = await this.findUserByLooseId(userId);
-    const owner = await this.findUserByLooseId(application.ownerId);
 
-    if (!reviewer?.agencyId || !owner?.agencyId) {
+    if (!reviewer?.agencyId) {
       return false;
     }
 
-    return reviewer.agencyId === owner.agencyId;
+    // Check if the owner belongs to the same agency
+    const owner = await this.findUserByLooseId(application.ownerId);
+
+    if (owner?.agencyId && reviewer.agencyId === owner.agencyId) {
+      return true;
+    }
+
+    // Check if the property itself belongs to the reviewer's agency
+    if (application.propertyId) {
+      const property = await this.propertyRepo.findOne({
+        where: {
+          _id: new ObjectId(application.propertyId),
+        },
+      });
+
+      if (property?.agencyId && reviewer.agencyId === property.agencyId) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private toStatusEvent(
@@ -574,11 +592,24 @@ export class ApplicationsService {
 
     if (!hasPlatformAdminRole(role)) {
       const reviewer = await this.findUserByLooseId(reviewerId);
-      const agencyOwnerIds = await this.getOwnerIdsForAgency(
+      const agencyMemberIds = await this.getMemberIdsForAgency(
         reviewer?.agencyId,
       );
 
-      if (!agencyOwnerIds.length) {
+      // Also include properties that belong to this agency directly
+      const agencyProperties = reviewer?.agencyId
+        ? await this.propertyRepo.find({
+            where: {
+              agencyId: reviewer.agencyId,
+              deletedAt: null,
+            } as any,
+            select: ['_id'],
+          })
+        : [];
+
+      const agencyPropertyIds = agencyProperties.map((p) => p.id);
+
+      if (!agencyMemberIds.length && !agencyPropertyIds.length) {
         return {
           applications: [],
           total: 0,
@@ -587,7 +618,21 @@ export class ApplicationsService {
         };
       }
 
-      where.ownerId = { $in: agencyOwnerIds } as any;
+      const ownerOrPropertyConditions: Record<string, unknown>[] = [];
+
+      if (agencyMemberIds.length) {
+        ownerOrPropertyConditions.push({
+          ownerId: { $in: agencyMemberIds },
+        });
+      }
+
+      if (agencyPropertyIds.length) {
+        ownerOrPropertyConditions.push({
+          propertyId: { $in: agencyPropertyIds },
+        });
+      }
+
+      where.$or = ownerOrPropertyConditions;
     }
 
     if (query.status) {
