@@ -2,8 +2,8 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsEnum,
-  IsInt,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   Max,
@@ -13,10 +13,10 @@ import {
 import { PropertyReviewStatus } from '../entities/property-review.entity';
 
 export class CreatePropertyReviewDto {
-  @ApiProperty({ example: 5, minimum: 1, maximum: 5 })
+  @ApiProperty({ example: 4.5, minimum: 0.5, maximum: 5 })
   @Type(() => Number)
-  @IsInt()
-  @Min(1)
+  @IsNumber()
+  @Min(0.5)
   @Max(5)
   rating!: number;
 
@@ -34,11 +34,11 @@ export class CreatePropertyReviewDto {
 }
 
 export class UpdatePropertyReviewDto {
-  @ApiPropertyOptional({ example: 4, minimum: 1, maximum: 5 })
+  @ApiPropertyOptional({ example: 4.5, minimum: 0.5, maximum: 5 })
   @IsOptional()
   @Type(() => Number)
-  @IsInt()
-  @Min(1)
+  @IsNumber()
+  @Min(0.5)
   @Max(5)
   rating?: number;
 

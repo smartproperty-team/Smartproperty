@@ -4,6 +4,7 @@
 
 import { HomeFooter, Navbar } from "@/components/layout";
 import AiDescriptionPanel from "@/components/properties/AiDescriptionPanel";
+import PropertyReviewsSection from "@/components/reviews/PropertyReviewsSection";
 import { useTranslation } from "@/i18n";
 import applicationService from "@/services/application.service";
 import {
@@ -1370,148 +1371,19 @@ export default function PropertyDetailPage() {
               </div>
             )}
 
-            <div className="property-description">
-              <div className="reviews-header">
-                <h3>Tenant Reviews</h3>
-                <div className="reviews-summary-pill">
-                  <strong>{reviewSummary.averageRating.toFixed(1)}</strong>
-                  <span>/ 5 · {reviewSummary.totalReviews} published</span>
-                </div>
-              </div>
-
-              {reviewError && (
-                <p role="alert" className="reviews-feedback-error">
-                  {reviewError}
-                </p>
-              )}
-
-              {isTenant(user) && (
-                <form className="review-form" onSubmit={handleSubmitReview}>
-                  <div className="review-form-grid">
-                    <label>
-                      <span>Rating</span>
-                      <select
-                        value={reviewForm.rating}
-                        onChange={(event) =>
-                          setReviewForm((prev) => ({
-                            ...prev,
-                            rating: Number(event.target.value),
-                          }))
-                        }
-                        disabled={reviewBusy}
-                      >
-                        {[5, 4, 3, 2, 1].map((score) => (
-                          <option key={score} value={score}>
-                            {score} / 5
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      <span>Title (optional)</span>
-                      <input
-                        type="text"
-                        maxLength={120}
-                        value={reviewForm.title}
-                        onChange={(event) =>
-                          setReviewForm((prev) => ({
-                            ...prev,
-                            title: event.target.value,
-                          }))
-                        }
-                        disabled={reviewBusy}
-                        placeholder="Short summary"
-                      />
-                    </label>
-                  </div>
-
-                  <label className="review-comment-field">
-                    <span>Review</span>
-                    <textarea
-                      rows={4}
-                      maxLength={2000}
-                      value={reviewForm.comment}
-                      onChange={(event) =>
-                        setReviewForm((prev) => ({
-                          ...prev,
-                          comment: event.target.value,
-                        }))
-                      }
-                      disabled={reviewBusy}
-                      placeholder="Describe your rental experience"
-                    />
-                  </label>
-
-                  {myReview && (
-                    <p
-                      className={`review-status-note review-status-${myReview.status}`}
-                    >
-                      Current status: {myReview.status}
-                    </p>
-                  )}
-
-                  <div className="review-form-actions">
-                    <button
-                      type="submit"
-                      className="btn-view"
-                      disabled={reviewBusy}
-                    >
-                      {reviewBusy
-                        ? "Saving..."
-                        : myReview
-                          ? "Update review"
-                          : "Submit review"}
-                    </button>
-                    {myReview && (
-                      <button
-                        type="button"
-                        className="btn-delete"
-                        onClick={() => void handleDeleteReview()}
-                        disabled={reviewBusy}
-                      >
-                        Delete review
-                      </button>
-                    )}
-                  </div>
-                </form>
-              )}
-
-              {reviewsLoading ? (
-                <p className="reviews-loading-text">Loading reviews...</p>
-              ) : approvedReviews.length === 0 ? (
-                <p className="reviews-empty-text">
-                  No approved reviews yet. Be the first to share feedback.
-                </p>
-              ) : (
-                <div className="reviews-list">
-                  {approvedReviews.map((review) => (
-                    <article key={review.id} className="review-item">
-                      <div className="review-item-head">
-                        <div>
-                          <h4>{review.title || "Tenant feedback"}</h4>
-                          <p>{review.author.name}</p>
-                        </div>
-                        <span>
-                          {"★".repeat(Math.max(1, Math.min(5, review.rating)))}
-                        </span>
-                      </div>
-                      <p className="review-item-comment">{review.comment}</p>
-                      <p className="review-item-date">
-                        Published{" "}
-                        {new Date(review.createdAt).toLocaleDateString()}
-                      </p>
-
-                      {review.ownerResponse && (
-                        <div className="review-owner-response">
-                          <strong>Official response</strong>
-                          <p>{review.ownerResponse.message}</p>
-                        </div>
-                      )}
-                    </article>
-                  ))}
-                </div>
-              )}
-            </div>
+            <PropertyReviewsSection
+              reviewSummary={reviewSummary}
+              approvedReviews={approvedReviews}
+              reviewError={reviewError}
+              reviewsLoading={reviewsLoading}
+              myReview={myReview}
+              reviewBusy={reviewBusy}
+              canLeaveReview={isTenant(user)}
+              reviewForm={reviewForm}
+              setReviewForm={setReviewForm}
+              onSubmitReview={handleSubmitReview}
+              onDeleteReview={() => void handleDeleteReview()}
+            />
 
             {property.features?.amenities &&
               property.features.amenities.length > 0 && (

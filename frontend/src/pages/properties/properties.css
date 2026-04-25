@@ -1774,6 +1774,299 @@
   color: #1e3a8a;
 }
 
+.property-reviews-panel {
+  margin-top: 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 24px;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(59, 130, 246, 0.12),
+      transparent 30%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.96),
+      rgba(248, 250, 252, 0.98)
+    );
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.06);
+}
+
+.property-reviews-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.property-reviews-hero-copy {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+
+.property-reviews-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+  padding: 0.32rem 0.65rem;
+  border-radius: 9999px;
+  background: rgba(219, 234, 254, 0.9);
+  color: #1d4ed8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.property-reviews-hero-copy h3 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.property-reviews-hero-copy p {
+  margin: 0.55rem 0 0;
+  max-width: 52rem;
+  color: #475569;
+  line-height: 1.55;
+}
+
+.property-reviews-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.property-reviews-metric {
+  min-width: 150px;
+  padding: 0.8rem 0.9rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.property-reviews-metric-label {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.property-reviews-metric strong {
+  font-size: 1.05rem;
+  color: #0f172a;
+}
+
+.property-reviews-summary-card {
+  flex: 0 1 240px;
+  padding: 1rem 1.1rem;
+  border-radius: 22px;
+  border: 1px solid rgba(191, 219, 254, 0.8);
+  background: linear-gradient(
+    180deg,
+    rgba(239, 246, 255, 0.95),
+    rgba(255, 255, 255, 0.96)
+  );
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.property-reviews-score {
+  font-size: 2.3rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #0f172a;
+}
+
+.property-reviews-summary-card p {
+  margin: 0.1rem 0 0;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.property-review-composer {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 22px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+}
+
+.property-review-composer-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.property-review-composer-head h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.property-review-composer-head p {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.property-review-rating-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.property-review-rating-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.property-review-rating-value {
+  padding: 0.42rem 0.75rem;
+  border-radius: 9999px;
+  background: #0f172a;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.property-review-form-grid {
+  margin-bottom: 0;
+  grid-template-columns: 1fr;
+}
+
+.property-review-comment-field textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.property-review-actions {
+  margin-top: 1rem;
+}
+
+.property-review-placeholder,
+.property-review-empty {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 20px;
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+  background: rgba(248, 250, 252, 0.75);
+  color: #64748b;
+}
+
+.property-review-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.property-review-empty {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.property-review-empty h4,
+.property-review-empty p {
+  margin: 0;
+}
+
+.property-reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+.property-review-card {
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 22px;
+  padding: 1rem;
+  background: white;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+}
+
+.property-review-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.9rem;
+  align-items: flex-start;
+}
+
+.property-review-author {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.property-review-avatar {
+  width: 2.55rem;
+  height: 2.55rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  color: #1d4ed8;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.property-review-author h4 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.property-review-author p {
+  margin: 0.2rem 0 0;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.property-review-card-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.property-review-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #64748b;
+  font-size: 0.76rem;
+}
+
+.property-review-comment {
+  margin: 0.85rem 0 0;
+  color: #334155;
+  line-height: 1.65;
+}
+
+.property-review-response {
+  margin-top: 0.85rem;
+}
+
 .reviews-moderation-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
