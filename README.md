@@ -1,7 +1,7 @@
 # SmartProperty
 
 ## Property Management and Rental Matching Platform
-Developed at Esprit School of Engineering – Tunisia
+Developed at Esprit School of Engineering – Tunisia 2026
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)
