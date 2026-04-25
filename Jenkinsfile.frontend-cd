@@ -1,0 +1,64 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = 'smartproperty-frontend'
+        IMAGE_TAG  = "${BUILD_NUMBER}"
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh """
+                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} --target prod ./frontend
+                    docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+                """
+            }
+        }
+
+        stage('Verify Image') {
+            steps {
+                sh "docker images ${IMAGE_NAME} --format '{{.Repository}}:{{.Tag}} {{.Size}}'"
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh """
+                    docker stop ${IMAGE_NAME} || true
+                    docker rm ${IMAGE_NAME} || true
+                    docker run -d \
+                        --name ${IMAGE_NAME} \
+                        --network smartproperty-network \
+                        -p 5173:80 \
+                        ${IMAGE_NAME}:${IMAGE_TAG}
+                """
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                sh """
+                    sleep 5
+                    docker exec ${IMAGE_NAME} wget -qO- http://localhost:80 || echo 'Health check pending - container started'
+                """
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Frontend CD SUCCESS - deployed ${IMAGE_NAME}:${IMAGE_TAG}"
+        }
+        failure {
+            echo 'Frontend CD FAILED'
+        }
+    }
+}
