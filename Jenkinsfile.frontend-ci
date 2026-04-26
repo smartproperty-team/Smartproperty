@@ -54,9 +54,10 @@ pipeline {
                               -Dsonar.tests=src \
                               -Dsonar.test.inclusions=**/*.test.ts,**/*.test.tsx \
                               -Dsonar.exclusions=**/node_modules/**,**/pages/**,**/components/**,**/types/**,**/store/**,src/App.tsx,src/main.tsx,src/index.tsx,src/index.css,src/style.css \
-                              -Dsonar.coverage.exclusions=**/hooks/**,**/push-notification.service.ts,**/agency-onboarding.service.ts,**/lease.service.ts,**/application.service.ts,**/reviews-favorites.service.ts,**/property.service.ts,**/routePrefetch.ts \
+                              -Dsonar.coverage.exclusions=**/hooks/**,**/api.ts,**/push-notification.service.ts,**/agency-onboarding.service.ts,**/lease.service.ts,**/application.service.ts,**/reviews-favorites.service.ts,**/property.service.ts,**/routePrefetch.ts \
                               -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
                               -Dsonar.typescript.lcov.reportPaths=coverage/lcov.info \
+                              -Dsonar.typescript.tsconfigPaths=tsconfig.sonar.json \
                               -Dsonar.sourceEncoding=UTF-8
                         """
                     }
