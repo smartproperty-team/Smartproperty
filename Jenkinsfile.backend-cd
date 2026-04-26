@@ -4,6 +4,12 @@ pipeline {
     environment {
         IMAGE_NAME = 'smartproperty-backend'
         IMAGE_TAG  = "${BUILD_NUMBER}"
+        MONGODB_URI       = credentials('MONGODB_URI')
+        REDIS_URL         = credentials('REDIS_URL')
+        JWT_SECRET        = credentials('JWT_SECRET')
+        JWT_REFRESH_SECRET = credentials('JWT_REFRESH_SECRET')
+        MINIO_ACCESS_KEY  = credentials('MINIO_ACCESS_KEY')
+        MINIO_SECRET_KEY  = credentials('MINIO_SECRET_KEY')
     }
 
     stages {
@@ -36,23 +42,23 @@ pipeline {
                     docker rm ${IMAGE_NAME} || true
                     docker run -d \
                         --name ${IMAGE_NAME} \
-                        --network smartproperty-network \
+                        --network smartproperty_smartproperty-network \
                         -p 3000:3000 \
                         -e NODE_ENV=production \
                         -e PORT=3000 \
-                        -e MONGODB_URI=mongodb://smartproperty_user:smartproperty_pass_2024@smartproperty-mongodb:27017/smartproperty?authSource=admin \
-                        -e REDIS_URL=redis://:redis_dev_password_2024@smartproperty-redis:6379 \
-                        -e JWT_SECRET=smartproperty_jwt_secret_dev_2024_change_in_prod \
+                        -e MONGODB_URI=${MONGODB_URI} \
+                        -e REDIS_URL=${REDIS_URL} \
+                        -e JWT_SECRET=${JWT_SECRET} \
                         -e JWT_EXPIRATION=1d \
-                        -e JWT_REFRESH_SECRET=smartproperty_refresh_secret_dev_2024 \
+                        -e JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET} \
                         -e JWT_REFRESH_EXPIRATION=7d \
                         -e CORS_ORIGIN=http://localhost:5173 \
                         -e SMTP_HOST=smartproperty-mailhog \
                         -e SMTP_PORT=1025 \
                         -e MINIO_ENDPOINT=smartproperty-minio \
                         -e MINIO_PORT=9000 \
-                        -e MINIO_ACCESS_KEY=smartproperty_minio \
-                        -e MINIO_SECRET_KEY=smartproperty_minio_secret_2024 \
+                        -e MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY} \
+                        -e MINIO_SECRET_KEY=${MINIO_SECRET_KEY} \
                         -e MINIO_BUCKET_NAME=smartproperty \
                         ${IMAGE_NAME}:${IMAGE_TAG}
                 """
