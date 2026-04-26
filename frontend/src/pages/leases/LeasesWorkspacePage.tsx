@@ -507,7 +507,7 @@ export default function LeasesWorkspacePage() {
         setOwnerDecision(draft.ownerDecision);
       }
       if (draft.signatureForm) {
-        setSignatureForm(draft.signatureForm);
+        setSignatureForm((previous) => ({ ...previous, ...draft.signatureForm }));
       }
       if (draft.renewalForm) {
         setRenewalForm(draft.renewalForm);
