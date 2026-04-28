@@ -175,7 +175,13 @@ function CityCard({ city }: { city: (typeof cities)[0] }) {
       className="city-card"
       aria-label={`Browse ${city.properties} properties in ${city.name}`}
     >
-      <img src={city.image} alt={`${city.name} cityscape`} loading="lazy" width={400} height={300} />
+      <img
+        src={city.image}
+        alt={`${city.name} cityscape`}
+        loading="lazy"
+        width={400}
+        height={300}
+      />
       <div className="city-overlay">
         <h4>{city.name}</h4>
         <span>{city.properties} Properties</span>
@@ -330,6 +336,10 @@ function RentalPropertyCard({ property }: { property: BackendProperty }) {
 export default function HomePage() {
   const t = useTranslation();
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuthStore();
+  const currentUserPreferences = usePreferencesStore((state) =>
+    user?.id ? state.getUserPreferences(user.id) : undefined,
+  );
   const [activeTab, setActiveTab] = useState<"sale" | "rent">("sale");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -347,17 +357,26 @@ export default function HomePage() {
   const [rentalError, setRentalError] = useState<string | null>(null);
 
   // Debounced search input handler (INP optimization - reduces re-renders)
-  const handleSearchInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchInput(value);
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setSearchQuery(value);
-    }, 300);
-  }, []);
+  const handleSearchInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setSearchInput(value);
+      clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        setSearchQuery(value);
+      }, 300);
+    },
+    [],
+  );
 
   // Fetch rental properties from backend
   useEffect(() => {
+    if (!user) {
+      setRentalLoading(false);
+      setRentalProperties([]);
+      return;
+    }
+
     const fetchRentals = async () => {
       try {
         setRentalLoading(true);

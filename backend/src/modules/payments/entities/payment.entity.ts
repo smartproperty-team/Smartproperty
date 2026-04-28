@@ -1,6 +1,18 @@
 // ===========================================
 // SmartProperty - Payment Entity
 // ===========================================
+//
+// CURRENCY: All amounts stored in MILLIMES (TND × 1000)
+// - Avoids float precision issues
+// - 1 TND = 1000 millimes
+// - Use: tndToMillimes() and millimesToTnd() from currency.constants
+//
+// AUDIT TRAIL: Tracks who did what, when, and why
+// - createdBy/updatedBy: Which user made changes
+// - ipAddress/userAgent: From where (fraud detection)
+// - refundedBy/refundReason: Complete refund history
+//
+// ===================================================
 
 import { ObjectId } from 'mongodb';
 import {
@@ -59,13 +71,13 @@ export class Payment {
   // ─────────────────────────────────────────────────────────
 
   @Column()
-  leaseId: ObjectId | string;
+  leaseId: ObjectId | string = '';
 
   @Column()
-  tenantId: ObjectId | string;
+  tenantId: ObjectId | string = '';
 
   @Column()
-  ownerId: ObjectId | string;
+  ownerId: ObjectId | string = '';
 
   @Column()
   agencyId?: ObjectId | string;
@@ -75,19 +87,19 @@ export class Payment {
   // ─────────────────────────────────────────────────────────
 
   @Column()
-  amount: number; // In cents to avoid float precision
+  amount: number = 0; // In millimes (TND × 1000 to avoid float precision)
 
   @Column()
-  currency: string; // Default: USD
+  currency: string = 'TND'; // Default: Tunisian Dinar
 
   @Column()
-  type: PaymentType;
+  type: PaymentType = PaymentType.OTHER;
 
   @Column()
-  status: PaymentStatus;
+  status: PaymentStatus = PaymentStatus.PENDING;
 
   @Column()
-  method: PaymentMethod;
+  method: PaymentMethod = PaymentMethod.OTHER;
 
   @Column()
   description?: string;
@@ -126,7 +138,7 @@ export class Payment {
   // ─────────────────────────────────────────────────────────
 
   @Column()
-  dueDate: Date;
+  dueDate: Date = new Date();
 
   @Column()
   paidAt?: Date;
@@ -139,13 +151,13 @@ export class Payment {
   // ─────────────────────────────────────────────────────────
 
   @Column()
-  fee?: number; // Processing fee in cents
+  fee?: number; // Processing fee in millimes (TND × 1000)
 
   @Column()
   feeType?: string; // 'platform_fee' | 'gateway_fee'
 
   @Column()
-  netAmount?: number; // amount - fees
+  netAmount?: number; // amount - fees (in millimes)
 
   // ─────────────────────────────────────────────────────────
   // Failure Handling (IMPROVEMENT #2)
@@ -165,31 +177,33 @@ export class Payment {
 
   // ─────────────────────────────────────────────────────────
   // Audit Trail (IMPROVEMENT #3)
+  // Who made changes? From where? Why?
+  // Used for: Compliance, Security, Debugging, Accountability
   // ─────────────────────────────────────────────────────────
 
   @Column()
-  createdBy: ObjectId | string;
+  createdBy: ObjectId | string = ''; // USER: Who created this payment?
 
   @Column()
-  updatedBy?: ObjectId | string;
+  updatedBy?: ObjectId | string; // USER: Who last updated it?
 
   @Column()
-  ipAddress?: string; // For fraud detection
+  ipAddress?: string; // LOCATION: What IP created/updated it? (fraud detection)
 
   @Column()
-  userAgent?: string;
+  userAgent?: string; // DEVICE: What browser/device? (fraud detection)
 
   @Column()
-  refundedAmount?: number; // Amount refunded in cents
+  refundedAmount?: number; // Amount refunded in millimes (TND × 1000)
 
   @Column()
-  refundedAt?: Date;
+  refundedAt?: Date; // When was it refunded?
 
   @Column()
-  refundedBy?: ObjectId | string;
+  refundedBy?: ObjectId | string; // USER: Who authorized the refund?
 
   @Column()
-  refundReason?: string;
+  refundReason?: string; // WHY: Reason for refund (required for accountability)
 
   // ─────────────────────────────────────────────────────────
   // Timestamps

@@ -3,7 +3,11 @@
 // ===========================================
 
 import { Exclude } from 'class-transformer';
-import { PaymentStatus, PaymentType, PaymentMethod } from '../entities/payment.entity';
+import {
+  PaymentMethod,
+  PaymentStatus,
+  PaymentType,
+} from '../entities/payment.entity';
 
 export class PaymentResponseDto {
   id: string;

@@ -42,8 +42,8 @@ import {
   TENANT_ONLY_ROLES,
 } from '../users/role-groups';
 import { AiDescriptionService } from './ai-description.service';
-import { AiRecommendationService } from './ai-recommendation.service';
 import { AiPricingService } from './ai-pricing.service';
+import { AiRecommendationService } from './ai-recommendation.service';
 import {
   GenerateDescriptionDto,
   GenerateDescriptionResponseDto,
@@ -78,6 +78,7 @@ export class PropertiesController {
     private readonly configService: ConfigService,
     private readonly aiDescriptionService: AiDescriptionService,
     private readonly aiPricingService: AiPricingService,
+    private readonly aiRecommendationService: AiRecommendationService,
   ) {}
 
   // ===========================================

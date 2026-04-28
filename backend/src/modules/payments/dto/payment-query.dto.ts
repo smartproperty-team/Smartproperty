@@ -2,13 +2,17 @@
 // SmartProperty - Payment Query DTOs
 // ===========================================
 
-import { IsEnum, IsISO8601, IsNumber, IsOptional, IsString } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import {
-  PaymentType,
-  PaymentStatus,
-  PaymentMethod,
-} from '../entities/payment.entity';
+  IsEnum,
+  IsISO8601,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
+import { PaymentStatus, PaymentType } from '../entities/payment.entity';
 
 export class PaymentQueryDto {
   @IsOptional()
@@ -34,11 +38,14 @@ export class PaymentQueryDto {
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
+  @Min(1, { message: 'Page must be at least 1' })
   page: number = 1;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
+  @Min(1, { message: 'Limit must be at least 1' })
+  @Max(100, { message: 'Limit cannot exceed 100' })
   limit: number = 10;
 
   @IsOptional()

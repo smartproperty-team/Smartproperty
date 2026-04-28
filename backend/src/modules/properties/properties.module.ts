@@ -8,8 +8,8 @@ import { Agency } from '../agencies/entities/agency.entity';
 import { UploadModule } from '../upload/upload.module';
 import { User } from '../users/entities/user.entity';
 import { AiDescriptionService } from './ai-description.service';
-import { AiRecommendationService } from './ai-recommendation.service';
 import { AiPricingService } from './ai-pricing.service';
+import { AiRecommendationService } from './ai-recommendation.service';
 import { Property } from './entities/property.entity';
 import { PropertiesController } from './properties.controller';
 import { PropertiesService } from './properties.service';
@@ -26,6 +26,7 @@ import { PropertyImagesService } from './property-images.service';
     PropertyImagesService,
     AiDescriptionService,
     AiPricingService,
+    AiRecommendationService,
   ],
   controllers: [PropertiesController, PropertyImagesController],
   exports: [PropertiesService, PropertyImagesService, TypeOrmModule],

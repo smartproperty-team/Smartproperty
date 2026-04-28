@@ -3,32 +3,33 @@
 // ===========================================
 
 import {
+  IsEnum,
+  IsMongoId,
   IsNotEmpty,
   IsNumber,
-  IsString,
   IsOptional,
-  IsEnum,
+  IsString,
   Min,
 } from 'class-validator';
-import { PaymentType, PaymentMethod } from '../entities/payment.entity';
+import { PaymentMethod, PaymentType } from '../entities/payment.entity';
 
 export class CreatePaymentDto {
   @IsNotEmpty()
-  @IsString()
+  @IsMongoId()
   leaseId: string;
 
   @IsNotEmpty()
-  @IsString()
+  @IsMongoId()
   tenantId: string;
 
   @IsNotEmpty()
   @IsNumber()
-  @Min(1) // Minimum 1 cent
-  amount: number; // in cents
+  @Min(1) // Minimum 1 millime
+  amount: number; // in millimes (TND × 1000)
 
   @IsOptional()
   @IsString()
-  currency: string = 'USD';
+  currency: string = 'TND';
 
   @IsNotEmpty()
   @IsEnum(PaymentType)
