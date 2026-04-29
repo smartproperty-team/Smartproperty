@@ -15,7 +15,7 @@ export const awsConfig = registerAs('aws', () => ({
     bucket: process.env.AWS_S3_BUCKET || 'smartproperty-uploads',
 
     // File upload limits
-    maxFileSize: 10 * 1024 * 1024, // 10MB
+    maxFileSize: 50 * 1024 * 1024, // 50MB
     allowedMimeTypes: [
       'image/jpeg',
       'image/png',

@@ -18,6 +18,8 @@ import type {
   PropertyFilters,
   PropertyImage,
   PropertyListResponse,
+  StagingJob,
+  StagingStyle,
   UpdatePropertyDto,
 } from "../types/property";
 import { api } from "./api";
@@ -349,6 +351,20 @@ export const propertyService = {
   },
 
   /**
+   * Save virtual tour hotspot configuration
+   */
+  async saveVirtualTourConfig(
+    propertyId: string,
+    config: import("../types/property").VirtualTourConfig,
+  ): Promise<Property> {
+    const response = await api.put<Property>(
+      `/properties/${propertyId}/images/virtual-tour-config`,
+      config,
+    );
+    return response.data;
+  },
+
+  /**
    * Delete all images
    */
   async deleteAllImages(propertyId: string): Promise<Property> {
@@ -389,6 +405,48 @@ export const propertyService = {
       { timeout: 90_000 },
     );
     return response.data;
+  },
+
+  // ===========================================
+  // AI Virtual Staging
+  // ===========================================
+
+  async getStagingStyles(propertyId: string): Promise<StagingStyle[]> {
+    const response = await api.get<StagingStyle[]>(
+      `/properties/${propertyId}/images/staging/styles`,
+    );
+    return response.data;
+  },
+
+  async requestStaging(
+    propertyId: string,
+    params: {
+      imageUrl: string;
+      style: string;
+      roomType?: string;
+      strength?: number;
+    },
+  ): Promise<StagingJob> {
+    const response = await api.post<StagingJob>(
+      `/properties/${propertyId}/images/staging/generate`,
+      params,
+      { timeout: 120_000 },
+    );
+    return response.data;
+  },
+
+  async getStagingJobStatus(
+    propertyId: string,
+    jobId: string,
+  ): Promise<StagingJob> {
+    const response = await api.get<StagingJob>(
+      `/properties/${propertyId}/images/staging/jobs/${jobId}`,
+    );
+    return response.data;
+  },
+
+  getStagingResultUrl(propertyId: string, jobId: string): string {
+    return `/properties/${propertyId}/images/staging/result/${jobId}`;
   },
 
   /**

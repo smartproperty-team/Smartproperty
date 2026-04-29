@@ -21,7 +21,7 @@ export const minioConfig = registerAs('minio', () => ({
   publicUrl: process.env.MINIO_PUBLIC_URL || 'http://localhost:9000',
 
   // File upload settings
-  maxFileSize: 10 * 1024 * 1024, // 10MB
+  maxFileSize: 50 * 1024 * 1024, // 50MB
   allowedImageTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
 
   // Presigned URL settings

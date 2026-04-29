@@ -12,6 +12,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Res,
   UploadedFiles,
   UseGuards,
@@ -38,6 +39,8 @@ import {
   PROPERTY_MANAGEMENT_ROLES,
   PROPERTY_MEDIA_UPLOAD_ROLES,
 } from '../users/role-groups';
+import { VirtualTourConfigDto } from './dto/property.dto';
+import { AiStagingService } from './ai-staging.service';
 import {
   PropertyImage,
   PropertyImagesService,
@@ -68,7 +71,10 @@ class SetPrimaryImageDto {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class PropertyImagesController {
-  constructor(private readonly propertyImagesService: PropertyImagesService) {}
+  constructor(
+    private readonly propertyImagesService: PropertyImagesService,
+    private readonly aiStagingService: AiStagingService,
+  ) {}
 
   // ===========================================
   // Upload Images
@@ -368,5 +374,115 @@ export class PropertyImagesController {
   @ApiResponse({ status: 404, description: 'No virtual tour job found' })
   async getVirtualTourStatus(@Param('propertyId') propertyId: string) {
     return this.propertyImagesService.getVirtualTourStatus(propertyId);
+  }
+
+  // ===========================================
+  // Virtual Tour Config (Hotspots)
+  // ===========================================
+
+  @Put('virtual-tour-config')
+  @Roles(...PROPERTY_MANAGEMENT_ROLES)
+  @ApiOperation({ summary: 'Save virtual tour hotspot configuration' })
+  @ApiParam({ name: 'propertyId', description: 'Property ID' })
+  @ApiBody({ type: VirtualTourConfigDto })
+  @ApiResponse({ status: 200, description: 'Virtual tour config saved' })
+  @ApiResponse({ status: 400, description: 'Invalid config or room keys' })
+  @ApiResponse({ status: 404, description: 'Property not found' })
+  async updateVirtualTourConfig(
+    @Param('propertyId') propertyId: string,
+    @Body() config: VirtualTourConfigDto,
+    @CurrentUser('id') userId: string,
+    @CurrentUser('role') userRole: UserRole,
+  ) {
+    return this.propertyImagesService.updateVirtualTourConfig(
+      propertyId,
+      config,
+      userId,
+      userRole,
+    );
+  }
+
+  // ===========================================
+  // AI Virtual Staging
+  // ===========================================
+
+  @Get('staging/styles')
+  @Public()
+  @ApiOperation({ summary: 'Get available virtual staging styles' })
+  @ApiResponse({ status: 200, description: 'List of staging styles' })
+  async getStagingStyles() {
+    return this.aiStagingService.getStyles();
+  }
+
+  @Post('staging/generate')
+  @Roles(...PROPERTY_MANAGEMENT_ROLES)
+  @ApiOperation({ summary: 'Request AI virtual staging for a room image' })
+  @ApiParam({ name: 'propertyId', description: 'Property ID' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        imageUrl: { type: 'string', description: 'URL of the room image' },
+        style: { type: 'string', description: 'Staging style ID' },
+        roomType: { type: 'string', description: 'Room type (optional)' },
+        strength: {
+          type: 'number',
+          description: 'Change intensity 0.1-0.8 (optional)',
+        },
+      },
+      required: ['imageUrl', 'style'],
+    },
+  })
+  @ApiResponse({ status: 202, description: 'Staging job created' })
+  @ApiResponse({ status: 400, description: 'Invalid request' })
+  async requestStaging(
+    @Param('propertyId') propertyId: string,
+    @Body()
+    body: {
+      imageUrl: string;
+      style: string;
+      roomType?: string;
+      strength?: number;
+    },
+  ) {
+    return this.aiStagingService.requestStaging({
+      image_url: body.imageUrl,
+      style: body.style,
+      room_type: body.roomType,
+      strength: body.strength,
+      property_id: propertyId,
+    });
+  }
+
+  @Get('staging/jobs/:jobId')
+  @Roles(...PROPERTY_MANAGEMENT_ROLES)
+  @ApiOperation({ summary: 'Get staging job status' })
+  @ApiParam({ name: 'propertyId', description: 'Property ID' })
+  @ApiParam({ name: 'jobId', description: 'Staging job ID' })
+  @ApiResponse({ status: 200, description: 'Job status' })
+  @ApiResponse({ status: 404, description: 'Job not found' })
+  async getStagingJobStatus(@Param('jobId') jobId: string) {
+    return this.aiStagingService.getJobStatus(jobId);
+  }
+
+  @Get('staging/result/:jobId')
+  @Public()
+  @ApiOperation({ summary: 'Get staged image result' })
+  @ApiParam({ name: 'propertyId', description: 'Property ID' })
+  @ApiParam({ name: 'jobId', description: 'Staging job ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Staged image stream',
+    content: { 'image/jpeg': {} },
+  })
+  @ApiResponse({ status: 404, description: 'Job or image not found' })
+  async getStagedImage(
+    @Param('jobId') jobId: string,
+    @Res() res: Response,
+  ) {
+    const imageStream = await this.aiStagingService.getStagedImage(jobId);
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    imageStream.pipe(res);
   }
 }

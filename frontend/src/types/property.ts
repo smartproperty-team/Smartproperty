@@ -51,6 +51,35 @@ export interface PropertyImage {
   uploadedAt?: Date;
 }
 
+export interface VirtualTourHotspot {
+  id: string;
+  sourceRoomKey: string;
+  targetRoomKey: string;
+  yaw: number;
+  pitch: number;
+  label: string;
+}
+
+export interface VirtualTourConfig {
+  hotspots: VirtualTourHotspot[];
+  defaultRoomKey?: string;
+}
+
+export interface StagingStyle {
+  id: string;
+  name: string;
+  description: string;
+  prompt: string;
+}
+
+export interface StagingJob {
+  jobId: string;
+  status: "queued" | "processing" | "completed" | "failed";
+  message: string;
+  stagedImagePath?: string;
+  error?: string;
+}
+
 export interface Property {
   id: string;
   _id?: string;
@@ -65,6 +94,7 @@ export interface Property {
   features?: PropertyFeatures;
   images?: PropertyImage[];
   virtualTour?: string;
+  virtualTourConfig?: VirtualTourConfig;
   ownerId: string;
   managerId?: string;
   agencyId?: string;

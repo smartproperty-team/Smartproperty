@@ -17,6 +17,7 @@ _ENDPOINTS = [
     ("analytics", "/analytics", ["Market Analytics"]),
     ("marketing", "/marketing", ["Marketing & Distribution"]),
     ("virtual_tour", "/virtual-tour", ["Virtual Tour"]),
+    ("staging", "/staging", ["Virtual Staging"]),
 ]
 
 # Load endpoint routers defensively so core features can still boot

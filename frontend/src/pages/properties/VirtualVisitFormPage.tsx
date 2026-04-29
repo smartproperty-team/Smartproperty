@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { Suspense, useCallback, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { HomeFooter, Navbar } from "../../components/layout";
+import Sphere360Viewer from "../../components/properties/Sphere360Viewer";
 import { useTranslation } from "../../i18n";
 import { propertyService } from "../../services/property.service";
 
@@ -8,13 +9,39 @@ interface RoomEntry {
   id: string;
   title: string;
   file: File | null;
+  previewUrl: string | null;
+  showPreview: boolean;
 }
 
-const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_IMAGE_SIZE_BYTES = 50 * 1024 * 1024;
 const PANORAMA_CAPTION_PREFIX = "__VR360__";
 
 const buildRoomId = () =>
   `room-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const extractApiErrorMessage = (error: unknown): string => {
+  if (!error || typeof error !== "object") {
+    return "Upload failed";
+  }
+
+  const maybeError = error as {
+    response?: { data?: { message?: string | string[] } };
+    message?: string;
+  };
+
+  const apiMessage = maybeError.response?.data?.message;
+  if (Array.isArray(apiMessage) && apiMessage.length > 0) {
+    return apiMessage.join(", ");
+  }
+  if (typeof apiMessage === "string" && apiMessage.trim()) {
+    return apiMessage;
+  }
+  if (maybeError.message) {
+    return maybeError.message;
+  }
+
+  return "Upload failed";
+};
 
 export default function VirtualVisitFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -27,33 +54,40 @@ export default function VirtualVisitFormPage() {
       id: buildRoomId(),
       title: "",
       file: null,
+      previewUrl: null,
+      showPreview: false,
     },
   ]);
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const extractApiErrorMessage = (error: unknown): string => {
-    if (!error || typeof error !== "object") {
-      return "Upload failed";
+  const revokePreview = (url: string | null) => {
+    if (url) URL.revokeObjectURL(url);
+  };
+
+  const validateAndSetFile = (roomId: string, file: File | null) => {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setSubmitError("Only image files are allowed.");
+      return;
     }
 
-    const maybeError = error as {
-      response?: { data?: { message?: string | string[] } };
-      message?: string;
-    };
-
-    const apiMessage = maybeError.response?.data?.message;
-    if (Array.isArray(apiMessage) && apiMessage.length > 0) {
-      return apiMessage.join(", ");
-    }
-    if (typeof apiMessage === "string" && apiMessage.trim()) {
-      return apiMessage;
-    }
-    if (maybeError.message) {
-      return maybeError.message;
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setSubmitError("Each image must be 50MB or smaller.");
+      return;
     }
 
-    return "Upload failed";
+    setSubmitError(null);
+    const previewUrl = URL.createObjectURL(file);
+
+    setRooms((prev) =>
+      prev.map((room) => {
+        if (room.id !== roomId) return room;
+        revokePreview(room.previewUrl);
+        return { ...room, file, previewUrl, showPreview: false };
+      }),
+    );
   };
 
   const addRoom = () => {
@@ -63,6 +97,8 @@ export default function VirtualVisitFormPage() {
         id: buildRoomId(),
         title: "",
         file: null,
+        previewUrl: null,
+        showPreview: false,
       },
     ]);
   };
@@ -73,27 +109,22 @@ export default function VirtualVisitFormPage() {
     );
   };
 
-  const updateRoomFile = (roomId: string, file: File | null) => {
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      setSubmitError("Only image files are allowed.");
-      return;
-    }
-
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      setSubmitError("Each image must be 10MB or smaller.");
-      return;
-    }
-
-    setSubmitError(null);
-    setRooms((prev) =>
-      prev.map((room) => (room.id === roomId ? { ...room, file } : room)),
-    );
+  const removeRoom = (roomId: string) => {
+    setRooms((prev) => {
+      const removed = prev.find((r) => r.id === roomId);
+      revokePreview(removed?.previewUrl ?? null);
+      return prev.filter((room) => room.id !== roomId);
+    });
   };
 
-  const removeRoom = (roomId: string) => {
-    setRooms((prev) => prev.filter((room) => room.id !== roomId));
+  const togglePreview = (roomId: string) => {
+    setRooms((prev) =>
+      prev.map((room) =>
+        room.id === roomId
+          ? { ...room, showPreview: !room.showPreview }
+          : room,
+      ),
+    );
   };
 
   const handleSubmit = async () => {
@@ -185,7 +216,7 @@ export default function VirtualVisitFormPage() {
             <h3 className="form-section-title">Room panorama builder</h3>
             <p>
               Add one panoramic image per room with a clear title. Visitors will
-              browse these rooms in your fullscreen 360 tour.
+              browse these rooms in your fullscreen 360° tour.
             </p>
             <div className="virtual-visit-stats">
               <span>{rooms.length} room(s)</span>
@@ -198,51 +229,16 @@ export default function VirtualVisitFormPage() {
 
           <section className="form-section virtual-visit-rooms">
             {rooms.map((room, index) => (
-              <article key={room.id} className="virtual-visit-room-card">
-                <div className="virtual-visit-room-head">
-                  <strong>Room {index + 1}</strong>
-                  <button
-                    type="button"
-                    className="btn-cancel"
-                    onClick={() => removeRoom(room.id)}
-                    disabled={rooms.length === 1}
-                  >
-                    Remove
-                  </button>
-                </div>
-
-                <div className="virtual-visit-room-grid">
-                  <label>
-                    Room title
-                    <input
-                      type="text"
-                      value={room.title}
-                      onChange={(e) => updateRoomTitle(room.id, e.target.value)}
-                      placeholder="Kitchen, Bedroom 1, Living room..."
-                    />
-                  </label>
-
-                  <label>
-                    Panoramic image
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) =>
-                        updateRoomFile(room.id, e.target.files?.[0] || null)
-                      }
-                    />
-                  </label>
-                </div>
-
-                {room.file && (
-                  <div className="virtual-visit-room-preview">
-                    <img
-                      src={URL.createObjectURL(room.file)}
-                      alt={room.title || `Room ${index + 1}`}
-                    />
-                  </div>
-                )}
-              </article>
+              <RoomCard
+                key={room.id}
+                room={room}
+                index={index}
+                canRemove={rooms.length > 1}
+                onTitleChange={(title) => updateRoomTitle(room.id, title)}
+                onFileChange={(file) => validateAndSetFile(room.id, file)}
+                onRemove={() => removeRoom(room.id)}
+                onTogglePreview={() => togglePreview(room.id)}
+              />
             ))}
 
             <button
@@ -287,5 +283,150 @@ export default function VirtualVisitFormPage() {
       </main>
       <HomeFooter />
     </div>
+  );
+}
+
+// ── Room card with drag & drop and 360° preview ──────────────
+
+interface RoomCardProps {
+  room: RoomEntry;
+  index: number;
+  canRemove: boolean;
+  onTitleChange: (title: string) => void;
+  onFileChange: (file: File | null) => void;
+  onRemove: () => void;
+  onTogglePreview: () => void;
+}
+
+function RoomCard({
+  room,
+  index,
+  canRemove,
+  onTitleChange,
+  onFileChange,
+  onRemove,
+  onTogglePreview,
+}: RoomCardProps) {
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragOver(false);
+      const file = e.dataTransfer.files?.[0] ?? null;
+      if (file) onFileChange(file);
+    },
+    [onFileChange],
+  );
+
+  return (
+    <article
+      className={`virtual-visit-room-card${dragOver ? " is-drag-over" : ""}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <div className="virtual-visit-room-head">
+        <strong>Room {index + 1}</strong>
+        <button
+          type="button"
+          className="btn-cancel"
+          onClick={onRemove}
+          disabled={!canRemove}
+        >
+          Remove
+        </button>
+      </div>
+
+      <div className="virtual-visit-room-grid">
+        <label>
+          Room title
+          <input
+            type="text"
+            value={room.title}
+            onChange={(e) => onTitleChange(e.target.value)}
+            placeholder="Kitchen, Bedroom 1, Living room..."
+          />
+        </label>
+
+        <label>
+          Panoramic image
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={(e) => onFileChange(e.target.files?.[0] || null)}
+          />
+        </label>
+      </div>
+
+      {/* Drop zone hint */}
+      {!room.file && (
+        <div
+          className={`virtual-visit-dropzone${dragOver ? " is-active" : ""}`}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <span className="virtual-visit-dropzone-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+          </span>
+          <span>Drag & drop a panoramic image here, or click to browse</span>
+        </div>
+      )}
+
+      {/* Image preview + 360° toggle */}
+      {room.file && room.previewUrl && (
+        <div className="virtual-visit-room-preview">
+          {room.showPreview ? (
+            <div className="virtual-visit-360-preview">
+              <Suspense
+                fallback={
+                  <div className="virtual-visit-360-loading">
+                    Loading 360° preview...
+                  </div>
+                }
+              >
+                <Sphere360Viewer
+                  src={room.previewUrl}
+                  altText={room.title || `Room ${index + 1}`}
+                  autoRotate
+                  autoRotateSpeed={0.6}
+                  height="280px"
+                />
+              </Suspense>
+            </div>
+          ) : (
+            <img
+              src={room.previewUrl}
+              alt={room.title || `Room ${index + 1}`}
+            />
+          )}
+          <button
+            type="button"
+            className="virtual-visit-preview-toggle"
+            onClick={onTogglePreview}
+          >
+            {room.showPreview ? "Show flat preview" : "Preview in 360°"}
+          </button>
+        </div>
+      )}
+    </article>
   );
 }

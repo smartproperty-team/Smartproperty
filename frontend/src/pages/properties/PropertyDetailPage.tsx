@@ -4,7 +4,9 @@
 
 import { HomeFooter, Navbar } from "@/components/layout";
 import AiDescriptionPanel from "@/components/properties/AiDescriptionPanel";
-import PanoramicPanViewer from "@/components/properties/PanoramicPanViewer";
+import HotspotEditor from "@/components/properties/HotspotEditor";
+import VirtualStagingPanel from "@/components/properties/VirtualStagingPanel";
+import Sphere360Viewer from "@/components/properties/Sphere360Viewer";
 import VirtualTourViewer from "@/components/properties/VirtualTourViewer";
 import PropertyReviewsSection from "@/components/reviews/PropertyReviewsSection";
 import { useTranslation } from "@/i18n";
@@ -687,6 +689,10 @@ function ImageGallery({ images }: ImageGalleryProps) {
 
 interface VirtualRooms360Props {
   rooms: PropertyImage[];
+  virtualTourConfig?: import("@/types/property").VirtualTourConfig;
+  canManage?: boolean;
+  propertyId?: string;
+  onConfigSaved?: (config: import("@/types/property").VirtualTourConfig) => void;
 }
 
 const PANORAMA_CAPTION_PREFIX = "__VR360__";
@@ -715,8 +721,20 @@ const getRoomDisplayName = (image: PropertyImage): string =>
 const isMarkedPanoramaRoom = (image: PropertyImage): boolean =>
   Boolean(image.caption?.trim().startsWith(PANORAMA_CAPTION_PREFIX));
 
-function VirtualRooms360({ rooms }: VirtualRooms360Props) {
+function VirtualRooms360({
+  rooms,
+  virtualTourConfig,
+  canManage,
+  propertyId,
+  onConfigSaved,
+}: VirtualRooms360Props) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [roomPanelOpen, setRoomPanelOpen] = useState(false);
+  const [fading, setFading] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const pendingRoomIndex = useRef<number | null>(null);
 
   const sortedRooms = [...rooms].sort((a, b) => {
     if (a.isPrimary) return -1;
@@ -727,39 +745,101 @@ function VirtualRooms360({ rooms }: VirtualRooms360Props) {
   const activeRoom =
     activeIndex === null ? null : (sortedRooms[activeIndex] ?? sortedRooms[0]);
 
-  const closeViewer = () => setActiveIndex(null);
+  // Hotspots for the currently active room
+  const activeRoomKey = activeRoom?.key;
+  const roomHotspots = (virtualTourConfig?.hotspots ?? []).filter(
+    (hs) => hs.sourceRoomKey === activeRoomKey,
+  );
 
-  const showPreviousRoom = () => {
-    setActiveIndex((current) => {
-      if (current === null) return 0;
-      return current === 0 ? sortedRooms.length - 1 : current - 1;
-    });
-  };
+  // Fade transition: fade out → swap room → fade in
+  const navigateToRoom = useCallback(
+    (targetIndex: number) => {
+      if (targetIndex === activeIndex || fading) return;
+      setFading(true);
+      pendingRoomIndex.current = targetIndex;
+      // After fade-out (300ms), swap the room
+      setTimeout(() => {
+        setActiveIndex(pendingRoomIndex.current);
+        pendingRoomIndex.current = null;
+        // After a brief moment, fade back in
+        setTimeout(() => setFading(false), 50);
+      }, 300);
+    },
+    [activeIndex, fading],
+  );
 
-  const showNextRoom = () => {
-    setActiveIndex((current) => {
-      if (current === null) return 0;
-      return current >= sortedRooms.length - 1 ? 0 : current + 1;
-    });
-  };
+  const handleHotspotClick = useCallback(
+    (hotspot: { targetRoomKey: string }) => {
+      const targetIdx = sortedRooms.findIndex(
+        (r) => r.key === hotspot.targetRoomKey,
+      );
+      if (targetIdx !== -1) {
+        navigateToRoom(targetIdx);
+      }
+    },
+    [sortedRooms, navigateToRoom],
+  );
+
+  const closeViewer = useCallback(() => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+    setActiveIndex(null);
+    setRoomPanelOpen(false);
+  }, []);
+
+  const showPreviousRoom = useCallback(() => {
+    const current = activeIndex ?? 0;
+    const prev = current === 0 ? sortedRooms.length - 1 : current - 1;
+    navigateToRoom(prev);
+  }, [activeIndex, sortedRooms.length, navigateToRoom]);
+
+  const showNextRoom = useCallback(() => {
+    const current = activeIndex ?? 0;
+    const next = current >= sortedRooms.length - 1 ? 0 : current + 1;
+    navigateToRoom(next);
+  }, [activeIndex, sortedRooms.length, navigateToRoom]);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!modalRef.current) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else {
+      modalRef.current.requestFullscreen().catch(() => {});
+    }
+  }, []);
+
+  // Sync fullscreen state
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
 
   useEffect(() => {
     if (activeIndex === null) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        if (document.fullscreenElement) return;
         closeViewer();
       }
-      if (event.key === "ArrowLeft") {
+      if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
         showPreviousRoom();
       }
-      if (event.key === "ArrowRight") {
+      if (event.key === "ArrowDown" || event.key === "ArrowRight") {
         showNextRoom();
+      }
+      if (event.key === "f" || event.key === "F") {
+        toggleFullscreen();
+      }
+      if (event.key === "r" || event.key === "R") {
+        setRoomPanelOpen((prev) => !prev);
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeIndex]);
+  }, [activeIndex, closeViewer, showPreviousRoom, showNextRoom, toggleFullscreen]);
 
   if (rooms.length === 0) {
     return null;
@@ -768,8 +848,19 @@ function VirtualRooms360({ rooms }: VirtualRooms360Props) {
   return (
     <section className="property-rooms-360">
       <div className="property-rooms-360-header">
-        <h3>3D Virtual Tour</h3>
-        <p>Click a room to open the full-screen 360 viewer.</p>
+        <div>
+          <h3>360° Virtual Tour</h3>
+          <p>Click a room to explore in immersive 360° view.</p>
+        </div>
+        {canManage && propertyId && sortedRooms.length > 1 && (
+          <button
+            type="button"
+            className="btn-edit"
+            onClick={() => setEditorOpen(true)}
+          >
+            Edit Hotspots
+          </button>
+        )}
       </div>
 
       <div className="property-rooms-360-grid">
@@ -779,58 +870,167 @@ function VirtualRooms360({ rooms }: VirtualRooms360Props) {
             type="button"
             className="property-rooms-360-card"
             onClick={() => setActiveIndex(index)}
-            aria-label={`Open ${getRoomDisplayName(room)} in panoramic viewer`}
+            aria-label={`Open ${getRoomDisplayName(room)} in 360° viewer`}
           >
             <img src={room.url} alt={getRoomDisplayName(room)} />
             <span>{getRoomDisplayName(room)}</span>
-            <small>Panoramic 360 room</small>
+            <small>360° panoramic room</small>
           </button>
         ))}
       </div>
 
       {activeRoom && (
         <div
-          className="property-rooms-360-modal"
+          ref={modalRef}
+          className={`property-rooms-360-modal${isFullscreen ? " is-fullscreen" : ""}`}
           role="dialog"
           aria-modal="true"
         >
-          <button
-            type="button"
-            className="property-rooms-360-close"
-            onClick={closeViewer}
-            aria-label="Close 360 viewer"
-          >
-            ×
-          </button>
-          <button
-            type="button"
-            className="property-rooms-360-arrow property-rooms-360-arrow-left"
-            onClick={showPreviousRoom}
-            aria-label="Previous room"
-          >
-            ◀
-          </button>
-          <button
-            type="button"
-            className="property-rooms-360-arrow property-rooms-360-arrow-right"
-            onClick={showNextRoom}
-            aria-label="Next room"
-          >
-            ▶
-          </button>
-          <div className="property-rooms-360-viewer">
-            <PanoramicPanViewer
-              src={activeRoom.url}
-              altText={getRoomDisplayName(activeRoom)}
-            />
-            <div className="property-rooms-360-title">
-              <strong>{getRoomDisplayName(activeRoom)}</strong>
-              <span>
+          {/* ── Toolbar ── */}
+          <div className="vr360-toolbar">
+            <div className="vr360-toolbar-left">
+              <strong className="vr360-toolbar-title">
+                {getRoomDisplayName(activeRoom)}
+              </strong>
+              <span className="vr360-toolbar-count">
                 {(activeIndex ?? 0) + 1} / {sortedRooms.length}
               </span>
             </div>
+            <div className="vr360-toolbar-right">
+              {sortedRooms.length > 1 && (
+                <button
+                  type="button"
+                  className="vr360-toolbar-btn"
+                  onClick={() => setRoomPanelOpen((p) => !p)}
+                  aria-label="Toggle room list"
+                  title="Room list (R)"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7" />
+                    <rect x="14" y="3" width="7" height="7" />
+                    <rect x="3" y="14" width="7" height="7" />
+                    <rect x="14" y="14" width="7" height="7" />
+                  </svg>
+                </button>
+              )}
+              <button
+                type="button"
+                className="vr360-toolbar-btn"
+                onClick={toggleFullscreen}
+                aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                title="Fullscreen (F)"
+              >
+                {isFullscreen ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="4 14 10 14 10 20" />
+                    <polyline points="20 10 14 10 14 4" />
+                    <line x1="14" y1="10" x2="21" y2="3" />
+                    <line x1="3" y1="21" x2="10" y2="14" />
+                  </svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15 3 21 3 21 9" />
+                    <polyline points="9 21 3 21 3 15" />
+                    <line x1="21" y1="3" x2="14" y2="10" />
+                    <line x1="3" y1="21" x2="10" y2="14" />
+                  </svg>
+                )}
+              </button>
+              <button
+                type="button"
+                className="vr360-toolbar-btn"
+                onClick={closeViewer}
+                aria-label="Close viewer"
+                title="Close (Esc)"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
           </div>
+
+          {/* ── Previous / Next arrows ── */}
+          {sortedRooms.length > 1 && (
+            <>
+              <button
+                type="button"
+                className="property-rooms-360-arrow property-rooms-360-arrow-left"
+                onClick={showPreviousRoom}
+                aria-label="Previous room"
+              >
+                &#9664;
+              </button>
+              <button
+                type="button"
+                className="property-rooms-360-arrow property-rooms-360-arrow-right"
+                onClick={showNextRoom}
+                aria-label="Next room"
+              >
+                &#9654;
+              </button>
+            </>
+          )}
+
+          {/* ── 360° Viewer with hotspots ── */}
+          <div className={`vr360-viewer-area${fading ? " is-fading" : ""}`}>
+            <Sphere360Viewer
+              key={activeRoom.key || activeRoom.url}
+              src={activeRoom.url}
+              altText={getRoomDisplayName(activeRoom)}
+              autoRotate
+              autoRotateSpeed={0.4}
+              height="100%"
+              hotspots={roomHotspots}
+              onHotspotClick={handleHotspotClick}
+            />
+          </div>
+
+          {/* ── Room selector panel ── */}
+          {roomPanelOpen && sortedRooms.length > 1 && (
+            <div className="vr360-room-panel">
+              <div className="vr360-room-panel-header">
+                <strong>Rooms</strong>
+                <button
+                  type="button"
+                  className="vr360-room-panel-close"
+                  onClick={() => setRoomPanelOpen(false)}
+                  aria-label="Close room panel"
+                >
+                  &times;
+                </button>
+              </div>
+              <div className="vr360-room-panel-list">
+                {sortedRooms.map((room, index) => (
+                  <button
+                    key={room.key || index}
+                    type="button"
+                    className={`vr360-room-panel-item${index === activeIndex ? " is-active" : ""}`}
+                    onClick={() => navigateToRoom(index)}
+                  >
+                    <img src={room.url} alt={getRoomDisplayName(room)} />
+                    <span>{getRoomDisplayName(room)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
+      )}
+
+      {/* ── Hotspot Editor ── */}
+      {editorOpen && canManage && propertyId && (
+        <HotspotEditor
+          rooms={sortedRooms}
+          virtualTourConfig={virtualTourConfig}
+          propertyId={propertyId}
+          onClose={() => setEditorOpen(false)}
+          onSaved={(config) => {
+            onConfigSaved?.(config);
+            setEditorOpen(false);
+          }}
+        />
       )}
     </section>
   );
@@ -856,6 +1056,7 @@ export default function PropertyDetailPage() {
   const [hasActiveApplication, setHasActiveApplication] = useState(false);
   const [checkingApplication, setCheckingApplication] = useState(false);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [stagingOpen, setStagingOpen] = useState(false);
   const [aiSaveError, setAiSaveError] = useState<string | null>(null);
   const [detectedPanoramaKeys, setDetectedPanoramaKeys] = useState<string[]>(
     [],
@@ -1413,7 +1614,19 @@ export default function PropertyDetailPage() {
           </div>
         </div>
 
-        {virtualRooms.length > 0 && <VirtualRooms360 rooms={virtualRooms} />}
+        {virtualRooms.length > 0 && (
+          <VirtualRooms360
+            rooms={virtualRooms}
+            virtualTourConfig={property.virtualTourConfig}
+            canManage={canManage}
+            propertyId={property.id || property._id}
+            onConfigSaved={(config) => {
+              setProperty((prev) =>
+                prev ? { ...prev, virtualTourConfig: config } : prev,
+              );
+            }}
+          />
+        )}
 
         <ImageGallery images={normalImages} />
 
@@ -1778,6 +1991,16 @@ export default function PropertyDetailPage() {
                   >
                     {t.propertyDetail.aiDescription.cta}
                   </button>
+                  {property.images && property.images.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn-ai-trigger"
+                      onClick={() => setStagingOpen(true)}
+                      style={{ width: "100%" }}
+                    >
+                      AI Virtual Staging
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -1789,6 +2012,14 @@ export default function PropertyDetailPage() {
                 snapshot={buildAiSnapshot()}
                 propertyId={property.id || property._id}
                 onApply={handleApplyAiDescription}
+              />
+            )}
+
+            {canManage && stagingOpen && (
+              <VirtualStagingPanel
+                images={property.images || []}
+                propertyId={property.id || property._id || ""}
+                onClose={() => setStagingOpen(false)}
               />
             )}
 

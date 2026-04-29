@@ -309,7 +309,7 @@ export const fr: Translations = {
         uploadAriaLabel: "Téléverser les images de la propriété",
         dropTitle: "Glissez-déposez vos images ici",
         dropSubtitle:
-          "ou cliquez pour sélectionner (JPEG, PNG, WebP - max 10MB)",
+          "ou cliquez pour sélectionner (JPEG, PNG, WebP - max 50MB)",
         virtualTour: {
           enableFromPhotos:
             "Générer une visite virtuelle à partir des photos téléversées",

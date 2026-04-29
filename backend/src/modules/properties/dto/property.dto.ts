@@ -30,6 +30,53 @@ import {
 // Nested DTOs
 // ===========================================
 
+export class VirtualTourHotspotDto {
+  @ApiProperty({ example: 'hs-abc123' })
+  @IsString()
+  @IsNotEmpty()
+  id!: string;
+
+  @ApiProperty({ example: 'image-key-living-room' })
+  @IsString()
+  @IsNotEmpty()
+  sourceRoomKey!: string;
+
+  @ApiProperty({ example: 'image-key-kitchen' })
+  @IsString()
+  @IsNotEmpty()
+  targetRoomKey!: string;
+
+  @ApiProperty({ example: 1.57, description: 'Horizontal angle in radians' })
+  @IsNumber()
+  @Min(-Math.PI)
+  @Max(Math.PI)
+  yaw!: number;
+
+  @ApiProperty({ example: 0, description: 'Vertical angle in radians' })
+  @IsNumber()
+  @Min(-Math.PI / 2)
+  @Max(Math.PI / 2)
+  pitch!: number;
+
+  @ApiProperty({ example: 'Kitchen' })
+  @IsString()
+  @IsNotEmpty()
+  label!: string;
+}
+
+export class VirtualTourConfigDto {
+  @ApiProperty({ type: [VirtualTourHotspotDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => VirtualTourHotspotDto)
+  hotspots!: VirtualTourHotspotDto[];
+
+  @ApiPropertyOptional({ example: 'image-key-living-room' })
+  @IsOptional()
+  @IsString()
+  defaultRoomKey?: string;
+}
+
 export class PropertyCoordinatesDto {
   @ApiProperty({ example: 40.7128 })
   @IsNumber()

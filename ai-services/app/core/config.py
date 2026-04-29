@@ -64,6 +64,14 @@ class Settings(BaseSettings):
     marketing_cache_ttl_seconds: int = 60 * 60 * 24  # 24h
     marketing_generation_timeout_ms: int = 45000
 
+    # Virtual Staging (Stability AI)
+    stability_api_key: str = "sk-q6XFnQyEAb2CKb32m30US7MvdtygmdRgVOIX0jRpFjYYL32d"
+    staging_output_dir: str = "./data/staging"
+    staging_max_image_size_mb: int = 10
+    staging_cache_ttl_seconds: int = 60 * 60 * 24  # 24h
+    staging_default_strength: float = 0.35
+    staging_cfg_scale: float = 7.0
+
     # Logging
     log_level: str = "DEBUG"
     log_format: str = "json"

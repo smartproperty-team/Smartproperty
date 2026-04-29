@@ -4,7 +4,7 @@
 
 import { useTranslation } from "@/i18n";
 import { useMemo } from "react";
-import PanoramicPanViewer from "./PanoramicPanViewer";
+import Sphere360Viewer from "./Sphere360Viewer";
 
 type VirtualTourProvider =
   | "youtube"
@@ -170,9 +170,10 @@ export default function VirtualTourViewer({
           />
         ) : viewConfig.kind === "image" ? (
           <div className="property-virtual-tour-image-wrap">
-            <PanoramicPanViewer
+            <Sphere360Viewer
               src={viewConfig.sourceUrl}
               altText={t.propertyDetail.virtualTour.iframeTitle}
+              height="400px"
             />
           </div>
         ) : (

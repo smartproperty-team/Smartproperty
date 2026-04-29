@@ -702,4 +702,44 @@ export class PropertyImagesService {
 
     return lastSegment.replace(/\.jpg$/i, '');
   }
+
+  // ===========================================
+  // Virtual Tour Config (Hotspots)
+  // ===========================================
+
+  async updateVirtualTourConfig(
+    propertyId: string,
+    config: { hotspots: Array<{ id: string; sourceRoomKey: string; targetRoomKey: string; yaw: number; pitch: number; label: string }>; defaultRoomKey?: string },
+    userId: string,
+    userRole: UserRole,
+  ): Promise<Property> {
+    const property = await this.findPropertyOrFail(propertyId);
+    this.checkAuthorization(property, userId, userRole);
+
+    const imageKeys = new Set(
+      (property.images || []).map((img) => img.key).filter(Boolean),
+    );
+
+    for (const hotspot of config.hotspots) {
+      if (!imageKeys.has(hotspot.sourceRoomKey)) {
+        throw new BadRequestException(
+          `Source room key "${hotspot.sourceRoomKey}" does not match any image on this property.`,
+        );
+      }
+      if (!imageKeys.has(hotspot.targetRoomKey)) {
+        throw new BadRequestException(
+          `Target room key "${hotspot.targetRoomKey}" does not match any image on this property.`,
+        );
+      }
+    }
+
+    if (config.defaultRoomKey && !imageKeys.has(config.defaultRoomKey)) {
+      throw new BadRequestException(
+        `Default room key "${config.defaultRoomKey}" does not match any image on this property.`,
+      );
+    }
+
+    property.virtualTourConfig = config;
+    return this.propertyRepository.save(property);
+  }
 }

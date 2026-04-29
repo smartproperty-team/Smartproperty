@@ -301,7 +301,7 @@ export const en = {
         primary: "Primary",
         uploadAriaLabel: "Upload property images",
         dropTitle: "Drag and drop your images here",
-        dropSubtitle: "or click to select (JPEG, PNG, WebP - max 10MB)",
+        dropSubtitle: "or click to select (JPEG, PNG, WebP - max 50MB)",
         virtualTour: {
           enableFromPhotos: "Generate virtual tour from uploaded photos",
           captureGuideTitle: "Owner photo capture guide",
