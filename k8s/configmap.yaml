@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: smartproperty
+data:
+  NODE_ENV: production
+  PORT: "3000"
+  APP_NAME: SmartProperty API
+  MONGODB_HOST: mongodb
+  MONGODB_PORT: "27017"
+  MONGODB_DATABASE: smartproperty
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  JWT_EXPIRATION: 1d
+  JWT_REFRESH_EXPIRATION: 7d
+  CORS_ORIGIN: http://localhost:30080
+  SMTP_HOST: mailhog
+  SMTP_PORT: "1025"
+  SMTP_SECURE: "false"
+  SMTP_FROM_NAME: SmartProperty
+  SMTP_FROM_EMAIL: noreply@smartproperty.com
+  THROTTLE_TTL: "60"
+  THROTTLE_LIMIT: "100"
+  MINIO_ENDPOINT: minio
+  MINIO_PORT: "9000"
+  MINIO_USE_SSL: "false"
+  MINIO_BUCKET_NAME: smartproperty
+  MINIO_PUBLIC_URL: http://localhost:30090
+  GOOGLE_CALLBACK_URL: http://localhost:30000/api/auth/google/callback
+  GOOGLE_FRONTEND_CALLBACK_URL: http://localhost:30080/auth/google/callback
+  FACEBOOK_CALLBACK_URL: http://localhost:30000/api/auth/facebook/callback
+  FACEBOOK_FRONTEND_CALLBACK_URL: http://localhost:30080/auth/facebook/callback
+  VAPID_SUBJECT: mailto:admin@smartproperty.com
+  LOG_LEVEL: debug
+  GRAPHQL_PLAYGROUND: "true"
+  GRAPHQL_DEBUG: "true"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: smartproperty
+data:
+  VITE_API_URL: http://localhost:30000/api
+  VITE_APP_NAME: SmartProperty
+  VITE_RECAPTCHA_SITE_KEY: 6LeVNmMsAAAAAH5tfjXkOtyScNdfrptlgxooPLHJ
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-config
+  namespace: smartproperty
+data:
+  APP_NAME: SmartProperty AI Services
+  APP_ENV: production
+  API_PREFIX: /api/v1
+  HOST: 0.0.0.0
+  PORT: "8000"
+  MONGODB_DB_NAME: smartproperty
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_DB: "1"
+  REDIS_ENABLED: "false"
+  BACKEND_API_URL: http://backend:3000/api
+  JWT_ALGORITHM: HS256
+  MODEL_PATH: ./models
+  LOG_LEVEL: INFO
+  LOG_FORMAT: json
+  RATE_LIMIT_PER_MINUTE: "60"
+  CORS_ORIGINS: http://localhost:30000,http://localhost:30080

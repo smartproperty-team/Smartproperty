@@ -88,7 +88,8 @@ export default function LoginPage() {
     return () => document.removeEventListener("keydown", handleEscape);
   }, [showReactivateModal]);
 
-  const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string | undefined;
+  const rawSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string | undefined;
+  const siteKey = rawSiteKey && rawSiteKey !== 'placeholder' ? rawSiteKey : undefined;
 
   const {
     register,

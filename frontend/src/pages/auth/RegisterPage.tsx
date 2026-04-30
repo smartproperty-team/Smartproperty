@@ -87,7 +87,8 @@ export default function RegisterPage() {
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaError, setCaptchaError] = useState<string | null>(null);
 
-  const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string | undefined;
+  const rawSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string | undefined;
+  const siteKey = rawSiteKey && rawSiteKey !== 'placeholder' ? rawSiteKey : undefined;
 
   const {
     register,
