@@ -14,7 +14,7 @@ data:
   REDIS_PORT: "6379"
   JWT_EXPIRATION: 1d
   JWT_REFRESH_EXPIRATION: 7d
-  CORS_ORIGIN: http://localhost:30080
+  CORS_ORIGIN: http://192.168.175.131:30080
   SMTP_HOST: mailhog
   SMTP_PORT: "1025"
   SMTP_SECURE: "false"
@@ -26,11 +26,11 @@ data:
   MINIO_PORT: "9000"
   MINIO_USE_SSL: "false"
   MINIO_BUCKET_NAME: smartproperty
-  MINIO_PUBLIC_URL: http://localhost:30090
-  GOOGLE_CALLBACK_URL: http://localhost:30000/api/auth/google/callback
-  GOOGLE_FRONTEND_CALLBACK_URL: http://localhost:30080/auth/google/callback
-  FACEBOOK_CALLBACK_URL: http://localhost:30000/api/auth/facebook/callback
-  FACEBOOK_FRONTEND_CALLBACK_URL: http://localhost:30080/auth/facebook/callback
+  MINIO_PUBLIC_URL: http://192.168.175.131:30090
+  GOOGLE_CALLBACK_URL: http://192.168.175.131:30000/api/auth/google/callback
+  GOOGLE_FRONTEND_CALLBACK_URL: http://192.168.175.131:30080/auth/google/callback
+  FACEBOOK_CALLBACK_URL: http://192.168.175.131:30000/api/auth/facebook/callback
+  FACEBOOK_FRONTEND_CALLBACK_URL: http://192.168.175.131:30080/auth/facebook/callback
   VAPID_SUBJECT: mailto:admin@smartproperty.com
   LOG_LEVEL: debug
   GRAPHQL_PLAYGROUND: "true"
@@ -42,7 +42,7 @@ metadata:
   name: frontend-config
   namespace: smartproperty
 data:
-  VITE_API_URL: http://localhost:30000/api
+  VITE_API_URL: http://192.168.175.131:30000/api
   VITE_APP_NAME: SmartProperty
   VITE_RECAPTCHA_SITE_KEY: 6LeVNmMsAAAAAH5tfjXkOtyScNdfrptlgxooPLHJ
 ---
@@ -68,4 +68,4 @@ data:
   LOG_LEVEL: INFO
   LOG_FORMAT: json
   RATE_LIMIT_PER_MINUTE: "60"
-  CORS_ORIGINS: http://localhost:30000,http://localhost:30080
+  CORS_ORIGINS: http://192.168.175.131:30000,http://192.168.175.131:30080
