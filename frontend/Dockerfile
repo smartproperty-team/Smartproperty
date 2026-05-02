@@ -23,6 +23,10 @@ FROM base AS build
 WORKDIR /app
 COPY --from=base /app/node_modules ./node_modules
 COPY . .
+ARG VITE_RECAPTCHA_SITE_KEY
+ARG VITE_API_URL
+ENV VITE_RECAPTCHA_SITE_KEY=$VITE_RECAPTCHA_SITE_KEY
+ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # Production stage with nginx
