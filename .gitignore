@@ -107,3 +107,5 @@ backend/dist/tsconfig.build.tsbuildinfo
 /backend/dist
 /backend/dist
 /.venv311
+smartproperty-backend.tar
+smartproperty-frontend.tar

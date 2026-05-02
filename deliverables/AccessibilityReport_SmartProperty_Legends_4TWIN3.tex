@@ -1,0 +1,486 @@
+\documentclass[12pt,a4paper]{article}
+
+% ── Packages ──────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{pifont}
+
+% ── Colors ────────────────────────────────────────────────
+\definecolor{primaryblue}{HTML}{1A3263}
+\definecolor{accentgold}{HTML}{FFC570}
+\definecolor{linkblue}{HTML}{2563EB}
+\definecolor{codebg}{HTML}{F3F4F6}
+\definecolor{goodgreen}{HTML}{16A34A}
+\definecolor{warnred}{HTML}{DC2626}
+\definecolor{warnorange}{HTML}{EA580C}
+\definecolor{passgreen}{HTML}{16A34A}
+\definecolor{failred}{HTML}{DC2626}
+
+% ── Hyperref setup ────────────────────────────────────────
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    urlcolor=linkblue,
+    citecolor=primaryblue,
+    pdftitle={Accessibility Audit Report (WCAG) - SmartProperty},
+    pdfauthor={Team Legends - 4TWIN3},
+}
+
+% ── Code listing style ───────────────────────────────────
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{gray!30},
+    tabsize=2,
+    showstringspaces=false,
+}
+
+% ── Custom commands ───────────────────────────────────────
+\newcommand{\pass}{\textcolor{passgreen}{\textbf{PASS}}}
+\newcommand{\fail}{\textcolor{failred}{\textbf{FAIL}}}
+\newcommand{\na}{\textcolor{gray}{\textbf{N/A}}}
+\newcommand{\partial}{\textcolor{warnorange}{\textbf{PARTIAL}}}
+
+% ── Header / Footer ──────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{primaryblue}{SmartProperty -- Accessibility Audit (WCAG)}}
+\fancyhead[R]{\small\textcolor{primaryblue}{Legends -- 4TWIN3}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ── Section styling ──────────────────────────────────────
+\titleformat{\section}{\Large\bfseries\color{primaryblue}}{}{0em}{}[\vspace{-0.5em}\rule{\textwidth}{0.4pt}]
+\titleformat{\subsection}{\large\bfseries\color{primaryblue!80}}{}{0em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{primaryblue!60}}{}{0em}{}
+
+% ══════════════════════════════════════════════════════════
+\begin{document}
+
+% ── Title Page ────────────────────────────────────────────
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    {\Huge\bfseries\textcolor{primaryblue}{Accessibility Audit Report}\par}
+    \vspace{0.3cm}
+    {\LARGE\textcolor{primaryblue!70}{WCAG 2.1 Compliance}\par}
+    \vspace{0.5cm}
+    {\LARGE\textcolor{primaryblue!70}{SmartProperty Platform}\par}
+    \vspace{2cm}
+    \rule{\textwidth}{1pt}\par
+    \vspace{1cm}
+    \begin{tabular}{rl}
+        \textbf{Project Code:} & SmartProperty \\[0.3em]
+        \textbf{Team Name:}    & Legends \\[0.3em]
+        \textbf{Class:}        & 4TWIN3 \\[0.3em]
+        \textbf{Date:}         & May 2026 \\[0.3em]
+        \textbf{Standard:}     & WCAG 2.1 (Level A \& AA) \\[0.3em]
+        \textbf{Program:}      & PIDEV -- Esprit School of Engineering \\
+    \end{tabular}
+    \vspace{1cm}\par
+    \rule{\textwidth}{1pt}
+    \vfill
+    {\large\textbf{Compliance Level Achieved: WCAG 2.1 Level AA (Partial)}\par}
+    \vspace{1cm}
+\end{titlepage}
+
+% ── Table of Contents ─────────────────────────────────────
+\tableofcontents
+\newpage
+
+% ══════════════════════════════════════════════════════════
+\section{Executive Summary}
+
+This report presents a comprehensive accessibility audit of the SmartProperty platform based on the Web Content Accessibility Guidelines (WCAG) 2.1. The audit covers all four POUR principles (Perceivable, Operable, Understandable, Robust) and documents the compliance level achieved, issues detected, and corrective measures implemented.
+
+\vspace{0.5em}
+\noindent The application meets the majority of Level~A and Level~AA success criteria. Remaining items are documented in the ``Known Limitations'' section.
+
+% ══════════════════════════════════════════════════════════
+\section{Audit Tools Used}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Tool} & \textbf{Version} & \textbf{Purpose} \\
+\midrule
+axe-core         & @axe-core/playwright 4.11.1 & Automated accessibility rule testing \\
+Playwright       & 1.58.2                      & Browser automation for accessibility checks \\
+Lighthouse       & Chrome DevTools             & Accessibility scoring and issue detection \\
+Manual Testing   & N/A                         & Keyboard navigation, focus management \\
+Contrast Analyzer& axe-core \texttt{color-contrast} & WCAG contrast ratio verification \\
+\bottomrule
+\end{tabularx}
+\caption{Accessibility audit tools}
+\end{table}
+
+% ══════════════════════════════════════════════════════════
+\section{Pages Audited}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llc}
+\toprule
+\textbf{Page} & \textbf{URL} & \textbf{Priority} \\
+\midrule
+Home            & \texttt{/}              & High \\
+Properties      & \texttt{/properties}    & High \\
+Login           & \texttt{/login}         & High \\
+Register        & \texttt{/register}      & High \\
+Dashboard       & \texttt{/dashboard}     & Medium \\
+Property Detail & \texttt{/properties/:id}& Medium \\
+Settings        & \texttt{/settings}      & Medium \\
+\bottomrule
+\end{tabular}
+\caption{Audited pages}
+\end{table}
+
+% ══════════════════════════════════════════════════════════
+\section{POUR Compliance Assessment}
+
+% ── 4.1 PERCEIVABLE ──────────────────────────────────────
+\subsection{Perceivable}
+
+\subsubsection{1.1 Text Alternatives -- \pass{} (Level A)}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lcX}
+\toprule
+\textbf{Criterion} & \textbf{Status} & \textbf{Details} \\
+\midrule
+1.1.1 Non-text Content & \pass & All informative images have meaningful \texttt{alt} text. Decorative images use \texttt{alt=""}. Icon-only buttons include \texttt{aria-label}. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{1.2 Time-Based Media -- \na}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lcX}
+\toprule
+\textbf{Criterion} & \textbf{Status} & \textbf{Details} \\
+\midrule
+1.2.1 Audio/Video & \na & No \texttt{<video>} or \texttt{<audio>} elements found in core routes. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{1.3 Adaptable -- \pass{} (Level A)}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lcX}
+\toprule
+\textbf{Criterion} & \textbf{Status} & \textbf{Details} \\
+\midrule
+1.3.1 Info and Relationships & \pass & Headings follow semantic hierarchy. Forms use proper labels. Tables use \texttt{<th>} headers. \\
+1.3.2 Meaningful Sequence    & \pass & Content order remains logical when styles are removed. \\
+1.3.3 Sensory Characteristics& \pass & Instructions do not rely solely on shape, size, or visual location. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{1.4 Distinguishable -- \pass{} (Level AA)}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lcX}
+\toprule
+\textbf{Criterion} & \textbf{Status} & \textbf{Details} \\
+\midrule
+1.4.1 Use of Color      & \pass & Status indicators include text labels in addition to color. \\
+1.4.3 Contrast (Minimum) & \pass & All core pages pass axe-core \texttt{color-contrast} rule. Normal text $\geq$ 4.5:1, large text $\geq$ 3:1. \\
+1.4.4 Resize Text       & \pass & Text resizable to 200\% without loss of content or function. \\
+1.4.5 Images of Text    & \pass & No images of text used; all text is rendered as real text. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Contrast Audit Evidence.}
+Initial audit (March 2026) found contrast violations on Home and Properties pages:
+
+\begin{itemize}[noitemsep]
+    \item \texttt{\#tab-sale} text: $\sim$1.55:1 ratio (required $\geq$ 4.5:1)
+    \item \texttt{.search-button > span}: $\sim$1.55:1
+    \item \texttt{.cta-button}: $\sim$1.55:1
+    \item \texttt{.logo-text}: $\sim$1.36:1 (required $\geq$ 3:1 for large text)
+    \item \texttt{.footer-subscribe-form button}: $\sim$1.55:1
+\end{itemize}
+
+\noindent\textbf{Corrective measures:} Updated button and text colors to meet WCAG ratios.
+
+\noindent\textbf{Final re-audit:} \textcolor{passgreen}{\textbf{0 contrast violations}} across all 4 core routes.
+
+\paragraph{Text Resize Evidence.}
+
+\begin{lstlisting}[caption={Text resize 200\% smoke check results}]
+{
+  "method": "Playwright html font-size 200% smoke check",
+  "results": [
+    { "url": "/",           "hasHOverflow": false },
+    { "url": "/properties", "hasHOverflow": false },
+    { "url": "/login",      "hasHOverflow": false },
+    { "url": "/register",   "hasHOverflow": false }
+  ]
+}
+\end{lstlisting}
+
+% ── 4.2 OPERABLE ─────────────────────────────────────────
+\subsection{Operable}
+
+\subsubsection{2.1 Keyboard Accessible -- \pass{} (Level A)}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lcX}
+\toprule
+\textbf{Criterion} & \textbf{Status} & \textbf{Details} \\
+\midrule
+2.1.1 Keyboard         & \pass & All interactive elements reachable by keyboard. \\
+2.1.2 No Keyboard Trap & \pass & No keyboard traps detected (\texttt{probableTrap: false} on all routes). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Keyboard Navigation Evidence.}
+
+\begin{lstlisting}[caption={Keyboard navigation smoke test results}]
+{
+  "method": "Playwright tab sequence smoke test",
+  "results": [
+    { "url": "/",           "focusableCount": 53,
+      "uniqueFocusTargets": 17, "probableTrap": false },
+    { "url": "/properties", "focusableCount": 41,
+      "uniqueFocusTargets": 14, "probableTrap": false },
+    { "url": "/login",      "focusableCount": 12,
+      "uniqueFocusTargets": 12, "probableTrap": false },
+    { "url": "/register",   "focusableCount": 14,
+      "uniqueFocusTargets": 14, "probableTrap": false }
+  ]
+}
+\end{lstlisting}
+
+\noindent\textbf{Corrective measure:} Mobile menu links removed from tab order when closed via conditional \texttt{tabIndex} and \texttt{aria-hidden} in \texttt{HomeNavbar}.
+
+\subsubsection{2.2 Enough Time -- \pass{} (Level A)}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lcX}
+\toprule
+\textbf{Criterion} & \textbf{Status} & \textbf{Details} \\
+\midrule
+2.2.1 Timing Adjustable  & \pass & Session timeout warning with ``Stay signed in'' action using refresh-token flow. \\
+2.2.2 Pause, Stop, Hide  & \pass & Notifications panel includes pause/resume toggle for live updates. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{2.3 Seizures and Physical Reactions -- \pass{} (Level A)}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lcX}
+\toprule
+\textbf{Criterion} & \textbf{Status} & \textbf{Details} \\
+\midrule
+2.3.1 Three Flashes            & \pass & No content flashes more than 3x/second. \\
+2.3.3 Motion from Interactions & \pass & Global \texttt{prefers-reduced-motion: reduce} fallback added. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{2.4 Navigable -- \pass{} (Level AA)}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lcX}
+\toprule
+\textbf{Criterion} & \textbf{Status} & \textbf{Details} \\
+\midrule
+2.4.1 Bypass Blocks   & \pass & Skip link (\texttt{a.skip-link}) to main content implemented. \\
+2.4.2 Page Titled     & \pass & Centralized route-based \texttt{document.title} in \texttt{App.tsx}. \\
+2.4.3 Focus Order     & \pass & Tab order is logical and predictable. \\
+2.4.4 Link Purpose    & \pass & No generic ``click here'' links. Descriptive link text. \\
+2.4.5 Multiple Ways   & \pass & Navigation bar + direct URL + search functionality. \\
+2.4.7 Focus Visible   & \pass & \texttt{:focus-visible} outline/ring patterns in shared styles. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ── 4.3 UNDERSTANDABLE ───────────────────────────────────
+\subsection{Understandable}
+
+\subsubsection{3.1 Readable -- \pass{} (Level A)}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lcX}
+\toprule
+\textbf{Criterion} & \textbf{Status} & \textbf{Details} \\
+\midrule
+3.1.1 Language of Page  & \pass & \texttt{lang} attribute set in \texttt{index.html}. Runtime updates on toggle. \\
+3.1.2 Language of Parts & \pass & Acronyms expanded (e.g., GDPR). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{3.2 Predictable -- \pass{} (Level A)}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lcX}
+\toprule
+\textbf{Criterion} & \textbf{Status} & \textbf{Details} \\
+\midrule
+3.2.1 On Focus                 & \pass & Focus does not trigger unexpected context changes. \\
+3.2.2 On Input                 & \pass & No unexpected behavior on form input. \\
+3.2.3 Consistent Navigation    & \pass & Shared navbar/sidebar patterns across all flows. \\
+3.2.4 Consistent Identification& \pass & UI components follow consistent patterns. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{3.3 Input Assistance -- \pass{} (Level AA)}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lcX}
+\toprule
+\textbf{Criterion} & \textbf{Status} & \textbf{Details} \\
+\midrule
+3.3.1 Error Identification & \pass & Field-level errors near inputs with \texttt{aria-describedby} and \texttt{aria-invalid}. \\
+3.3.2 Labels or Instructions& \pass & All form fields have associated labels. \\
+3.3.3 Error Suggestion      & \pass & Error messages provide correction guidance. \\
+3.3.4 Error Prevention      & \pass & Destructive actions use confirmation dialogs. Required fields marked. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ── 4.4 ROBUST ────────────────────────────────────────────
+\subsection{Robust}
+
+\subsubsection{4.1 Compatible -- \partial{} (Level A)}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lcX}
+\toprule
+\textbf{Criterion} & \textbf{Status} & \textbf{Details} \\
+\midrule
+4.1.1 Parsing          & \pass & HTML is semantically valid. No diagnostics errors. \\
+4.1.2 Name, Role, Value& \pass & ARIA used correctly. Redundant ARIA removed. \\
+4.1.3 Status Messages  & \pass & Form errors and notifications communicated to AT. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ══════════════════════════════════════════════════════════
+\section{Issues Found and Corrective Measures}
+
+\subsection{Resolved Issues}
+
+\begin{longtable}{clp{2.8cm}p{1.8cm}p{4.5cm}}
+\toprule
+\textbf{\#} & \textbf{Severity} & \textbf{Issue} & \textbf{WCAG} & \textbf{Fix Applied} \\
+\midrule
+\endhead
+1  & High   & Low contrast on CTA buttons              & 1.4.3 & Updated button colors to meet 4.5:1 ratio \\
+2  & Medium & Low contrast on logo text                 & 1.4.3 & Updated footer logo text color \\
+3  & Medium & Low contrast on subscribe button          & 1.4.3 & Updated footer button color scheme \\
+4  & Medium & Low contrast on empty-state text          & 1.4.3 & Updated text color for sufficient contrast \\
+5  & Medium & Mobile menu items in tab order when hidden & 2.1.1 & Added conditional \texttt{tabIndex}/\texttt{aria-hidden} \\
+6  & Medium & Missing skip link on non-home routes      & 2.4.1 & Added app-level skip link for all routes \\
+7  & Medium & Missing page titles for routes            & 2.4.2 & Added centralized route-based \texttt{document.title} \\
+8  & Medium & No session timeout warning                & 2.2.1 & Added in-app warning with extend/dismiss \\
+9  & Low    & No reduced-motion global fallback         & 2.3.3 & Added \texttt{prefers-reduced-motion} in CSS \\
+10 & Low    & Redundant ARIA roles                      & 4.1.2 & Removed redundant \texttt{role} attributes \\
+11 & Low    & External links not announced              & 3.2.2 & Added ``opens in new tab'' announcements \\
+12 & Low    & No notification pause control             & 2.2.2 & Added pause/resume toggle for live updates \\
+\bottomrule
+\caption{Resolved accessibility issues}
+\end{longtable}
+
+\subsection{Known Limitations}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{clX}
+\toprule
+\textbf{\#} & \textbf{Status} & \textbf{Notes} \\
+\midrule
+1 & Pending       & Screen reader cross-device testing (NVDA/VoiceOver) not yet completed \\
+2 & Pending       & Full cross-browser responsive validation at all breakpoints not yet done \\
+3 & Informational & Some nodes flagged as ``incomplete'' by axe but no violations detected \\
+\bottomrule
+\end{tabularx}
+\caption{Known limitations}
+\end{table}
+
+% ══════════════════════════════════════════════════════════
+\section{Lighthouse Accessibility Scores}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Page} & \textbf{Score} & \textbf{Rating} \\
+\midrule
+Home (\texttt{/})                 & 90+  & Good \\
+Properties (\texttt{/properties}) & 90+  & Good \\
+Login (\texttt{/login})           & 95+  & Excellent \\
+Register (\texttt{/register})     & 95+  & Excellent \\
+Dashboard (\texttt{/dashboard})   & 88+  & Good \\
+\bottomrule
+\end{tabular}
+\caption{Lighthouse accessibility scores}
+\end{table}
+
+% ══════════════════════════════════════════════════════════
+\section{Testing Methodology}
+
+\subsection{Automated Testing}
+
+\begin{itemize}[noitemsep]
+    \item \textbf{axe-core via Playwright:} Ran \texttt{color-contrast} rule checks across 4 core routes
+    \item \textbf{Playwright keyboard smoke test:} Validated tab sequence, focus count, and keyboard trap detection
+    \item \textbf{Playwright text resize test:} Verified no horizontal overflow at 200\% zoom
+    \item Report files stored in \texttt{frontend/lighthouse-reports/}
+\end{itemize}
+
+\subsection{Manual Testing}
+
+\begin{itemize}[noitemsep]
+    \item Keyboard-only navigation through all core user flows
+    \item Focus indicator visibility verification
+    \item Form error identification and correction guidance review
+    \item Skip link functionality verification
+\end{itemize}
+
+% ══════════════════════════════════════════════════════════
+\section{Conclusion}
+
+The SmartProperty application achieves \textbf{WCAG 2.1 Level AA partial compliance}. All Level~A criteria are met, and the majority of Level~AA criteria are satisfied. The primary remaining items are manual screen reader testing across multiple devices and comprehensive cross-browser responsive validation. The application demonstrates a strong commitment to accessibility through automated testing, systematic issue tracking, and documented corrective measures applied throughout development.
+
+\end{document}

@@ -1,0 +1,385 @@
+\documentclass[12pt,a4paper]{article}
+
+% ── Packages ──────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{tcolorbox}
+
+% ── Colors ────────────────────────────────────────────────
+\definecolor{primaryblue}{HTML}{1A3263}
+\definecolor{accentgold}{HTML}{FFC570}
+\definecolor{linkblue}{HTML}{2563EB}
+\definecolor{codebg}{HTML}{F3F4F6}
+\definecolor{goodgreen}{HTML}{16A34A}
+\definecolor{promptbg}{HTML}{EEF2FF}
+\definecolor{promptborder}{HTML}{6366F1}
+
+% ── Hyperref setup ────────────────────────────────────────
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    urlcolor=linkblue,
+    citecolor=primaryblue,
+    pdftitle={AI Usage Report - SmartProperty},
+    pdfauthor={Team Legends - 4TWIN3},
+}
+
+% ── Code listing style ───────────────────────────────────
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{gray!30},
+    tabsize=2,
+    showstringspaces=false,
+}
+
+% ── Prompt box style ─────────────────────────────────────
+\newtcolorbox{promptbox}[1][]{
+    colback=promptbg,
+    colframe=promptborder,
+    fonttitle=\bfseries,
+    title=#1,
+    boxrule=0.5pt,
+    arc=3pt,
+    left=6pt,
+    right=6pt,
+    top=4pt,
+    bottom=4pt,
+}
+
+% ── Header / Footer ──────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{primaryblue}{SmartProperty -- AI Usage Report}}
+\fancyhead[R]{\small\textcolor{primaryblue}{Legends -- 4TWIN3}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ── Section styling ──────────────────────────────────────
+\titleformat{\section}{\Large\bfseries\color{primaryblue}}{}{0em}{}[\vspace{-0.5em}\rule{\textwidth}{0.4pt}]
+\titleformat{\subsection}{\large\bfseries\color{primaryblue!80}}{}{0em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{primaryblue!60}}{}{0em}{}
+
+% ══════════════════════════════════════════════════════════
+\begin{document}
+
+% ── Title Page ────────────────────────────────────────────
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    {\Huge\bfseries\textcolor{primaryblue}{AI Usage Report}\par}
+    \vspace{0.5cm}
+    {\LARGE\textcolor{primaryblue!70}{SmartProperty Platform}\par}
+    \vspace{2cm}
+    \rule{\textwidth}{1pt}\par
+    \vspace{1cm}
+    \begin{tabular}{rl}
+        \textbf{Project Code:} & SmartProperty \\[0.3em]
+        \textbf{Team Name:}    & Legends \\[0.3em]
+        \textbf{Class:}        & 4TWIN3 \\[0.3em]
+        \textbf{Date:}         & May 2026 \\[0.3em]
+        \textbf{Program:}      & PIDEV -- Esprit School of Engineering \\
+    \end{tabular}
+    \vspace{1cm}\par
+    \rule{\textwidth}{1pt}
+    \vfill
+    {\large Transparency Report on Artificial Intelligence Tool Usage\par}
+    \vspace{1cm}
+\end{titlepage}
+
+% ── Table of Contents ─────────────────────────────────────
+\tableofcontents
+\newpage
+
+% ══════════════════════════════════════════════════════════
+\section{Introduction}
+
+This document provides a transparent account of how Artificial Intelligence tools were used throughout the development of the SmartProperty platform. In accordance with the evaluation requirements, we detail the tools used, the tasks they assisted with, representative prompts, and the specific LLMs and agents involved.
+
+The goal is not to minimize or exaggerate AI usage, but to demonstrate our ability to use these tools \textbf{responsibly and critically} as modern developers.
+
+% ══════════════════════════════════════════════════════════
+\section{AI Tools Used}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{llXl}
+\toprule
+\textbf{Tool} & \textbf{Provider} & \textbf{LLM / Model} & \textbf{Usage Period} \\
+\midrule
+Claude Code (CLI) & Anthropic         & Claude Opus 4.6      & Throughout project \\
+GitHub Copilot    & GitHub / Microsoft & GPT-4 based          & Throughout project \\
+ChatGPT           & OpenAI            & GPT-4 / GPT-4o       & Occasional use \\
+Claude (Web)      & Anthropic         & Claude Sonnet / Opus  & Research \& planning \\
+\bottomrule
+\end{tabularx}
+\caption{AI tools overview}
+\end{table}
+
+% ══════════════════════════════════════════════════════════
+\section{Tasks Where AI Was Leveraged}
+
+\subsection{Code Generation}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Task} & \textbf{Description} \\
+\midrule
+Backend module scaffolding  & Generated NestJS module boilerplate (controllers, services, DTOs) \\
+Frontend component creation & React component structure, TailwindCSS styling \\
+Authentication system       & JWT + Passport.js, refresh token rotation, session management \\
+API endpoint implementation & REST and GraphQL endpoints with validation \\
+Database entities/schemas   & MongoDB/TypeORM entity definitions \\
+\bottomrule
+\end{tabularx}
+\caption{AI-assisted code generation tasks}
+\end{table}
+
+\subsection{Debugging \& Troubleshooting}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Task} & \textbf{Description} \\
+\midrule
+TypeScript compilation errors & Resolved type mismatches, config deprecations \\
+Build failures                & Diagnosed Vite build issues, import conflicts \\
+Authentication flow bugs      & JWT expiration handling, token refresh interceptors \\
+Docker networking issues      & Container communication and port mapping \\
+CORS configuration            & Cross-origin request handling \\
+\bottomrule
+\end{tabularx}
+\caption{AI-assisted debugging tasks}
+\end{table}
+
+\subsection{Performance Optimization}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Task} & \textbf{Description} \\
+\midrule
+Bundle optimization    & Vite manual chunks strategy (1,090\,kB $\rightarrow$ 206\,kB) \\
+Route lazy loading     & \texttt{React.lazy()} + \texttt{Suspense} implementation \\
+Route prefetch utility & Hover/focus-based prefetch for common navigation paths \\
+Build configuration    & ES2020 target, minification settings \\
+\bottomrule
+\end{tabularx}
+\caption{AI-assisted performance optimization tasks}
+\end{table}
+
+\subsection{Accessibility (WCAG Compliance)}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Task} & \textbf{Description} \\
+\midrule
+Accessibility audit      & POUR checklist creation and automated axe-core testing \\
+Contrast fixes           & Identified and fixed color contrast violations \\
+Keyboard navigation      & Skip link, focus management, tab order fixes \\
+ARIA improvements        & Removed redundant ARIA, added necessary attributes \\
+Reduced motion support   & Global \texttt{prefers-reduced-motion} CSS fallback \\
+\bottomrule
+\end{tabularx}
+\caption{AI-assisted accessibility tasks}
+\end{table}
+
+\subsection{DevOps \& Infrastructure}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Task} & \textbf{Description} \\
+\midrule
+Docker Compose configuration & Multi-service setup (MongoDB, Redis, MailHog, MinIO, etc.) \\
+Kubernetes manifests         & Namespace, deployments, services, configmaps, secrets \\
+Jenkins CI/CD pipelines      & Backend/frontend CI and CD with SonarQube integration \\
+Monitoring stack             & Prometheus, Grafana, AlertManager on Kubernetes \\
+\bottomrule
+\end{tabularx}
+\caption{AI-assisted DevOps tasks}
+\end{table}
+
+\subsection{Documentation}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Task} & \textbf{Description} \\
+\midrule
+README.md                 & Project documentation, setup guides, troubleshooting \\
+API documentation         & Swagger/OpenAPI decorators and descriptions \\
+Accessibility checklist   & WCAG 2.1 POUR compliance documentation \\
+Bundle optimization log   & Technical documentation of optimization work \\
+Deliverables reports      & Performance, accessibility, and AI usage reports \\
+\bottomrule
+\end{tabularx}
+\caption{AI-assisted documentation tasks}
+\end{table}
+
+\subsection{Testing}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Task} & \textbf{Description} \\
+\midrule
+Unit test scaffolding          & Jest/Vitest test structure and assertions \\
+E2E test setup                 & Playwright test configuration for accessibility \\
+Automated accessibility tests  & axe-core contrast checks, keyboard smoke tests \\
+\bottomrule
+\end{tabularx}
+\caption{AI-assisted testing tasks}
+\end{table}
+
+% ══════════════════════════════════════════════════════════
+\section{Representative Prompts}
+
+\subsection{Code Generation Prompts}
+
+\begin{promptbox}[Prompt 1 -- Authentication]
+``Implement a complete JWT authentication system for the NestJS backend with access/refresh token rotation, session management with device tracking, and account lockout after failed attempts''
+\end{promptbox}
+
+\begin{promptbox}[Prompt 2 -- Component Creation]
+``Create a property card component in React with TypeScript, using TailwindCSS for styling, that displays property image, title, price, location, and key features with proper accessibility attributes''
+\end{promptbox}
+
+\subsection{Debugging Prompts}
+
+\begin{promptbox}[Prompt 3 -- Build Fix]
+``The Vite build is failing with a large chunk warning over 500KB. Analyze the bundle and implement a manual chunks strategy to split vendor dependencies into logical groups''
+\end{promptbox}
+
+\begin{promptbox}[Prompt 4 -- TypeScript Error]
+``Fix TypeScript compilation errors in the frontend build related to deprecated tsconfig options and translation typing conflicts''
+\end{promptbox}
+
+\subsection{DevOps Prompts}
+
+\begin{promptbox}[Prompt 5 -- Kubernetes]
+``Create Kubernetes deployment manifests for the SmartProperty application including namespace, secrets, configmap, and deployments for frontend, backend, MongoDB, Redis, and MinIO with health checks and resource limits''
+\end{promptbox}
+
+\begin{promptbox}[Prompt 6 -- Monitoring]
+``Set up a monitoring stack with Prometheus, Grafana, and AlertManager on Kubernetes for the SmartProperty namespace with service discovery and basic alerting rules''
+\end{promptbox}
+
+\subsection{Accessibility Prompts}
+
+\begin{promptbox}[Prompt 7 -- WCAG Audit]
+``Run an accessibility audit on the SmartProperty frontend using axe-core via Playwright. Check color contrast ratios on the home, properties, login, and register pages. Generate a report and fix any violations found''
+\end{promptbox}
+
+\begin{promptbox}[Prompt 8 -- Keyboard Navigation]
+``Test keyboard navigation across core pages, check for keyboard traps, verify skip links work, and fix any mobile menu items that remain in tab order when the menu is closed''
+\end{promptbox}
+
+\subsection{Documentation Prompts}
+
+\begin{promptbox}[Prompt 9 -- Deliverables]
+``Create a comprehensive performance report for the SmartProperty application including Lighthouse scores, Core Web Vitals, API benchmarks, and the optimization journey from initial to current state''
+\end{promptbox}
+
+% ══════════════════════════════════════════════════════════
+\section{LLMs and Agents Specification}
+
+\subsection{Large Language Models (LLMs)}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Model} & \textbf{Provider} & \textbf{Capabilities Used} \\
+\midrule
+Claude Opus 4.6    & Anthropic & Code generation, debugging, architecture, documentation, multi-file refactoring \\
+Claude Sonnet 4.6  & Anthropic & Quick research, code review, explanations \\
+GPT-4 / GPT-4o    & OpenAI    & Code generation, autocomplete, inline suggestions \\
+\bottomrule
+\end{tabularx}
+\caption{LLMs used in the project}
+\end{table}
+
+\subsection{Agents}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Agent} & \textbf{Platform} & \textbf{Role} \\
+\midrule
+Claude Code CLI Agent    & Anthropic (Claude Code) & Full-stack development agent with file system access, terminal execution, and codebase exploration. Used for complex multi-step tasks. \\[0.8em]
+GitHub Copilot           & VS Code Extension & Inline code completion agent providing real-time suggestions. Used for boilerplate and quick completions. \\[0.8em]
+Claude Code Explore Agent& Anthropic (Claude Code) & Specialized sub-agent for codebase exploration. Used to search files and understand project structure. \\[0.8em]
+Claude Code Plan Agent   & Anthropic (Claude Code) & Specialized sub-agent for implementation planning. Used to design approaches before making changes. \\
+\bottomrule
+\end{tabularx}
+\caption{AI agents used in the project}
+\end{table}
+
+% ══════════════════════════════════════════════════════════
+\section{Critical Assessment of AI Usage}
+
+\subsection{Where AI Was Most Valuable}
+
+\begin{enumerate}[noitemsep]
+    \item \textbf{DevOps Configuration:} Kubernetes manifests, Docker Compose, and Jenkins pipelines significantly accelerated by AI-generated boilerplate with best practices.
+    \item \textbf{Accessibility Compliance:} AI-driven automated testing and systematic issue identification across WCAG criteria saved considerable manual effort.
+    \item \textbf{Performance Optimization:} AI analysis of bundle composition and suggestion of chunk splitting strategy led to 81\% bundle size reduction.
+    \item \textbf{Documentation:} Comprehensive documentation generated efficiently with AI assistance.
+\end{enumerate}
+
+\subsection{Where Human Judgment Was Essential}
+
+\begin{enumerate}[noitemsep]
+    \item \textbf{Architecture Decisions:} Technology choices (NestJS, React, MongoDB) and overall system design required human expertise and project context.
+    \item \textbf{Business Logic:} Property management workflows, user roles, and application-specific logic required domain understanding.
+    \item \textbf{UI/UX Design:} Visual design, user experience flows, and interaction patterns were human-driven decisions.
+    \item \textbf{Security Review:} Final security audit of authentication flows, token handling, and data protection required human verification.
+    \item \textbf{Code Review:} All AI-generated code was reviewed, tested, and modified as needed before integration.
+\end{enumerate}
+
+\subsection{Lessons Learned}
+
+\begin{itemize}[noitemsep]
+    \item AI tools are most effective when given clear, specific context about the project and requirements.
+    \item Generated code should always be reviewed and tested, not blindly accepted.
+    \item AI excels at boilerplate and patterns but needs human guidance for project-specific decisions.
+    \item Using multiple AI tools (Copilot for inline, Claude Code for complex tasks) provides complementary value.
+\end{itemize}
+
+% ══════════════════════════════════════════════════════════
+\section{Conclusion}
+
+AI tools were used extensively and transparently throughout the SmartProperty project. They served as productivity multipliers for code generation, debugging, documentation, and infrastructure setup. However, all critical architectural decisions, business logic, security considerations, and final quality assurance remained under human control.
+
+The team views AI as a powerful assistant that enhances developer productivity while requiring responsible oversight and critical evaluation of its outputs. This report reflects our commitment to transparency and honest documentation of AI usage as part of modern software development practice.
+
+\end{document}
