@@ -1,17 +1,28 @@
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { defineConfig } from "vite";
+import { compression } from "vite-plugin-compression2";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Gzip compression for production builds
+    compression({ algorithm: "gzip", threshold: 1024 }),
+    // Brotli compression for production builds (better ratio)
+    compression({ algorithm: "brotliCompress", threshold: 1024 }),
+  ],
 
   build: {
     // Enable minification for JS and CSS (improves FCP & LCP)
-    minify: true,
+    minify: "esbuild",
     cssMinify: true,
     // Target modern browsers for smaller output
     target: "es2020",
+    // Report compressed sizes
+    reportCompressedSize: true,
+    // Increase chunk size warning limit
+    chunkSizeWarningLimit: 500,
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -19,6 +30,7 @@ export default defineConfig({
             return undefined;
           }
 
+          // Core React - loaded on every page
           if (
             id.includes("react") ||
             id.includes("react-dom") ||
@@ -27,24 +39,49 @@ export default defineConfig({
             return "react-vendor";
           }
 
+          // Heavy 3D/Maps - only loaded when needed (lazy routes)
           if (
             id.includes("@react-three") ||
             id.includes("three") ||
             id.includes("mapbox-gl") ||
-            id.includes("leaflet")
+            id.includes("leaflet") ||
+            id.includes("react-map-gl") ||
+            id.includes("@turf")
           ) {
             return "maps-3d-vendor";
           }
 
+          // Socket.io - loaded on demand
+          if (id.includes("socket.io")) {
+            return "socket-vendor";
+          }
+
+          // Charts - only loaded on dashboard
+          if (id.includes("recharts") || id.includes("d3-")) {
+            return "charts-vendor";
+          }
+
+          // Form libraries
+          if (
+            id.includes("react-hook-form") ||
+            id.includes("@hookform") ||
+            id.includes("zod") ||
+            id.includes("react-dropzone")
+          ) {
+            return "forms-vendor";
+          }
+
+          // UI components
           if (
             id.includes("@radix-ui") ||
             id.includes("framer-motion") ||
-            id.includes("lucide-react") ||
-            id.includes("recharts")
+            id.includes("motion") ||
+            id.includes("lucide-react")
           ) {
             return "ui-vendor";
           }
 
+          // State management & data fetching
           if (
             id.includes("zustand") ||
             id.includes("jotai") ||

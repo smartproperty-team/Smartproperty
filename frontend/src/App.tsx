@@ -5,25 +5,9 @@
 import { lazy, Suspense, useEffect, useRef } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import "./App.css";
-import { ProtectedRoute } from "./components/auth";
-import { PushNotificationTestButton } from "./components/notifications/PushNotificationTestButton";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { useLanguageStore } from "./i18n";
-import {
-  ApplicationsReviewPage,
-  TenantApplicationsPage,
-} from "./pages/applications";
-import {
-  FacebookCallbackPage,
-  ForgotPasswordPage,
-  GoogleCallbackPage,
-  LoginPage,
-  RegisterPage,
-  ResetPasswordPage,
-  VerifyEmailPage,
-} from "./pages/auth";
-import { HomePage, PaletteDemoPage } from "./pages/home";
-import { LeasesWorkspacePage } from "./pages/leases";
-import { PreferencesOnboardingModal } from "./pages/onboarding";
+import HomePage from "./pages/home/HomePage";
 import authService from "./services/auth.service";
 import { pushNotificationService } from "./services/push-notification.service";
 import { useAuthStore, usePreferencesStore } from "./store";
@@ -43,6 +27,51 @@ import {
   isTenant,
 } from "./utils";
 
+// --- Lazy-loaded pages (code-split for smaller initial bundle) ---
+
+// Auth pages
+const LoginPage = lazy(() => import("./pages/auth/LoginPage"));
+const RegisterPage = lazy(() => import("./pages/auth/RegisterPage"));
+const ForgotPasswordPage = lazy(
+  () => import("./pages/auth/ForgotPasswordPage"),
+);
+const ResetPasswordPage = lazy(
+  () => import("./pages/auth/ResetPasswordPage"),
+);
+const VerifyEmailPage = lazy(() => import("./pages/auth/VerifyEmailPage"));
+const GoogleCallbackPage = lazy(
+  () => import("./pages/auth/GoogleCallbackPage"),
+);
+const FacebookCallbackPage = lazy(
+  () => import("./pages/auth/FacebookCallbackPage"),
+);
+
+// Application pages
+const ApplicationsReviewPage = lazy(
+  () => import("./pages/applications/ApplicationsReviewPage"),
+);
+const TenantApplicationsPage = lazy(
+  () => import("./pages/applications/TenantApplicationsPage"),
+);
+
+// Leases
+const LeasesWorkspacePage = lazy(
+  () => import("./pages/leases/LeasesWorkspacePage"),
+);
+
+// Misc
+const PaletteDemoPage = lazy(() => import("./pages/home/PaletteDemoPage"));
+const PreferencesOnboardingModal = lazy(
+  () => import("./pages/onboarding/PreferencesOnboardingModal"),
+);
+const PushNotificationTestButton = lazy(
+  () =>
+    import("./components/notifications/PushNotificationTestButton").then(
+      (m) => ({ default: m.PushNotificationTestButton }),
+    ),
+);
+
+// Dashboard pages
 const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage"));
 const VerificationPage = lazy(
   () => import("./pages/dashboard/VerificationPage"),
@@ -58,6 +87,7 @@ const BranchManagerAgencyOnboardingPage = lazy(
   () => import("./pages/dashboard/BranchManagerAgencyOnboardingPage"),
 );
 
+// Property pages
 const PropertiesPage = lazy(() => import("./pages/properties/PropertiesPage"));
 const MyPropertiesPage = lazy(
   () => import("./pages/properties/MyPropertiesPage"),
@@ -72,6 +102,7 @@ const VirtualVisitFormPage = lazy(
   () => import("./pages/properties/VirtualVisitFormPage"),
 );
 
+// Settings & Maintenance
 const SettingsPage = lazy(() => import("./pages/settings/SettingsPage"));
 const MaintenanceRequestFormPage = lazy(
   () => import("./pages/maintenance/MaintenanceRequestFormPage"),

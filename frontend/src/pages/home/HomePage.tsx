@@ -14,13 +14,62 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./home3.css";
 
+// Lazy-render sections below the fold to reduce initial main-thread work
+function useLazyVisible(rootMargin = "200px") {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [rootMargin]);
+
+  return { ref, visible };
+}
+
 // City data - Famous cities in Tunisia
 const cities = [
-  { name: "Tunis", properties: 245, image: "/tq_bdn30ebwk5-m0bm-1500h.png" },
-  { name: "Sousse", properties: 178, image: "/tq_brzn8uwaca-vatm-1500h.png" },
-  { name: "Sfax", properties: 156, image: "/tq_eg61ro6xoc-8z2e-1500h.png" },
-  { name: "Hammamet", properties: 134, image: "/tq_ev3u-afbuo-tv-1500h.png" },
-  { name: "Djerba", properties: 98, image: "/tq_fqz__chb9i-7br-1500h.png" },
+  {
+    name: "Tunis",
+    properties: 245,
+    image: "/tq_bdn30ebwk5-m0bm-1500h.webp",
+    fallback: "/tq_bdn30ebwk5-m0bm-1500h.png",
+  },
+  {
+    name: "Sousse",
+    properties: 178,
+    image: "/tq_brzn8uwaca-vatm-1500h.webp",
+    fallback: "/tq_brzn8uwaca-vatm-1500h.png",
+  },
+  {
+    name: "Sfax",
+    properties: 156,
+    image: "/tq_eg61ro6xoc-8z2e-1500h.webp",
+    fallback: "/tq_eg61ro6xoc-8z2e-1500h.png",
+  },
+  {
+    name: "Hammamet",
+    properties: 134,
+    image: "/tq_ev3u-afbuo-tv-1500h.webp",
+    fallback: "/tq_ev3u-afbuo-tv-1500h.png",
+  },
+  {
+    name: "Djerba",
+    properties: 98,
+    image: "/tq_fqz__chb9i-7br-1500h.webp",
+    fallback: "/tq_fqz__chb9i-7br-1500h.png",
+  },
 ];
 
 // Property Card Component - Accessible
@@ -175,13 +224,16 @@ function CityCard({ city }: { city: (typeof cities)[0] }) {
       className="city-card"
       aria-label={`Browse ${city.properties} properties in ${city.name}`}
     >
-      <img
-        src={city.image}
-        alt={`${city.name} cityscape`}
-        loading="lazy"
-        width={400}
-        height={300}
-      />
+      <picture>
+        <source srcSet={city.image} type="image/webp" />
+        <img
+          src={city.fallback}
+          alt={`${city.name} cityscape`}
+          loading="lazy"
+          width={400}
+          height={300}
+        />
+      </picture>
       <div className="city-overlay">
         <h4>{city.name}</h4>
         <span>{city.properties} Properties</span>
@@ -202,7 +254,7 @@ function RentalPropertyCard({ property }: { property: BackendProperty }) {
   const primaryImage =
     property.images?.find((img) => img.isPrimary)?.url ??
     property.images?.[0]?.url ??
-    "/tq_1s1jvryd0n-ta2j-1500h.png";
+    "/tq_1s1jvryd0n-ta2j-1500h.webp";
   const price = `${property.price.toLocaleString()} ${property.currency}`;
 
   return (
@@ -219,7 +271,7 @@ function RentalPropertyCard({ property }: { property: BackendProperty }) {
           height={220}
           onError={(e) => {
             (e.currentTarget as HTMLImageElement).src =
-              "/tq_1s1jvryd0n-ta2j-1500h.png";
+              "/tq_1s1jvryd0n-ta2j-1500h.webp";
           }}
         />
         <span className="property-badge rent" aria-label={t.home.forRent}>
@@ -356,6 +408,13 @@ export default function HomePage() {
   const [rentalLoading, setRentalLoading] = useState(true);
   const [rentalError, setRentalError] = useState<string | null>(null);
 
+  // Lazy-render below-the-fold sections to reduce TBT and main-thread work
+  const citiesSection = useLazyVisible("300px");
+  const rentalsSection = useLazyVisible("300px");
+  const howItWorksSection = useLazyVisible("200px");
+  const ctaSection = useLazyVisible("200px");
+  const whyUsSection = useLazyVisible("200px");
+
   // Debounced search input handler (INP optimization - reduces re-renders)
   const handleSearchInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -369,8 +428,9 @@ export default function HomePage() {
     [],
   );
 
-  // Fetch rental properties from backend
+  // Fetch rental properties from backend (deferred until section is near viewport)
   useEffect(() => {
+    if (!rentalsSection.visible) return;
     if (!user) {
       setRentalLoading(false);
       setRentalProperties([]);
@@ -436,7 +496,7 @@ export default function HomePage() {
       }
     };
     void fetchRentals();
-  }, [currentUserPreferences, isAuthenticated, user]);
+  }, [currentUserPreferences, isAuthenticated, user, rentalsSection.visible]);
 
   useEffect(() => {
     const loadHomeProperties = async () => {
@@ -664,102 +724,298 @@ export default function HomePage() {
           </div>
         </section>
         {/* Explore Cities */}
-        <section className="cities-section" aria-labelledby="cities-title">
-          <div className="section-container">
-            <header className="section-header">
-              <span className="section-tag">{t.home.locations}</span>
-              <h2 id="cities-title" className="section-title">
-                {t.home.exploreCities}
-              </h2>
-              <p className="section-subtitle">{t.home.exploreCitiesSubtitle}</p>
-            </header>
-            <div className="cities-grid" role="list">
-              {cities.map((city) => (
-                <CityCard key={city.name} city={city} />
-              ))}
-            </div>
-          </div>
-        </section>
-        {/* Recent Properties for Rent */}
-        <section
-          className="properties-section bg-light"
-          aria-labelledby="rent-title"
-        >
-          <div className="section-container">
-            <header className="section-header">
-              <span className="section-tag">{t.home.forRent}</span>
-              <h2 id="rent-title" className="section-title">
-                {showBestMatch ? t.home.bestMatchTitle : t.home.recentRentTitle}
-              </h2>
-              <p className="section-subtitle">
-                {showBestMatch
-                  ? t.home.bestMatchSubtitle
-                  : t.home.recentRentSubtitle}
-              </p>
-            </header>
-            {rentalLoading ? (
-              <div
-                className="flex justify-center items-center py-16"
-                aria-live="polite"
-                aria-label="Loading rental properties"
-              >
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-                  <p className="text-gray-600 text-sm">
-                    {t.home.loadingProperties}
+        <div ref={citiesSection.ref}>
+          {citiesSection.visible && (
+            <section className="cities-section" aria-labelledby="cities-title">
+              <div className="section-container">
+                <header className="section-header">
+                  <span className="section-tag">{t.home.locations}</span>
+                  <h2 id="cities-title" className="section-title">
+                    {t.home.exploreCities}
+                  </h2>
+                  <p className="section-subtitle">
+                    {t.home.exploreCitiesSubtitle}
                   </p>
-                </div>
-              </div>
-            ) : rentalError ? (
-              <div
-                className="flex flex-col items-center justify-center py-16 gap-3"
-                aria-live="polite"
-              >
-                <svg
-                  width="48"
-                  height="48"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  className="text-gray-400"
-                  aria-hidden="true"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 8v4" />
-                  <path d="M12 16h.01" />
-                </svg>
-                <p className="text-gray-600">{rentalError}</p>
-                <Link
-                  to="/properties"
-                  className="text-emerald-700 hover:underline text-sm font-medium"
-                >
-                  {t.home.browseAll}
-                </Link>
-              </div>
-            ) : rentalProperties.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 gap-3">
-                <p className="text-gray-600">{t.home.noRental}</p>
-                <Link
-                  to="/properties"
-                  className="text-emerald-700 hover:underline text-sm font-medium"
-                >
-                  {t.home.browseAll}
-                </Link>
-              </div>
-            ) : (
-              <>
-                <div className="properties-grid" role="list">
-                  {rentalProperties.map((property) => (
-                    <RentalPropertyCard
-                      key={property.id || property._id}
-                      property={property}
-                    />
+                </header>
+                <div className="cities-grid" role="list">
+                  {cities.map((city) => (
+                    <CityCard key={city.name} city={city} />
                   ))}
                 </div>
-                <div className="section-cta">
-                  <Link to="/properties" className="view-all-btn">
-                    {t.home.viewAllRentals}
+              </div>
+            </section>
+          )}
+        </div>
+        {/* Recent Properties for Rent */}
+        <div ref={rentalsSection.ref}>
+          {rentalsSection.visible && (
+            <section
+              className="properties-section bg-light"
+              aria-labelledby="rent-title"
+            >
+              <div className="section-container">
+                <header className="section-header">
+                  <span className="section-tag">{t.home.forRent}</span>
+                  <h2 id="rent-title" className="section-title">
+                    {showBestMatch
+                      ? t.home.bestMatchTitle
+                      : t.home.recentRentTitle}
+                  </h2>
+                  <p className="section-subtitle">
+                    {showBestMatch
+                      ? t.home.bestMatchSubtitle
+                      : t.home.recentRentSubtitle}
+                  </p>
+                </header>
+                {rentalLoading ? (
+                  <div
+                    className="flex justify-center items-center py-16"
+                    aria-live="polite"
+                    aria-label="Loading rental properties"
+                  >
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                      <p className="text-gray-600 text-sm">
+                        {t.home.loadingProperties}
+                      </p>
+                    </div>
+                  </div>
+                ) : rentalError ? (
+                  <div
+                    className="flex flex-col items-center justify-center py-16 gap-3"
+                    aria-live="polite"
+                  >
+                    <svg
+                      width="48"
+                      height="48"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      className="text-gray-400"
+                      aria-hidden="true"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M12 8v4" />
+                      <path d="M12 16h.01" />
+                    </svg>
+                    <p className="text-gray-600">{rentalError}</p>
+                    <Link
+                      to="/properties"
+                      className="text-emerald-700 hover:underline text-sm font-medium"
+                    >
+                      {t.home.browseAll}
+                    </Link>
+                  </div>
+                ) : rentalProperties.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 gap-3">
+                    <p className="text-gray-600">{t.home.noRental}</p>
+                    <Link
+                      to="/properties"
+                      className="text-emerald-700 hover:underline text-sm font-medium"
+                    >
+                      {t.home.browseAll}
+                    </Link>
+                  </div>
+                ) : (
+                  <>
+                    <div className="properties-grid" role="list">
+                      {rentalProperties.map((property) => (
+                        <RentalPropertyCard
+                          key={property.id || property._id}
+                          property={property}
+                        />
+                      ))}
+                    </div>
+                    <div className="section-cta">
+                      <Link to="/properties" className="view-all-btn">
+                        {t.home.viewAllRentals}
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          aria-hidden="true"
+                        >
+                          <path d="M5 12h14" />
+                          <path d="m12 5 7 7-7 7" />
+                        </svg>
+                      </Link>
+                    </div>
+                  </>
+                )}
+              </div>
+            </section>
+          )}
+        </div>
+        {/* How It Works */}
+        <div ref={howItWorksSection.ref}>
+          {howItWorksSection.visible && (
+            <section
+              className="how-it-works-section"
+              aria-labelledby="how-title"
+            >
+              <div className="section-container">
+                <header className="section-header">
+                  <span className="section-tag">{t.home.process}</span>
+                  <h2 id="how-title" className="section-title">
+                    {t.home.howItWorks}
+                  </h2>
+                  <p className="section-subtitle">
+                    {t.home.howItWorksSubtitle}
+                  </p>
+                </header>
+                <ol className="steps-grid">
+                  <li className="step-card">
+                    <div className="step-number" aria-hidden="true">
+                      01
+                    </div>
+                    <div className="step-icon" aria-hidden="true">
+                      <svg
+                        width="40"
+                        height="40"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.35-4.35" />
+                      </svg>
+                    </div>
+                    <h3>{t.home.step1Title}</h3>
+                    <p>{t.home.step1Desc}</p>
+                  </li>
+                  <li className="step-card">
+                    <div className="step-number" aria-hidden="true">
+                      02
+                    </div>
+                    <div className="step-icon" aria-hidden="true">
+                      <svg
+                        width="40"
+                        height="40"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                      </svg>
+                    </div>
+                    <h3>{t.home.step2Title}</h3>
+                    <p>{t.home.step2Desc}</p>
+                  </li>
+                  <li className="step-card">
+                    <div className="step-number" aria-hidden="true">
+                      03
+                    </div>
+                    <div className="step-icon" aria-hidden="true">
+                      <svg
+                        width="40"
+                        height="40"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="m15 5 4 4" />
+                        <path d="M13 7 8.7 2.7a2.41 2.41 0 0 0-3.4 0L2.7 5.3a2.41 2.41 0 0 0 0 3.4L7 13" />
+                        <path d="m8 6 2-2" />
+                        <path d="m2 22 5.5-1.5L21 7l-4-4L3.5 16.5 2 22z" />
+                        <path d="m18 15 4 4" />
+                        <path d="M15 18 3 6" />
+                      </svg>
+                    </div>
+                    <h3>{t.home.step3Title}</h3>
+                    <p>{t.home.step3Desc}</p>
+                  </li>
+                </ol>
+              </div>
+            </section>
+          )}
+        </div>
+        {/* CTA Section */}
+        <div ref={ctaSection.ref}>
+          {ctaSection.visible && (
+            <section className="cta-section" aria-labelledby="cta-title">
+              <div className="cta-content">
+                <h2 id="cta-title">{t.home.discoverPlace}</h2>
+                <p>{t.home.discoverDesc}</p>
+                <Link to="/properties" className="cta-button">
+                  {t.home.viewProperties}
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    aria-hidden="true"
+                  >
+                    <path d="M5 12h14" />
+                    <path d="m12 5 7 7-7 7" />
+                  </svg>
+                </Link>
+              </div>
+            </section>
+          )}
+        </div>
+        {/* Why Work With Us */}
+        <div ref={whyUsSection.ref}>
+          {whyUsSection.visible && (
+            <section className="why-us-section" aria-labelledby="why-title">
+              <div className="section-container">
+                <div className="why-us-content">
+                  <span className="section-tag">{t.home.whyUs}</span>
+                  <h2 id="why-title">{t.home.whyUsTitle}</h2>
+                  <p className="why-us-description">{t.home.whyUsDesc}</p>
+                  <ul className="why-us-features" role="list">
+                    <li className="feature">
+                      <div className="feature-icon" aria-hidden="true">
+                        <svg
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                          <polyline points="22 4 12 14.01 9 11.01" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4>{t.home.buyOrRent}</h4>
+                        <p>{t.home.buyOrRentDesc}</p>
+                      </div>
+                    </li>
+                    <li className="feature">
+                      <div className="feature-icon" aria-hidden="true">
+                        <svg
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                          <polyline points="22 4 12 14.01 9 11.01" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4>{t.home.trustedTitle}</h4>
+                        <p>{t.home.trustedDesc}</p>
+                      </div>
+                    </li>
+                  </ul>
+                  <Link to="/about" className="learn-more-btn">
+                    {t.home.learnMore}
                     <svg
                       width="16"
                       height="16"
@@ -774,186 +1030,25 @@ export default function HomePage() {
                     </svg>
                   </Link>
                 </div>
-              </>
-            )}
-          </div>
-        </section>
-        {/* How It Works */}
-        <section className="how-it-works-section" aria-labelledby="how-title">
-          <div className="section-container">
-            <header className="section-header">
-              <span className="section-tag">{t.home.process}</span>
-              <h2 id="how-title" className="section-title">
-                {t.home.howItWorks}
-              </h2>
-              <p className="section-subtitle">{t.home.howItWorksSubtitle}</p>
-            </header>
-            <ol className="steps-grid">
-              <li className="step-card">
-                <div className="step-number" aria-hidden="true">
-                  01
+                <div className="why-us-image">
+                  <picture>
+                    <source
+                      srcSet="/tq_n6jpin4sea-6ofk-1500h.webp"
+                      type="image/webp"
+                    />
+                    <img
+                      src="/tq_n6jpin4sea-6ofk-1500h.png"
+                      alt="Happy family in their new home"
+                      loading="lazy"
+                      width={600}
+                      height={400}
+                    />
+                  </picture>
                 </div>
-                <div className="step-icon" aria-hidden="true">
-                  <svg
-                    width="40"
-                    height="40"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="m21 21-4.35-4.35" />
-                  </svg>
-                </div>
-                <h3>{t.home.step1Title}</h3>
-                <p>{t.home.step1Desc}</p>
-              </li>
-              <li className="step-card">
-                <div className="step-number" aria-hidden="true">
-                  02
-                </div>
-                <div className="step-icon" aria-hidden="true">
-                  <svg
-                    width="40"
-                    height="40"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                  </svg>
-                </div>
-                <h3>{t.home.step2Title}</h3>
-                <p>{t.home.step2Desc}</p>
-              </li>
-              <li className="step-card">
-                <div className="step-number" aria-hidden="true">
-                  03
-                </div>
-                <div className="step-icon" aria-hidden="true">
-                  <svg
-                    width="40"
-                    height="40"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="m15 5 4 4" />
-                    <path d="M13 7 8.7 2.7a2.41 2.41 0 0 0-3.4 0L2.7 5.3a2.41 2.41 0 0 0 0 3.4L7 13" />
-                    <path d="m8 6 2-2" />
-                    <path d="m2 22 5.5-1.5L21 7l-4-4L3.5 16.5 2 22z" />
-                    <path d="m18 15 4 4" />
-                    <path d="M15 18 3 6" />
-                  </svg>
-                </div>
-                <h3>{t.home.step3Title}</h3>
-                <p>{t.home.step3Desc}</p>
-              </li>
-            </ol>
-          </div>
-        </section>
-        {/* CTA Section */}
-        <section className="cta-section" aria-labelledby="cta-title">
-          <div className="cta-content">
-            <h2 id="cta-title">{t.home.discoverPlace}</h2>
-            <p>{t.home.discoverDesc}</p>
-            <Link to="/properties" className="cta-button">
-              {t.home.viewProperties}
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                aria-hidden="true"
-              >
-                <path d="M5 12h14" />
-                <path d="m12 5 7 7-7 7" />
-              </svg>
-            </Link>
-          </div>
-        </section>
-        {/* Why Work With Us */}
-        <section className="why-us-section" aria-labelledby="why-title">
-          <div className="section-container">
-            <div className="why-us-content">
-              <span className="section-tag">{t.home.whyUs}</span>
-              <h2 id="why-title">{t.home.whyUsTitle}</h2>
-              <p className="why-us-description">{t.home.whyUsDesc}</p>
-              <ul className="why-us-features" role="list">
-                <li className="feature">
-                  <div className="feature-icon" aria-hidden="true">
-                    <svg
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                      <polyline points="22 4 12 14.01 9 11.01" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4>{t.home.buyOrRent}</h4>
-                    <p>{t.home.buyOrRentDesc}</p>
-                  </div>
-                </li>
-                <li className="feature">
-                  <div className="feature-icon" aria-hidden="true">
-                    <svg
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                      <polyline points="22 4 12 14.01 9 11.01" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4>{t.home.trustedTitle}</h4>
-                    <p>{t.home.trustedDesc}</p>
-                  </div>
-                </li>
-              </ul>
-              <Link to="/about" className="learn-more-btn">
-                {t.home.learnMore}
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  aria-hidden="true"
-                >
-                  <path d="M5 12h14" />
-                  <path d="m12 5 7 7-7 7" />
-                </svg>
-              </Link>
-            </div>
-            <div className="why-us-image">
-              <img
-                src="/tq_n6jpin4sea-6ofk-1500h.png"
-                alt="Happy family in their new home"
-                loading="lazy"
-                width={600}
-                height={400}
-              />
-            </div>
-          </div>
-        </section>
+              </div>
+            </section>
+          )}
+        </div>
       </main>
 
       {/* Newsletter */}

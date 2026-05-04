@@ -4,7 +4,8 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { authService, clearTokens, getAccessToken } from "../services";
+import { clearTokens, getAccessToken } from "../services/api";
+import authService from "../services/auth.service";
 import type { RegisterData, Session, User } from "../types/auth";
 
 interface AuthState {

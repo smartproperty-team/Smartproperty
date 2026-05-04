@@ -3,7 +3,7 @@
 // ===========================================
 
 import { create } from "zustand";
-import { authService } from "../services";
+import authService from "../services/auth.service";
 import type { Session } from "../types/auth";
 
 interface SessionsState {

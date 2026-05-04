@@ -1,11 +1,8 @@
-import { LanguageToggle } from "@/components/ui";
+import LanguageToggle from "@/components/ui/LanguageToggle";
 import { useTranslation } from "@/i18n";
-import {
-  authService,
-  getAccessToken,
-  getRefreshToken,
-  notificationService,
-} from "@/services";
+import { getAccessToken, getRefreshToken } from "@/services/api";
+import authService from "@/services/auth.service";
+import notificationService from "@/services/notification.service";
 import type { Notification } from "@/services/notification.service";
 import { useAuthStore, usePreferencesStore } from "@/store";
 import {
@@ -27,7 +24,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { io, type Socket } from "socket.io-client";
+import type { Socket } from "socket.io-client";
 
 const resolveSocketBaseUrl = () => {
   const configuredApiUrl = import.meta.env.VITE_API_URL as string | undefined;
@@ -188,39 +185,47 @@ export default function HomeNavbar() {
       return;
     }
 
-    const socket = io(`${resolveSocketBaseUrl()}/notifications`, {
-      withCredentials: true,
-      auth: {
-        token: `Bearer ${token}`,
-      },
-      transports: ["websocket", "polling"],
+    let cancelled = false;
+
+    void import("socket.io-client").then(({ io }) => {
+      if (cancelled) return;
+
+      const socket = io(`${resolveSocketBaseUrl()}/notifications`, {
+        withCredentials: true,
+        auth: {
+          token: `Bearer ${token}`,
+        },
+        transports: ["websocket", "polling"],
+      });
+
+      notificationSocketRef.current = socket;
+
+      socket.on("notification:new", (incoming: Notification) => {
+        if (notificationsAutoRefreshRef.current) {
+          setNotifications((prev) => {
+            if (prev.some((n) => n.id === incoming.id)) {
+              return prev;
+            }
+            return [incoming, ...prev];
+          });
+        }
+
+        if (!incoming.isRead) {
+          setUnreadCount((prev) => prev + 1);
+          playNotificationSound();
+        }
+      });
+
+      socket.on("notification:count", (count: number) => {
+        setUnreadCount(count);
+      });
     });
-
-    socket.on("notification:new", (incoming: Notification) => {
-      if (notificationsAutoRefreshRef.current) {
-        setNotifications((prev) => {
-          if (prev.some((n) => n.id === incoming.id)) {
-            return prev;
-          }
-          return [incoming, ...prev];
-        });
-      }
-
-      if (!incoming.isRead) {
-        setUnreadCount((prev) => prev + 1);
-        playNotificationSound();
-      }
-    });
-
-    socket.on("notification:count", (count: number) => {
-      setUnreadCount(count);
-    });
-
-    notificationSocketRef.current = socket;
 
     return () => {
-      socket.disconnect();
-      if (notificationSocketRef.current === socket) {
+      cancelled = true;
+      const socket = notificationSocketRef.current;
+      if (socket) {
+        socket.disconnect();
         notificationSocketRef.current = null;
       }
     };

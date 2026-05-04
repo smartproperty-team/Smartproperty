@@ -715,14 +715,13 @@ select:focus-visible {
    Hero Section
    ============================================ */
 .hero-section {
-  --hero-bg-image: url("/images/hero_background.jpg");
   min-height: 760px;
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
   background:
     linear-gradient(rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.34)),
-    var(--hero-bg-image) center/cover no-repeat;
+    url("/images/hero_background.webp") center/cover no-repeat;
   padding: 8.5rem 2rem 6.5rem;
   position: relative;
   overflow: hidden;
