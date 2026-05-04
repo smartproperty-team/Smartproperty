@@ -1,0 +1,202 @@
+# ===========================================
+# SmartProperty - Network Policies
+# ===========================================
+# Restricts pod-to-pod communication:
+# - MongoDB: only backend can access
+# - Redis: only backend can access
+# - MinIO: only backend can access
+# - Backend: accessible from frontend and ingress
+# - Frontend: accessible from ingress only
+
+# Default deny all ingress in smartproperty namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: smartproperty
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+
+---
+# MongoDB: only backend can connect
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backend-to-mongodb
+  namespace: smartproperty
+spec:
+  podSelector:
+    matchLabels:
+      app: mongodb
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: backend
+        - podSelector:
+            matchLabels:
+              app: mongo-express
+      ports:
+        - protocol: TCP
+          port: 27017
+
+---
+# Redis: only backend can connect
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backend-to-redis
+  namespace: smartproperty
+spec:
+  podSelector:
+    matchLabels:
+      app: redis
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: backend
+      ports:
+        - protocol: TCP
+          port: 6379
+
+---
+# MinIO: only backend can connect
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backend-to-minio
+  namespace: smartproperty
+spec:
+  podSelector:
+    matchLabels:
+      app: minio
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: backend
+      ports:
+        - protocol: TCP
+          port: 9000
+    # Allow external access to MinIO console
+    - ports:
+        - protocol: TCP
+          port: 9001
+
+---
+# MailHog: only backend can send emails
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backend-to-mailhog
+  namespace: smartproperty
+spec:
+  podSelector:
+    matchLabels:
+      app: mailhog
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: backend
+      ports:
+        - protocol: TCP
+          port: 1025
+    # Allow external access to MailHog web UI
+    - ports:
+        - protocol: TCP
+          port: 8025
+
+---
+# Backend: accessible from frontend and external (NodePort/Ingress)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-to-backend
+  namespace: smartproperty
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: frontend
+      ports:
+        - protocol: TCP
+          port: 3000
+    # Allow external access (NodePort/Ingress)
+    - ports:
+        - protocol: TCP
+          port: 3000
+
+---
+# Frontend: accessible externally (NodePort/Ingress)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-external-to-frontend
+  namespace: smartproperty
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 80
+
+---
+# Mongo Express: accessible externally
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-external-to-mongo-express
+  namespace: smartproperty
+spec:
+  podSelector:
+    matchLabels:
+      app: mongo-express
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 8081
+
+---
+# Allow DNS resolution for all pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: smartproperty
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to: []
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Allow all other egress (outbound connections)
+    - to: []

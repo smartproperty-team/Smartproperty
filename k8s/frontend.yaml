@@ -15,6 +15,10 @@ spec:
       labels:
         app: frontend
     spec:
+      initContainers:
+        - name: wait-for-backend
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z backend 3000; do echo "Waiting for Backend..."; sleep 3; done; echo "Backend is ready!"']
       containers:
         - name: frontend
           image: smartproperty-frontend:latest
