@@ -39,6 +39,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { LeasesModule } from './modules/leases/leases.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { PropertiesModule } from './modules/properties/properties.module';
 import { ReviewsFavoritesModule } from './modules/reviews-favorites/reviews-favorites.module';
 import { UploadModule } from './modules/upload/upload.module';
@@ -178,6 +179,7 @@ import { VerificationModule } from './modules/verification/verification.module';
     UploadModule,
     VerificationModule,
     NotificationsModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

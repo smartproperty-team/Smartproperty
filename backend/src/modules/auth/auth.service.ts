@@ -22,7 +22,7 @@ import * as crypto from 'crypto';
 import { ObjectId } from 'mongodb';
 import * as QRCode from 'qrcode';
 import * as speakeasy from 'speakeasy';
-import { Repository } from 'typeorm';
+import { DeepPartial, Repository } from 'typeorm';
 
 import {
   AuthProvider,
@@ -84,6 +84,14 @@ export class AuthService {
     private readonly mailerService: MailerService,
     private readonly sessionService: SessionService,
   ) {}
+
+  // Remove keys with undefined values before sending to the DB
+  private stripUndefined<T extends Record<string, any>>(obj: T): Partial<T> {
+    return Object.entries(obj).reduce((acc, [k, v]) => {
+      if (v !== undefined) acc[k as keyof T] = v;
+      return acc;
+    }, {} as Partial<T>);
+  }
 
   private async verifyRecaptcha(
     token?: string,
@@ -313,7 +321,7 @@ export class AuthService {
       user.status = user.isEmailVerified
         ? UserStatus.ACTIVE
         : UserStatus.PENDING_VERIFICATION;
-      user.deletedAt = undefined;
+      user.deletedAt = null;
     }
 
     // Reset login attempts on successful login
@@ -874,7 +882,7 @@ export class AuthService {
         await this.userRepository.save(user);
       } else {
         // Create new user with Google account
-        user = this.userRepository.create({
+        const newUserData = this.stripUndefined({
           email: email.toLowerCase(),
           firstName,
           lastName,
@@ -884,10 +892,21 @@ export class AuthService {
           role: UserRole.TENANT,
           status: UserStatus.ACTIVE,
           isEmailVerified: true, // Google accounts are pre-verified
+          loginAttempts: 0,
+          twoFactorEnabled: false,
+          permanentlyDeleted: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         });
 
-        await this.userRepository.save(user);
+        user = await this.userRepository.save(
+          this.userRepository.create(newUserData as DeepPartial<User>),
+        );
       }
+    }
+
+    if (!user) {
+      throw new UnauthorizedException('Unable to authenticate Google user');
     }
 
     // Check if account is suspended
@@ -959,7 +978,7 @@ export class AuthService {
         await this.userRepository.save(user);
       } else {
         // Create new user with Facebook account
-        user = this.userRepository.create({
+        const newUserData = this.stripUndefined({
           email: email.toLowerCase(),
           firstName,
           lastName,
@@ -969,10 +988,21 @@ export class AuthService {
           role: UserRole.TENANT,
           status: UserStatus.ACTIVE,
           isEmailVerified: true, // Facebook accounts are pre-verified
+          loginAttempts: 0,
+          twoFactorEnabled: false,
+          permanentlyDeleted: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         });
 
-        await this.userRepository.save(user);
+        user = await this.userRepository.save(
+          this.userRepository.create(newUserData as DeepPartial<User>),
+        );
       }
+    }
+
+    if (!user) {
+      throw new UnauthorizedException('Unable to authenticate Facebook user');
     }
 
     // Check if account is suspended

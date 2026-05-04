@@ -39,6 +39,7 @@ interface RefundParams {
 @Injectable()
 export class StripeService {
   private stripe: any;
+  private isStripeEnabled = false;
   private readonly logger = new Logger(StripeService.name);
   private readonly webhookSecret: string;
   private readonly publishableKey: string;
@@ -47,10 +48,18 @@ export class StripeService {
     // Initialize Stripe with secret key
     const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
     if (!secretKey) {
-      throw new Error('❌ STRIPE_SECRET_KEY is not configured in .env');
+      this.logger.warn(
+        'STRIPE_SECRET_KEY is not configured. Payments via Stripe are disabled.',
+      );
+      this.webhookSecret =
+        this.configService.get<string>('STRIPE_WEBHOOK_SECRET') || '';
+      this.publishableKey =
+        this.configService.get<string>('STRIPE_PUBLISHABLE_KEY') || '';
+      return;
     }
 
     this.stripe = new Stripe(secretKey);
+    this.isStripeEnabled = true;
 
     // Store webhook secret and publishable key
     this.webhookSecret =
@@ -59,6 +68,14 @@ export class StripeService {
       this.configService.get<string>('STRIPE_PUBLISHABLE_KEY') || '';
 
     this.logger.log('✅ Stripe Service Initialized');
+  }
+
+  private ensureStripeConfigured(): void {
+    if (!this.isStripeEnabled || !this.stripe) {
+      throw new BadRequestException(
+        'Stripe is not configured. Please set STRIPE_SECRET_KEY in backend environment.',
+      );
+    }
   }
 
   // ─────────────────────────────────────────────────────────
@@ -70,6 +87,7 @@ export class StripeService {
    * Prevents duplicate customers by email
    */
   async createOrGetCustomer(params: CreateCustomerParams): Promise<any> {
+    this.ensureStripeConfigured();
     try {
       this.logger.debug(`🔍 Looking for customer: ${params.email}`);
 
@@ -107,6 +125,7 @@ export class StripeService {
     customerId: string,
     metadata: Record<string, string>,
   ): Promise<any> {
+    this.ensureStripeConfigured();
     try {
       const customer = await this.stripe.customers.update(customerId, {
         metadata,
@@ -136,6 +155,7 @@ export class StripeService {
    * Stripe automatically shows available methods based on customer location
    */
   async createPaymentIntent(params: CreatePaymentIntentParams): Promise<any> {
+    this.ensureStripeConfigured();
     try {
       this.logger.debug(
         `💳 Creating payment intent: ${(params.amount / 1000).toFixed(3)} TND`,
@@ -151,8 +171,8 @@ export class StripeService {
           // ✅ KEY: Automatically enables ALL available payment methods
           automatic_payment_methods: {
             enabled: true,
+            allow_redirects: 'never',
           },
-          statement_descriptor: 'SmartProperty Payment',
         },
         {
           // Idempotency: If request fails, retry is safe (won't duplicate)
@@ -167,7 +187,20 @@ export class StripeService {
       return paymentIntent;
     } catch (error) {
       this.logger.error('❌ Failed to create payment intent', error);
-      throw new BadRequestException('Failed to create payment intent');
+
+      // Try to surface Stripe's original message for easier debugging
+      const stripeError = error as {
+        message?: string;
+        raw?: { message?: string };
+      };
+      const stripeMsg =
+        stripeError?.message ||
+        stripeError?.raw?.message ||
+        'Failed to create payment intent';
+
+      throw new BadRequestException(
+        `Failed to create payment intent: ${stripeMsg}`,
+      );
     }
   }
 
@@ -175,6 +208,7 @@ export class StripeService {
    * Retrieve payment intent details
    */
   async getPaymentIntent(paymentIntentId: string): Promise<any> {
+    this.ensureStripeConfigured();
     try {
       this.logger.debug(`🔍 Retrieving payment intent: ${paymentIntentId}`);
       const paymentIntent =
@@ -193,6 +227,7 @@ export class StripeService {
     paymentIntentId: string,
     paymentMethodId?: string,
   ): Promise<any> {
+    this.ensureStripeConfigured();
     try {
       this.logger.debug(`✅ Confirming payment intent: ${paymentIntentId}`);
 
@@ -221,6 +256,7 @@ export class StripeService {
    * @param params.reason - Reason for refund (for audit trail)
    */
   async refundPayment(params: RefundParams): Promise<any> {
+    this.ensureStripeConfigured();
     try {
       this.logger.debug(
         `🔄 Refunding payment intent: ${params.paymentIntentId}`,
@@ -260,6 +296,7 @@ export class StripeService {
    * Get refund status
    */
   async getRefund(refundId: string): Promise<any> {
+    this.ensureStripeConfigured();
     try {
       return await this.stripe.refunds.retrieve(refundId);
     } catch (error) {
@@ -277,6 +314,7 @@ export class StripeService {
    * Used for recurring/future payments
    */
   async createSetupIntent(customerId: string): Promise<any> {
+    this.ensureStripeConfigured();
     try {
       this.logger.debug(`📝 Creating setup intent for customer: ${customerId}`);
 
@@ -306,6 +344,7 @@ export class StripeService {
     paymentMethodId: string,
     customerId: string,
   ): Promise<any> {
+    this.ensureStripeConfigured();
     try {
       this.logger.debug(
         `🔗 Attaching payment method ${paymentMethodId} to customer ${customerId}`,
@@ -333,6 +372,7 @@ export class StripeService {
     customerId: string,
     paymentMethodId: string,
   ): Promise<any> {
+    this.ensureStripeConfigured();
     try {
       this.logger.debug(
         `⭐ Setting default payment method for customer ${customerId}`,
@@ -356,6 +396,7 @@ export class StripeService {
    * List payment methods for customer
    */
   async listPaymentMethods(customerId: string): Promise<any[]> {
+    this.ensureStripeConfigured();
     try {
       const paymentMethods = await this.stripe.paymentMethods.list({
         customer: customerId,
@@ -378,6 +419,7 @@ export class StripeService {
    * CRITICAL: Ensures webhook came from Stripe, not attacker
    */
   constructEvent(body: Buffer | string, signature: string): any {
+    this.ensureStripeConfigured();
     try {
       this.logger.debug('🔐 Verifying webhook signature');
 
@@ -413,7 +455,7 @@ export class StripeService {
    * Check if Stripe is configured
    */
   isConfigured(): boolean {
-    return !!(this.stripe && this.publishableKey && this.webhookSecret);
+    return !!(this.isStripeEnabled && this.stripe);
   }
 
   /**

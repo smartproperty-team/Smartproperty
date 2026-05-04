@@ -84,6 +84,17 @@ const ReviewModerationPage = lazy(
   () => import("./pages/reviews/ReviewModerationPage"),
 );
 
+const PaymentInitiatePage = lazy(() =>
+  import("./pages/payments").then((m) => ({
+    default: m.PaymentInitiatePage,
+  })),
+);
+const PaymentHistoryPage = lazy(() =>
+  import("./pages/payments").then((m) => ({
+    default: m.PaymentHistoryPage,
+  })),
+);
+
 function RouteLoadingFallback() {
   return (
     <div
@@ -385,6 +396,30 @@ function App() {
               <ProtectedRoute>
                 {canAccessLeases(user) ? (
                   <LeasesWorkspacePage />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/payments/initiate"
+            element={
+              <ProtectedRoute>
+                {isTenant(user) ? (
+                  <PaymentInitiatePage />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/payments/history"
+            element={
+              <ProtectedRoute>
+                {isTenant(user) ? (
+                  <PaymentHistoryPage />
                 ) : (
                   <Navigate to="/dashboard" replace />
                 )}

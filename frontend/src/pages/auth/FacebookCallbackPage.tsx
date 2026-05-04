@@ -71,11 +71,11 @@ export default function FacebookCallbackPage() {
   return (
     <>
       <Navbar />
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-100 via-white to-purple-100 px-4 py-12 pt-28">
+      <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-indigo-100 via-white to-purple-100 px-4 py-12 pt-28">
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="mb-8 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-linear-to-r from-indigo-600 to-purple-600">
               <Building2 className="h-8 w-8 text-white" />
             </div>
             <h1 className="mt-4 text-3xl font-bold text-gray-900">
