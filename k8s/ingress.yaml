@@ -34,6 +34,30 @@ spec:
                 name: frontend
                 port:
                   number: 80
+    - host: smartproperties.tech
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 3000
+          - path: /mailhog
+            pathType: Prefix
+            backend:
+              service:
+                name: mailhog
+                port:
+                  number: 8025
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
 ---
 # MinIO Ingress (separate host)
 apiVersion: networking.k8s.io/v1
