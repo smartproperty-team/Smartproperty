@@ -60,7 +60,7 @@ export function Alert({
       )}
     >
       <div className="flex">
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           <Icon className={cn("h-5 w-5", config.iconColor)} />
         </div>
         <div className="ml-3 flex-1">

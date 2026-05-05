@@ -165,21 +165,21 @@ SmartProperty is a SaaS property management platform with AI capabilities. Based
 | Lease reporting | Missing | |
 | Frontend pages | Missing | |
 
-### 9. Payments Module - Missing
+### 9. Payments Module - Partial
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Payment entity | Missing | Schema documented, no entity file |
-| Stripe integration | Missing | |
-| Rent collection + tracking | Missing | |
+| Payment entity | Done | MongoDB entity exists |
+| Stripe integration | Partial | Initiate/confirm/refund flow wired; Stripe hardening still needed |
+| Rent collection + tracking | Partial | Payment history, summary, and history views exist |
 | Recurring payments | Missing | |
 | Invoice generation | Missing | |
 | Late fee calculation | Missing | |
 | Payment reminders | Missing | |
 | Receipt generation (PDF) | Missing | |
-| Financial reporting | Missing | |
-| Accounting exports | Missing | |
-| Frontend pages | Missing | |
+| Financial reporting | Partial | Summary endpoint exists |
+| Accounting exports | Partial | CSV export exists |
+| Frontend pages | Partial | Initiate/history pages added |
 
 ### 10. Maintenance Module - Done
 
@@ -307,8 +307,8 @@ SmartProperty is a SaaS property management platform with AI capabilities. Based
 ### Tier 1 - Core Business Logic (Must Have)
 
 1. **Leases Module** - No lease entity, no workflow from approved application to active lease. This breaks the rental lifecycle.
-2. **Payments Module** - No payment processing, no rent tracking, no invoicing. No Stripe integration.
-3. **Mandate/Owner-Agency Relationship** - The spec defines owners delegating to agencies. No mandate entity or workflow exists.
+2. **Mandate/Owner-Agency Relationship** - The spec defines owners delegating to agencies. No mandate entity or workflow exists.
+3. **Payments Module Hardening** - Core flows exist now, but it still needs tests, stricter secret handling, and UI sync polish.
 
 ### Tier 2 - User Experience (Should Have)
 
@@ -351,8 +351,8 @@ SmartProperty is a SaaS property management platform with AI capabilities. Based
 ## Recommended Next Steps (Priority Order)
 
 1. **Implement Leases Module** - Entity, status workflow, create-from-approved-application, digital signature, renewal/termination
-2. **Implement Payments Module** - Stripe integration, rent tracking, invoicing, receipts, late fees
-3. **Implement Mandate Module** - Owner-agency contract, commission, property attachment, signing flow
+2. **Implement Mandate Module** - Owner-agency contract, commission, property attachment, signing flow
+3. **Harden Payments Module** - Add tests, secrets hygiene, delete-state sync, and pagination edge-case handling
 4. **Build Role-specific Dashboards** - At minimum: Owner portal, Branch Manager cockpit, Rental Manager workspace
 5. **Implement Messaging** - Conversation entity, WebSocket real-time chat, property-linked conversations
 6. **Add Reviews & Favorites** - Simple CRUD, star ratings, bookmark properties
@@ -360,3 +360,24 @@ SmartProperty is a SaaS property management platform with AI capabilities. Based
 8. **Expand Test Coverage** - Unit tests for services, E2E tests for critical flows
 9. **AI Matching Engine** - Recommendation algorithm, compatibility scoring
 10. **AI Solvency Analysis** - OCR + risk scoring pipeline
+
+---
+
+## Cleanup & Hardening Backlog
+
+### Tier 1 - Immediate
+
+1. **Remove committed secrets from env templates** - Keep only placeholders in `.env.example`, avoid real OAuth/API values in repo files.
+2. **Add tests for payment flows** - Cover clear-all, single delete, summary counter, and role access checks.
+3. **Fix payment UI sync** - Refresh dashboard count instantly after delete/clear and keep history pagination stable.
+
+### Tier 2 - Important
+
+4. **Normalize payment types and exports** - Align backend response DTOs and frontend interfaces.
+5. **Add loading and disabled states** - Prevent double submit on delete/clear/payment actions.
+6. **Trim stale docs/scripts** - Remove or update any payment docs that no longer match the latest flow.
+
+### Tier 3 - Nice to Have
+
+7. **Add a small repo-wide secrets policy note** - Document which values belong in local env files only.
+8. **Split large docs into smaller guides** - Keep the status report high-level and move workflow details into targeted docs.

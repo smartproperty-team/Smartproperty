@@ -10,9 +10,9 @@ import {
   LeaseStatus,
   type Lease,
 } from "@/types/lease";
-import { canManageLeases, isOwner, isPlatformAdmin } from "@/utils";
+import { canManageLeases, isOwner, isPlatformAdmin, isTenant } from "@/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 const LEASE_WORKSPACE_DRAFT_PREFIX = "lease-workspace-draft";
 
@@ -203,6 +203,7 @@ export default function LeasesWorkspacePage() {
   const applicationIdFromQuery = searchParams.get("applicationId") || "";
 
   const { user } = useAuthStore();
+  const navigate = useNavigate();
   const draftStorageKey = useMemo(
     () => `${LEASE_WORKSPACE_DRAFT_PREFIX}:${user?.id || "anonymous"}`,
     [user?.id],
@@ -301,7 +302,7 @@ export default function LeasesWorkspacePage() {
 
     return selectedLease.documents
       .filter((document) => document.type === LeaseDocumentType.SIGNATURE_PROOF)
-      .at(-1);
+      .slice(-1)[0];
   }, [selectedLease]);
 
   const ownerSignature = useMemo(() => {
@@ -311,7 +312,7 @@ export default function LeasesWorkspacePage() {
 
     return selectedLease.signatures
       .filter((signature) => signature.signerId === selectedLease.ownerId)
-      .at(-1);
+      .slice(-1)[0];
   }, [selectedLease]);
 
   const tenantSignature = useMemo(() => {
@@ -321,7 +322,7 @@ export default function LeasesWorkspacePage() {
 
     return selectedLease.signatures
       .filter((signature) => signature.signerId === selectedLease.tenantId)
-      .at(-1);
+      .slice(-1)[0];
   }, [selectedLease]);
 
   const bothPartiesSigned = useMemo(() => {
@@ -346,6 +347,32 @@ export default function LeasesWorkspacePage() {
 
     return signedByOwner && signedByTenant;
   }, [selectedLease]);
+
+  const ownerSignatureStatus = useMemo(() => {
+    if (!selectedLease) {
+      return "Select a lease to see the owner signature status.";
+    }
+
+    if (ownerSignature) {
+      return `Signed by owner on ${toDisplayDate(ownerSignature.signedAt)}.`;
+    }
+
+    return "Missing owner signature.";
+  }, [ownerSignature, selectedLease]);
+
+  const tenantSignatureStatus = useMemo(() => {
+    if (!selectedLease) {
+      return "Select a lease to see the tenant signature status.";
+    }
+
+    if (tenantSignature) {
+      return `Signed by tenant on ${toDisplayDate(tenantSignature.signedAt)}.`;
+    }
+
+    return "Missing tenant signature.";
+  }, [selectedLease, tenantSignature]);
+
+  const canShowPaymentDue = !!selectedLease && bothPartiesSigned;
 
   const showOwnerDecisionForm =
     canOwnerValidate &&
@@ -507,7 +534,12 @@ export default function LeasesWorkspacePage() {
         setOwnerDecision(draft.ownerDecision);
       }
       if (draft.signatureForm) {
-        setSignatureForm(draft.signatureForm);
+        setSignatureForm({
+          method: draft.signatureForm.method,
+          note: draft.signatureForm.note || "",
+          signerName: draft.signatureForm.signerName || "",
+          acceptedTerms: !!draft.signatureForm.acceptedTerms,
+        });
       }
       if (draft.renewalForm) {
         setRenewalForm(draft.renewalForm);
@@ -740,7 +772,7 @@ export default function LeasesWorkspacePage() {
         const proofDocuments = (leaseWithUploadedProof.documents || []).filter(
           (document) => document.type === LeaseDocumentType.SIGNATURE_PROOF,
         );
-        signatureProofDocumentId = proofDocuments.at(-1)?.id;
+        signatureProofDocumentId = proofDocuments.slice(-1)[0]?.id;
       }
 
       await leaseService.signLease(selectedLease.id, {
@@ -785,7 +817,7 @@ export default function LeasesWorkspacePage() {
             document.type === LeaseDocumentType.SIGNATURE_PROOF &&
             document.uploadedBy === userId,
         )
-        .at(-1);
+        .slice(-1)[0];
     };
 
     const renderSignatureBlock = (
@@ -1215,86 +1247,144 @@ export default function LeasesWorkspacePage() {
               )}
 
               {selectedLease && (
-                <section className="mb-6 rounded-xl border border-gray-200 p-4">
-                  <h2 className="mb-2 text-lg font-semibold text-gray-900">
-                    Selected Lease
-                  </h2>
-                  <p className="text-sm text-gray-700">
-                    {selectedLease.leaseNumber || selectedLease.id} | status:{" "}
-                    {selectedLease.status}
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    Property:{" "}
-                    {selectedLease.propertyTitle || selectedLease.propertyId}
-                    {selectedLease.propertyLocation
-                      ? ` (${selectedLease.propertyLocation})`
-                      : ""}
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    Tenant: {selectedLease.tenantName || selectedLease.tenantId}{" "}
-                    | Owner: {selectedLease.ownerName || selectedLease.ownerId}
-                    {selectedLease.managerId
-                      ? ` | Manager: ${selectedLease.managerName || selectedLease.managerId}`
-                      : ""}
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    Period: {toDisplayDate(selectedLease.startDate)} to{" "}
-                    {toDisplayDate(selectedLease.endDate)}
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    Rent:{" "}
-                    {toDisplayMoney(
-                      selectedLease.monthlyRent,
-                      selectedLease.currency,
-                    )}
-                  </p>
-                  <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-600">
-                      Personalized Contract Draft
+                <>
+                  <section className="mb-6 rounded-xl border border-gray-200 p-4">
+                    <h2 className="mb-2 text-lg font-semibold text-gray-900">
+                      Selected Lease
+                    </h2>
+                    <p className="text-sm text-gray-700">
+                      {selectedLease.leaseNumber || selectedLease.id} | status:{" "}
+                      {selectedLease.status}
                     </p>
-                    <pre className="whitespace-pre-wrap text-xs text-gray-700">
-                      {toReadableTemplate(selectedLease)}
-                    </pre>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={handleExportContractPdf}
-                      className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      Export Contract PDF
-                    </button>
-                  </div>
-                  <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-600">
-                      Latest Signature Proof
+                    <p className="text-sm text-gray-700">
+                      Property:{" "}
+                      {selectedLease.propertyTitle || selectedLease.propertyId}
+                      {selectedLease.propertyLocation
+                        ? ` (${selectedLease.propertyLocation})`
+                        : ""}
                     </p>
-                    {latestSignatureProofDocument ? (
-                      latestSignatureProofDocument.mimeType?.startsWith(
-                        "image/",
-                      ) ? (
-                        <img
-                          src={latestSignatureProofDocument.url}
-                          alt="Latest signature proof"
-                          className="max-h-24 rounded border border-gray-200"
-                        />
-                      ) : (
-                        <a
-                          href={latestSignatureProofDocument.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-sm text-indigo-600 hover:text-indigo-700"
-                        >
-                          {latestSignatureProofDocument.name}
-                        </a>
-                      )
-                    ) : (
-                      <p className="text-xs text-gray-600">
-                        No signature proof attached yet.
+                    <p className="text-sm text-gray-700">
+                      Tenant:{" "}
+                      {selectedLease.tenantName || selectedLease.tenantId} |
+                      Owner: {selectedLease.ownerName || selectedLease.ownerId}
+                      {selectedLease.managerId
+                        ? ` | Manager: ${selectedLease.managerName || selectedLease.managerId}`
+                        : ""}
+                    </p>
+                    <p className="text-sm text-gray-700">
+                      Period: {toDisplayDate(selectedLease.startDate)} to{" "}
+                      {toDisplayDate(selectedLease.endDate)}
+                    </p>
+                    <p className="text-sm text-gray-700">
+                      Rent:{" "}
+                      {toDisplayMoney(
+                        selectedLease.monthlyRent,
+                        selectedLease.currency,
+                      )}
+                    </p>
+                    <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                        Personalized Contract Draft
                       </p>
-                    )}
-                  </div>
-                </section>
+                      <pre className="whitespace-pre-wrap text-xs text-gray-700">
+                        {toReadableTemplate(selectedLease)}
+                      </pre>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={handleExportContractPdf}
+                        className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        Export Contract PDF
+                      </button>
+                    </div>
+                    <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                        Latest Signature Proof
+                      </p>
+                      {latestSignatureProofDocument ? (
+                        latestSignatureProofDocument.mimeType?.startsWith(
+                          "image/",
+                        ) ? (
+                          <img
+                            src={latestSignatureProofDocument.url}
+                            alt="Latest signature proof"
+                            className="max-h-24 rounded border border-gray-200"
+                          />
+                        ) : (
+                          <a
+                            href={latestSignatureProofDocument.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sm text-indigo-600 hover:text-indigo-700"
+                          >
+                            {latestSignatureProofDocument.name}
+                          </a>
+                        )
+                      ) : (
+                        <p className="text-xs text-gray-600">
+                          No signature proof attached yet.
+                        </p>
+                      )}
+                    </div>
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                      <div className="rounded-lg border border-gray-200 bg-white p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                          Owner Signature
+                        </p>
+                        <p className="mt-1 text-sm text-gray-700">
+                          {ownerSignatureStatus}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-gray-200 bg-white p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                          Tenant Signature
+                        </p>
+                        <p className="mt-1 text-sm text-gray-700">
+                          {tenantSignatureStatus}
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+
+                  {isTenant(user) && selectedLease && canShowPaymentDue && (
+                    <section className="mb-6 rounded-xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h2 className="text-lg font-semibold text-gray-900">
+                            💳 Payment Due
+                          </h2>
+                          <p className="mt-2 text-sm text-gray-700">
+                            Monthly rent:{" "}
+                            <span className="font-semibold text-green-700">
+                              {toDisplayMoney(
+                                selectedLease.monthlyRent,
+                                selectedLease.currency,
+                              )}
+                            </span>
+                          </p>
+                          <p className="mt-1 text-xs text-gray-600">
+                            Property:{" "}
+                            {selectedLease.propertyTitle ||
+                              selectedLease.propertyId}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(
+                              `/payments/initiate?leaseId=${selectedLease.id}`,
+                            )
+                          }
+                          className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-3 text-lg font-semibold text-white shadow-lg transition-all hover:shadow-xl hover:from-green-700 hover:to-emerald-700"
+                        >
+                          💰 Pay Now
+                        </button>
+                      </div>
+                    </section>
+                  )}
+                </>
               )}
 
               {managementEnabled && !selectedLease && (

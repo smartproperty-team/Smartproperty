@@ -17,6 +17,7 @@ import {
   authService,
   leaseService,
   notificationService,
+  paymentService,
   propertyService,
   verificationService,
   type AgencySearchItem,
@@ -48,6 +49,7 @@ import {
 import {
   Bell,
   Building2,
+  CreditCard,
   Download,
   FileText,
   Home,
@@ -162,6 +164,28 @@ export default function DashboardPage() {
     leases: 0,
     notifications: 0,
   });
+  const [paymentCount, setPaymentCount] = useState<number>(0);
+
+  useEffect(() => {
+    let mounted = true;
+    if (user && isTenant(user)) {
+      paymentService
+        .getSummary()
+        .then((s) => {
+          if (!mounted) return;
+          setPaymentCount(s.paymentCount || 0);
+        })
+        .catch(() => {
+          if (!mounted) return;
+          setPaymentCount(0);
+        });
+    } else {
+      setPaymentCount(0);
+    }
+    return () => {
+      mounted = false;
+    };
+  }, [user]);
   const [portfolioSummary, setPortfolioSummary] =
     useState<PortfolioSummary | null>(null);
   const [isLoadingPortfolioSummary, setIsLoadingPortfolioSummary] =
@@ -1175,7 +1199,7 @@ export default function DashboardPage() {
               </div>
             )}
             {canTrackOwnMaintenance && (
-              <div className="mt-4">
+              <div className="mt-4 flex flex-wrap gap-3">
                 <Button
                   variant="outline"
                   onClick={() => navigate("/maintenance/requests/mine")}
@@ -1183,6 +1207,11 @@ export default function DashboardPage() {
                   <Wrench className="mr-2 h-4 w-4" />
                   My Maintenance Status
                 </Button>
+                {isTenant(user) && (
+                  <Button onClick={() => navigate("/payments/history")}>
+                    Payment History
+                  </Button>
+                )}
               </div>
             )}
             {canManageMaintenanceAsProvider && (
@@ -1325,7 +1354,7 @@ export default function DashboardPage() {
           )}
 
           {/* Quick Stats */}
-          <div className="mb-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mb-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
             <Card>
               <CardContent className="flex items-center p-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-indigo-100">
@@ -1433,6 +1462,34 @@ export default function DashboardPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {isTenant(user) && (
+              <Card
+                className="cursor-pointer transition hover:shadow-md"
+                onClick={() => navigate("/payments/history")}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    navigate("/payments/history");
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label="Open payment history"
+              >
+                <CardContent className="flex items-center p-6">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-100">
+                    <CreditCard className="h-6 w-6 text-emerald-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-2xl font-bold text-gray-900">
+                      {paymentCount}
+                    </p>
+                    <p className="text-sm text-gray-500">Payment History</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {canReviewApplications(user) && (

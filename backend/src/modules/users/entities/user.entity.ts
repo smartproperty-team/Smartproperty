@@ -162,7 +162,7 @@ export class User {
   loginAttempts: number;
 
   @Column({ nullable: true })
-  lockUntil?: Date;
+  lockUntil?: Date | null;
 
   @Column('simple-array', { nullable: true })
   @Exclude()
@@ -189,7 +189,7 @@ export class User {
   updatedAt: Date;
 
   @Column({ nullable: true })
-  deletedAt?: Date;
+  deletedAt?: Date | null;
 
   @Column({ default: false })
   permanentlyDeleted: boolean;
@@ -254,7 +254,7 @@ export class User {
     // Reset attempts if lock has expired
     if (this.lockUntil && this.lockUntil < new Date()) {
       this.loginAttempts = 1;
-      this.lockUntil = undefined;
+      this.lockUntil = null;
     } else {
       this.loginAttempts += 1;
 
@@ -268,7 +268,7 @@ export class User {
 
   resetLoginAttempts(): void {
     this.loginAttempts = 0;
-    this.lockUntil = undefined;
+    this.lockUntil = null;
     this.lastLogin = new Date();
   }
 
