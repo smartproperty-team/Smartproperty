@@ -64,6 +64,16 @@ class Settings(BaseSettings):
     marketing_cache_ttl_seconds: int = 60 * 60 * 24  # 24h
     marketing_generation_timeout_ms: int = 45000
 
+    # Fraud Detection (Document verification)
+    # LLM provider priority: Anthropic > Gemini. Whichever key is set first wins.
+    anthropic_api_key: str = ""
+    anthropic_vision_model: str = "claude-sonnet-4-6"
+    gemini_api_key: str = ""
+    gemini_vision_model: str = "gemini-2.5-flash-lite"
+    fraud_detection_timeout_ms: int = 30000
+    fraud_detection_use_llm: bool = True
+    fraud_detection_use_ocr: bool = True
+
     # Virtual Staging (Stability AI)
     stability_api_key: str = "sk-q6XFnQyEAb2CKb32m30US7MvdtygmdRgVOIX0jRpFjYYL32d"
     staging_output_dir: str = "./data/staging"

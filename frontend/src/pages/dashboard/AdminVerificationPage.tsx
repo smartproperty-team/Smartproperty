@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   Clock,
   Eye,
-  FileImage,
   FileText,
   Filter,
   RefreshCw,
@@ -21,9 +20,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppSidebar } from '../../components/layout';
 import { Alert, Button, Card, CardContent } from '../../components/ui';
+import {
+  FraudAnalysisPanel,
+  FraudScoreBadge,
+  FraudStatusPill,
+} from '../../components/verification/FraudAnalysisDisplay';
 import { verificationService } from '../../services/verification.service';
 import {
   AdminVerificationItem,
+  FraudAnalysisStatus,
+  RiskLevel,
   VerificationDocument,
   VerificationStatus,
 } from '../../types/verification';
@@ -98,45 +104,97 @@ function getInitials(name?: string | null) {
 }
 
 // ─── Document preview card ──────────────────────────────
-function DocumentCard({ doc }: { doc: VerificationDocument }) {
+function DocumentCard({
+  doc,
+  onRerunAnalysis,
+  rerunLoadingId,
+}: {
+  doc: VerificationDocument;
+  onRerunAnalysis?: (documentId: string) => void;
+  rerunLoadingId?: string | null;
+}) {
   const st = statusConfig(doc.status);
+  const isRerunning = rerunLoadingId === doc.id;
+  const isImage = doc.mimeType.startsWith('image/');
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50">
-        {doc.mimeType.startsWith('image/') ? (
-          <FileImage className="h-5 w-5 text-indigo-500" />
+    <div className="rounded-lg border border-gray-200 bg-white p-3">
+      <div className="flex items-center gap-3">
+        {isImage ? (
+          <a
+            href={doc.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50"
+            aria-label={`Open ${doc.fileName} in a new tab`}
+          >
+            <img
+              src={doc.url}
+              alt={doc.fileName}
+              className="h-full w-full object-cover transition-transform hover:scale-105"
+              loading="lazy"
+            />
+          </a>
         ) : (
-          <FileText className="h-5 w-5 text-indigo-500" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50">
+            <FileText className="h-5 w-5 text-indigo-500" />
+          </div>
         )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-gray-900">
+            {doc.fileName}
+          </p>
+          <p className="text-xs text-gray-500">
+            {formatBytes(doc.fileSize)} •{' '}
+            {doc.type === 'identity' ? 'Identity' : 'Proof of Income'}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${st.bg} ${st.color}`}
+          >
+            {st.icon}
+            {st.label}
+          </span>
+          {doc.fraudAnalysis ? (
+            <FraudScoreBadge
+              score={doc.fraudAnalysis.fraudScore}
+              riskLevel={doc.fraudAnalysis.riskLevel}
+            />
+          ) : (
+            <FraudStatusPill status={doc.fraudAnalysisStatus} />
+          )}
+          {onRerunAnalysis && (
+            <button
+              type="button"
+              onClick={() => onRerunAnalysis(doc.id)}
+              disabled={isRerunning}
+              className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-indigo-50 hover:text-indigo-600 disabled:opacity-50"
+              aria-label="Re-run fraud analysis"
+              title="Re-run fraud analysis"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${isRerunning ? 'animate-spin' : ''}`}
+              />
+            </button>
+          )}
+          <a
+            href={doc.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
+            aria-label={`View document ${doc.fileName} in a new tab`}
+            title="View document"
+          >
+            <Eye className="h-4 w-4" />
+            <span className="sr-only">Opens in a new tab</span>
+          </a>
+        </div>
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-gray-900">
-          {doc.fileName}
-        </p>
-        <p className="text-xs text-gray-500">
-          {formatBytes(doc.fileSize)} •{' '}
-          {doc.type === 'identity' ? 'Identity' : 'Proof of Income'}
-        </p>
-      </div>
-      <div className="flex items-center gap-2">
-        <span
-          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${st.bg} ${st.color}`}
-        >
-          {st.icon}
-          {st.label}
-        </span>
-        <a
-          href={doc.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
-          aria-label={`View document ${doc.fileName} in a new tab`}
-          title="View document"
-        >
-          <Eye className="h-4 w-4" />
-          <span className="sr-only">Opens in a new tab</span>
-        </a>
-      </div>
+      {doc.fraudAnalysis && (
+        <div className="mt-3">
+          <FraudAnalysisPanel analysis={doc.fraudAnalysis} />
+        </div>
+      )}
     </div>
   );
 }
@@ -161,6 +219,7 @@ export default function AdminVerificationPage() {
     'all',
   );
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [rerunLoadingId, setRerunLoadingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [message, setMessage] = useState<{
@@ -189,6 +248,50 @@ export default function AdminVerificationPage() {
     fetchVerifications();
   }, [fetchVerifications]);
 
+  // Auto-refresh while any document analysis is still pending so the admin
+  // sees fresh scores arrive without a manual reload.
+  const hasPendingAnalysis = verifications.some((v) =>
+    v.documents.some(
+      (d) => d.fraudAnalysisStatus === FraudAnalysisStatus.PENDING,
+    ),
+  );
+
+  useEffect(() => {
+    if (!hasPendingAnalysis) return;
+    const id = window.setInterval(() => {
+      void fetchVerifications();
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, [hasPendingAnalysis, fetchVerifications]);
+
+  // Sort: unreviewed and high-risk first, then by submission time descending.
+  const RISK_RANK: Record<RiskLevel, number> = {
+    [RiskLevel.HIGH]: 3,
+    [RiskLevel.MEDIUM]: 2,
+    [RiskLevel.LOW]: 1,
+  };
+  const sortedVerifications = [...verifications].sort((a, b) => {
+    const aActionable =
+      a.overallStatus === VerificationStatus.PENDING ||
+      a.overallStatus === VerificationStatus.UNDER_REVIEW
+        ? 1
+        : 0;
+    const bActionable =
+      b.overallStatus === VerificationStatus.PENDING ||
+      b.overallStatus === VerificationStatus.UNDER_REVIEW
+        ? 1
+        : 0;
+    if (aActionable !== bActionable) return bActionable - aActionable;
+
+    const aRisk = a.riskLevel ? RISK_RANK[a.riskLevel] : 0;
+    const bRisk = b.riskLevel ? RISK_RANK[b.riskLevel] : 0;
+    if (aRisk !== bRisk) return bRisk - aRisk;
+
+    const aSubmitted = a.submittedAt ? Date.parse(a.submittedAt) : 0;
+    const bSubmitted = b.submittedAt ? Date.parse(b.submittedAt) : 0;
+    return bSubmitted - aSubmitted;
+  });
+
   const handleApprove = async (id: string) => {
     const shouldApprove = window.confirm(
       'Approve this verification request? This action affects tenant status.',
@@ -210,6 +313,29 @@ export default function AdminVerificationPage() {
       });
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleRerunAnalysis = async (documentId: string) => {
+    setRerunLoadingId(documentId);
+    setMessage(null);
+    try {
+      await verificationService.rerunFraudAnalysis(documentId);
+      setMessage({
+        type: 'success',
+        text: 'Fraud analysis re-queued. Refresh in a few seconds to see results.',
+      });
+      // Auto-refresh after a delay so the new score appears
+      setTimeout(() => {
+        void fetchVerifications();
+      }, 8000);
+    } catch {
+      setMessage({
+        type: 'error',
+        text: 'Failed to re-run fraud analysis.',
+      });
+    } finally {
+      setRerunLoadingId(null);
     }
   };
 
@@ -365,7 +491,7 @@ export default function AdminVerificationPage() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {verifications.map((v) => {
+            {sortedVerifications.map((v) => {
               const st = statusConfig(v.overallStatus);
               const isExpanded = expandedId === v.id;
               const isActionable =
@@ -411,6 +537,13 @@ export default function AdminVerificationPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
+                      {v.riskScore !== undefined && v.riskLevel && (
+                        <FraudScoreBadge
+                          score={v.riskScore}
+                          riskLevel={v.riskLevel}
+                          size="md"
+                        />
+                      )}
                       <span
                         className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${st.bg} ${st.color}`}
                       >
@@ -447,7 +580,12 @@ export default function AdminVerificationPage() {
                         {v.documents.length > 0 ? (
                           <div className="space-y-2">
                             {v.documents.map((doc) => (
-                              <DocumentCard key={doc.id} doc={doc} />
+                              <DocumentCard
+                                key={doc.id}
+                                doc={doc}
+                                onRerunAnalysis={handleRerunAnalysis}
+                                rerunLoadingId={rerunLoadingId}
+                              />
                             ))}
                           </div>
                         ) : (

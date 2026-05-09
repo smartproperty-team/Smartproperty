@@ -159,6 +159,17 @@ export class VerificationController {
     return this.verificationService.approveVerification(id);
   }
 
+  @Post('admin/documents/:documentId/rerun-fraud-analysis')
+  @Roles(...VERIFICATION_REVIEW_ROLES)
+  @ApiOperation({
+    summary: 'Re-run AI fraud analysis on a document (Admin)',
+  })
+  @ApiParam({ name: 'documentId', description: 'Document ID' })
+  @ApiResponse({ status: 200, description: 'Fraud analysis re-queued' })
+  async rerunFraudAnalysis(@Param('documentId') documentId: string) {
+    return this.verificationService.rerunFraudAnalysis(documentId);
+  }
+
   @Post('admin/:id/reject')
   @Roles(...VERIFICATION_REVIEW_ROLES)
   @ApiOperation({ summary: 'Reject a tenant verification (Admin)' })

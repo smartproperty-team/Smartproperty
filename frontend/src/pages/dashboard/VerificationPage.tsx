@@ -26,6 +26,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../../components/ui";
+import { FraudStatusPill } from "../../components/verification/FraudAnalysisDisplay";
 import { verificationService } from "../../services/verification.service";
 import { useAuthStore } from "../../store";
 import {
@@ -242,6 +243,8 @@ function DropZone({
                     {st.icon}
                     {st.label}
                   </span>
+                  <FraudStatusPill status={doc.fraudAnalysisStatus} />
+                  {/* Note: full fraud score is admin-only — do not leak signals to tenants. */}
                   {doc.status !== VerificationStatus.VERIFIED && (
                     <button
                       onClick={(e) => {

@@ -11,6 +11,7 @@ import {
   TenantVerification,
   VerificationDocument,
 } from './entities/verification.entity';
+import { FraudDetectionService } from './fraud-detection.service';
 import { VerificationController } from './verification.controller';
 import { VerificationService } from './verification.service';
 
@@ -22,7 +23,7 @@ import { VerificationService } from './verification.service';
     UsersModule,
   ],
   controllers: [VerificationController],
-  providers: [VerificationService],
+  providers: [VerificationService, FraudDetectionService],
   exports: [VerificationService],
 })
 export class VerificationModule {}

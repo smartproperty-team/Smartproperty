@@ -15,6 +15,29 @@ export enum VerificationStatus {
   REJECTED = 'rejected',
 }
 
+export enum FraudAnalysisStatus {
+  NOT_RUN = 'not_run',
+  PENDING = 'pending',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+}
+
+export enum RiskLevel {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
+}
+
+export interface FraudAnalysis {
+  fraudScore: number;
+  riskLevel: RiskLevel;
+  flags: string[];
+  ocrText?: string | null;
+  ocrFields?: Record<string, string | number | undefined>;
+  llmFindings?: string[];
+  analyzedAt: string;
+}
+
 export interface VerificationDocument {
   id: string;
   type: DocumentType;
@@ -26,6 +49,8 @@ export interface VerificationDocument {
   uploadedAt: string;
   reviewedAt?: string;
   rejectionReason?: string;
+  fraudAnalysisStatus?: FraudAnalysisStatus;
+  fraudAnalysis?: FraudAnalysis | null;
 }
 
 export interface TenantVerification {
@@ -34,6 +59,8 @@ export interface TenantVerification {
   identityDocuments: VerificationDocument[];
   incomeDocuments: VerificationDocument[];
   overallStatus: VerificationStatus;
+  riskScore?: number;
+  riskLevel?: RiskLevel;
   submittedAt?: string;
   verifiedAt?: string;
   updatedAt: string;
@@ -51,6 +78,8 @@ export interface AdminVerificationItem {
   tenantName?: string | null;
   tenantAvatar?: string | null;
   overallStatus: VerificationStatus;
+  riskScore?: number;
+  riskLevel?: RiskLevel;
   submittedAt?: string;
   verifiedAt?: string;
   createdAt: string;

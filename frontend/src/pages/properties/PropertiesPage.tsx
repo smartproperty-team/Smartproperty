@@ -342,7 +342,7 @@ export default function PropertiesPage() {
     const parsed = parseNumberParam(value);
     return parsed !== undefined && parsed > 0 ? parsed : undefined;
   };
-  const [showMap, setShowMap] = useState(false);
+  const [showMap, setShowMap] = useState(true);
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(
     null,
   );

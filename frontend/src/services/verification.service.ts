@@ -92,4 +92,14 @@ export const verificationService = {
     );
     return response.data;
   },
+
+  // Re-run AI fraud analysis on a document (admin)
+  rerunFraudAnalysis: async (
+    documentId: string,
+  ): Promise<{ message: string; documentId: string }> => {
+    const response = await api.post<{ message: string; documentId: string }>(
+      `/verification/admin/documents/${documentId}/rerun-fraud-analysis`,
+    );
+    return response.data;
+  },
 };

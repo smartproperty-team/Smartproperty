@@ -23,10 +23,13 @@ import { UserRole } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
 import {
   DocumentType,
+  FraudAnalysisStatus,
+  RiskLevel,
   TenantVerification,
   VerificationDocument,
   VerificationStatus,
 } from './entities/verification.entity';
+import { FraudDetectionService } from './fraud-detection.service';
 
 @Injectable()
 export class VerificationService {
@@ -42,6 +45,7 @@ export class VerificationService {
     private readonly configService: ConfigService,
     private readonly usersService: UsersService,
     private readonly notificationsService: NotificationsService,
+    private readonly fraudDetectionService: FraudDetectionService,
   ) {}
 
   // ─── Get or create tenant verification record ──────────
@@ -73,6 +77,8 @@ export class VerificationService {
       identityDocuments: identityDocuments.map((d) => this.mapDocument(d)),
       incomeDocuments: incomeDocuments.map((d) => this.mapDocument(d)),
       overallStatus: verification.overallStatus,
+      riskScore: verification.riskScore,
+      riskLevel: verification.riskLevel,
       submittedAt: verification.submittedAt?.toISOString(),
       verifiedAt: verification.verifiedAt?.toISOString(),
       updatedAt: verification.updatedAt?.toISOString(),
@@ -99,9 +105,13 @@ export class VerificationService {
       key: uploaded.key,
       url: uploaded.url,
       status: VerificationStatus.PENDING,
+      fraudAnalysisStatus: FraudAnalysisStatus.PENDING,
     });
 
     const saved = await this.docRepo.save(doc);
+
+    // Fire-and-forget fraud analysis (do not block upload response).
+    void this.runFraudAnalysisInBackground(saved._id.toHexString(), userId);
 
     // Ensure a tenant verification record exists
     const existing = await this.verificationRepo.findOne({
@@ -255,6 +265,16 @@ export class VerificationService {
       uploadedAt: doc.uploadedAt?.toISOString?.() || doc.uploadedAt,
       reviewedAt: doc.reviewedAt?.toISOString?.() || doc.reviewedAt,
       rejectionReason: doc.rejectionReason,
+      fraudAnalysisStatus: doc.fraudAnalysisStatus,
+      fraudAnalysis: doc.fraudAnalysis
+        ? {
+            ...doc.fraudAnalysis,
+            analyzedAt:
+              doc.fraudAnalysis.analyzedAt instanceof Date
+                ? doc.fraudAnalysis.analyzedAt.toISOString()
+                : doc.fraudAnalysis.analyzedAt,
+          }
+        : null,
     };
   }
 
@@ -290,6 +310,8 @@ export class VerificationService {
         tenantName,
         tenantAvatar,
         overallStatus: v.overallStatus,
+        riskScore: v.riskScore,
+        riskLevel: v.riskLevel,
         submittedAt: v.submittedAt?.toISOString(),
         verifiedAt: v.verifiedAt?.toISOString(),
         createdAt: v.createdAt?.toISOString(),
@@ -448,6 +470,147 @@ export class VerificationService {
         `Failed to send verification ${status} email to user ${userId}`,
         err,
       );
+    }
+  }
+
+  // ─── Fraud Analysis ────────────────────────────────────
+
+  async rerunFraudAnalysis(documentId: string) {
+    const doc = await this.docRepo.findOne({
+      where: { _id: new ObjectId(documentId) },
+    });
+    if (!doc) {
+      throw new NotFoundException('Document not found');
+    }
+    doc.fraudAnalysisStatus = FraudAnalysisStatus.PENDING;
+    await this.docRepo.save(doc);
+    void this.runFraudAnalysisInBackground(documentId, doc.userId);
+    return { message: 'Fraud analysis re-queued', documentId };
+  }
+
+  private async runFraudAnalysisInBackground(
+    documentId: string,
+    userId: string,
+  ): Promise<void> {
+    try {
+      const doc = await this.docRepo.findOne({
+        where: { _id: new ObjectId(documentId) },
+      });
+      if (!doc) return;
+
+      let userProfile: {
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        phone?: string;
+      } = {};
+      try {
+        const user = await this.usersService.findById(userId);
+        userProfile = {
+          firstName: user?.firstName,
+          lastName: user?.lastName,
+          email: user?.email,
+          phone: user?.phone,
+        };
+      } catch {
+        // proceed without profile cross-validation
+      }
+
+      const result = await this.fraudDetectionService.analyzeDocument({
+        fileUrl: doc.url,
+        documentType: doc.type,
+        userProfile,
+      });
+
+      doc.fraudAnalysis = result;
+      doc.fraudAnalysisStatus = FraudAnalysisStatus.COMPLETED;
+      await this.docRepo.save(doc);
+
+      await this.recomputeRiskScore(userId);
+
+      if (result.riskLevel === RiskLevel.HIGH) {
+        await this.notifyAdminsOfHighRisk(userId, doc.fileName, result);
+      }
+
+      this.logger.log(
+        `[fraud] document=${documentId} score=${result.fraudScore} risk=${result.riskLevel}`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `[fraud] analysis failed for document ${documentId}`,
+        err,
+      );
+      try {
+        const doc = await this.docRepo.findOne({
+          where: { _id: new ObjectId(documentId) },
+        });
+        if (doc) {
+          doc.fraudAnalysisStatus = FraudAnalysisStatus.FAILED;
+          await this.docRepo.save(doc);
+        }
+      } catch {
+        // swallow
+      }
+    }
+  }
+
+  private async recomputeRiskScore(userId: string): Promise<void> {
+    const docs = await this.docRepo.find({ where: { userId } });
+    const completed = docs.filter(
+      (d) =>
+        d.fraudAnalysisStatus === FraudAnalysisStatus.COMPLETED &&
+        d.fraudAnalysis,
+    );
+    if (completed.length === 0) return;
+
+    const avg =
+      completed.reduce((sum, d) => sum + (d.fraudAnalysis?.fraudScore ?? 0), 0) /
+      completed.length;
+    const riskScore = Math.round(avg);
+    const riskLevel: RiskLevel =
+      riskScore >= 60
+        ? RiskLevel.HIGH
+        : riskScore >= 30
+          ? RiskLevel.MEDIUM
+          : RiskLevel.LOW;
+
+    const verification = await this.verificationRepo.findOne({
+      where: { userId },
+    });
+    if (!verification) return;
+    verification.riskScore = riskScore;
+    verification.riskLevel = riskLevel;
+    await this.verificationRepo.save(verification);
+  }
+
+  private async notifyAdminsOfHighRisk(
+    userId: string,
+    fileName: string,
+    result: import('./entities/verification.entity').FraudAnalysisResult,
+  ): Promise<void> {
+    try {
+      const admins = await this.usersService.findByRole(UserRole.SUPER_ADMIN);
+      const flagSummary = result.flags.slice(0, 3).join(', ') || 'multiple signals';
+      await Promise.all(
+        admins.map(async (admin) => {
+          const adminId =
+            (admin as { id?: string; _id?: { toHexString?: () => string } })
+              ?.id ||
+            (
+              admin as { _id?: { toHexString?: () => string } }
+            )._id?.toHexString?.();
+          if (!adminId) return;
+          await this.notificationsService.create({
+            userId: adminId,
+            title: '⚠️ High-risk verification document',
+            message: `Document "${fileName}" flagged with score ${result.fraudScore}/100 (${flagSummary}).`,
+            type: NotificationType.INFO,
+            link: '/super-administrator/verifications',
+          });
+        }),
+      );
+    } catch (err) {
+      this.logger.warn(`[fraud] admin notification failed: ${err}`);
     }
   }
 }

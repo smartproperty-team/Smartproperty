@@ -18,6 +18,7 @@ _ENDPOINTS = [
     ("marketing", "/marketing", ["Marketing & Distribution"]),
     ("virtual_tour", "/virtual-tour", ["Virtual Tour"]),
     ("staging", "/staging", ["Virtual Staging"]),
+    ("fraud_detection", "/verification", ["Document Fraud Detection"]),
 ]
 
 # Load endpoint routers defensively so core features can still boot

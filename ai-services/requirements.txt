@@ -26,5 +26,13 @@ redis==5.0.1
 # Keep pytest for local testing
 pytest==7.4.4
 
+# Fraud detection (Phase 1)
+# pytesseract requires the Tesseract binary to be installed system-wide.
+# On Windows: choco install tesseract  /  brew install tesseract on macOS.
+# If unavailable at runtime, OCR layer is skipped automatically.
+pytesseract==0.3.10
+anthropic==0.39.0
+google-generativeai==0.8.3
+
 # NOTE: Full ML deps (torch, transformers, etc.) were removed for faster local builds.
 # Re-add them in CI or production images as needed.

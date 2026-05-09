@@ -24,6 +24,29 @@ export enum VerificationStatus {
   REJECTED = 'rejected',
 }
 
+export enum FraudAnalysisStatus {
+  NOT_RUN = 'not_run',
+  PENDING = 'pending',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+}
+
+export enum RiskLevel {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
+}
+
+export interface FraudAnalysisResult {
+  fraudScore: number; // 0-100, higher = more suspicious
+  riskLevel: RiskLevel;
+  flags: string[]; // e.g. ["exif_edited_photoshop", "name_mismatch", "low_quality_scan"]
+  ocrText?: string;
+  ocrFields?: Record<string, string | number | undefined>;
+  llmFindings?: string[]; // human-readable findings from Claude/GPT-4V
+  analyzedAt: Date;
+}
+
 @Entity('verification_documents')
 export class VerificationDocument {
   @ObjectIdColumn()
@@ -63,6 +86,16 @@ export class VerificationDocument {
   @Column({ nullable: true })
   reviewedAt?: Date;
 
+  @Column({
+    type: 'enum',
+    enum: FraudAnalysisStatus,
+    default: FraudAnalysisStatus.NOT_RUN,
+  })
+  fraudAnalysisStatus: FraudAnalysisStatus;
+
+  @Column({ type: 'json', nullable: true })
+  fraudAnalysis?: FraudAnalysisResult;
+
   @CreateDateColumn()
   uploadedAt: Date;
 
@@ -95,6 +128,12 @@ export class TenantVerification {
 
   @Column({ nullable: true })
   verifiedAt?: Date;
+
+  @Column({ type: 'int', nullable: true })
+  riskScore?: number; // aggregate 0-100 across all docs + cross-checks
+
+  @Column({ type: 'enum', enum: RiskLevel, nullable: true })
+  riskLevel?: RiskLevel;
 
   @CreateDateColumn()
   createdAt: Date;
