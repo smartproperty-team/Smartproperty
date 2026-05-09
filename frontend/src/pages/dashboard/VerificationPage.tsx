@@ -313,6 +313,19 @@ export default function VerificationPage() {
     fetchStatus();
   }, [fetchStatus]);
 
+  // Poll while AI analysis is running so the tenant sees the pending pill
+  // disappear without a manual refresh.
+  useEffect(() => {
+    const docs = [
+      ...(verification?.identityDocuments || []),
+      ...(verification?.incomeDocuments || []),
+    ];
+    const hasPending = docs.some((d) => d.fraudAnalysisStatus === "pending");
+    if (!hasPending) return;
+    const id = window.setInterval(() => void fetchStatus(), 5000);
+    return () => window.clearInterval(id);
+  }, [verification, fetchStatus]);
+
   // Upload handler
   const handleUpload = async (file: File, type: DocumentType) => {
     const maxSize = 10 * 1024 * 1024; // 10MB
@@ -391,6 +404,13 @@ export default function VerificationPage() {
 
   const overall =
     verification?.overallStatus || VerificationStatus.NOT_SUBMITTED;
+  const allDocs = [
+    ...(verification?.identityDocuments || []),
+    ...(verification?.incomeDocuments || []),
+  ];
+  const pendingAnalysisCount = allDocs.filter(
+    (d) => d.fraudAnalysisStatus === "pending",
+  ).length;
   const overallConf = statusConfig(overall);
   const hasIdentity = (verification?.identityDocuments.length || 0) > 0;
   const hasIncome = (verification?.incomeDocuments.length || 0) > 0;
@@ -543,6 +563,77 @@ export default function VerificationPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* AI verification info card */}
+            {!isVerified && (
+              <Card className="border-blue-100 bg-blue-50/40">
+                <CardContent className="flex items-start gap-4 p-6">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100">
+                    <ShieldCheck className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-gray-900">
+                      AI-assisted verification
+                    </h4>
+                    <p className="mt-1 text-sm text-gray-600">
+                      To speed up your review, we run automated checks on your
+                      documents the moment you upload them — image quality,
+                      metadata, and visual authenticity. If everything looks
+                      good, your verification can be approved in minutes
+                      instead of days.
+                    </p>
+                    <ul className="mt-3 grid gap-2 text-sm text-gray-700 sm:grid-cols-3">
+                      {[
+                        {
+                          label: "Metadata check",
+                          desc: "We inspect EXIF/file data for signs of editing",
+                        },
+                        {
+                          label: "Visual analysis",
+                          desc: "AI vision verifies document authenticity",
+                        },
+                        {
+                          label: "Profile matching",
+                          desc: "Names extracted from your docs are matched to your profile",
+                        },
+                      ].map((item) => (
+                        <li
+                          key={item.label}
+                          className="rounded-lg border border-blue-100 bg-white p-3"
+                        >
+                          <p className="font-medium text-gray-900">
+                            {item.label}
+                          </p>
+                          <p className="mt-0.5 text-xs text-gray-500">
+                            {item.desc}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* In-progress AI analysis banner */}
+            {pendingAnalysisCount > 0 && (
+              <div className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+                <RefreshCw className="h-5 w-5 shrink-0 animate-spin text-blue-600" />
+                <div className="flex-1 text-sm">
+                  <p className="font-medium text-blue-900">
+                    Running AI checks on your{' '}
+                    {pendingAnalysisCount === 1
+                      ? 'document'
+                      : `${pendingAnalysisCount} documents`}
+                    ...
+                  </p>
+                  <p className="mt-0.5 text-xs text-blue-700/80">
+                    This usually takes 5-15 seconds. You can keep using the app
+                    — we'll update this page automatically.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Upload sections */}
             <div className="grid gap-6 lg:grid-cols-2">

@@ -106,34 +106,43 @@ function getInitials(name?: string | null) {
 // ─── Document preview card ──────────────────────────────
 function DocumentCard({
   doc,
+  tenantName,
   onRerunAnalysis,
+  onPreviewImage,
   rerunLoadingId,
 }: {
   doc: VerificationDocument;
+  tenantName?: string | null;
   onRerunAnalysis?: (documentId: string) => void;
+  onPreviewImage?: (url: string, fileName: string) => void;
   rerunLoadingId?: string | null;
 }) {
   const st = statusConfig(doc.status);
   const isRerunning = rerunLoadingId === doc.id;
   const isImage = doc.mimeType.startsWith('image/');
+  const isHighRisk =
+    doc.fraudAnalysis?.riskLevel === RiskLevel.HIGH;
+  const cardBorder = isHighRisk
+    ? 'border-red-300 ring-1 ring-red-200 bg-red-50/30'
+    : 'border-gray-200 bg-white';
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-3">
+    <div className={`rounded-lg border p-3 transition-colors ${cardBorder}`}>
       <div className="flex items-center gap-3">
         {isImage ? (
-          <a
-            href={doc.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50"
-            aria-label={`Open ${doc.fileName} in a new tab`}
+          <button
+            type="button"
+            onClick={() => onPreviewImage?.(doc.url, doc.fileName)}
+            className="block h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 transition-transform hover:scale-[1.02]"
+            aria-label={`Preview ${doc.fileName}`}
+            title="Click to preview"
           >
             <img
               src={doc.url}
               alt={doc.fileName}
-              className="h-full w-full object-cover transition-transform hover:scale-105"
+              className="h-full w-full object-cover"
               loading="lazy"
             />
-          </a>
+          </button>
         ) : (
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50">
             <FileText className="h-5 w-5 text-indigo-500" />
@@ -192,7 +201,10 @@ function DocumentCard({
       </div>
       {doc.fraudAnalysis && (
         <div className="mt-3">
-          <FraudAnalysisPanel analysis={doc.fraudAnalysis} />
+          <FraudAnalysisPanel
+            analysis={doc.fraudAnalysis}
+            userProfile={{ fullName: tenantName }}
+          />
         </div>
       )}
     </div>
@@ -220,6 +232,11 @@ export default function AdminVerificationPage() {
   );
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [rerunLoadingId, setRerunLoadingId] = useState<string | null>(null);
+  const [riskFilter, setRiskFilter] = useState<RiskLevel | 'all'>('all');
+  const [previewImage, setPreviewImage] = useState<{
+    url: string;
+    fileName: string;
+  } | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [message, setMessage] = useState<{
@@ -264,13 +281,27 @@ export default function AdminVerificationPage() {
     return () => window.clearInterval(id);
   }, [hasPendingAnalysis, fetchVerifications]);
 
+  // Close image preview on Escape key
+  useEffect(() => {
+    if (!previewImage) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPreviewImage(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [previewImage]);
+
   // Sort: unreviewed and high-risk first, then by submission time descending.
   const RISK_RANK: Record<RiskLevel, number> = {
     [RiskLevel.HIGH]: 3,
     [RiskLevel.MEDIUM]: 2,
     [RiskLevel.LOW]: 1,
   };
-  const sortedVerifications = [...verifications].sort((a, b) => {
+  const filteredByRisk =
+    riskFilter === 'all'
+      ? verifications
+      : verifications.filter((v) => v.riskLevel === riskFilter);
+  const sortedVerifications = [...filteredByRisk].sort((a, b) => {
     const aActionable =
       a.overallStatus === VerificationStatus.PENDING ||
       a.overallStatus === VerificationStatus.UNDER_REVIEW
@@ -405,8 +436,8 @@ export default function AdminVerificationPage() {
           </div>
         )}
 
-        {/* Stats row */}
-        <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {/* Stats row — status + AI risk distribution */}
+        <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
           {[
             {
               label: 'Total',
@@ -436,6 +467,27 @@ export default function AdminVerificationPage() {
               ).length,
               color: 'bg-red-100 text-red-700',
             },
+            {
+              label: 'High AI risk',
+              count: verifications.filter(
+                (v) => v.riskLevel === RiskLevel.HIGH,
+              ).length,
+              color: 'bg-red-100 text-red-700',
+            },
+            {
+              label: 'Medium AI risk',
+              count: verifications.filter(
+                (v) => v.riskLevel === RiskLevel.MEDIUM,
+              ).length,
+              color: 'bg-yellow-100 text-yellow-700',
+            },
+            {
+              label: 'Low AI risk',
+              count: verifications.filter(
+                (v) => v.riskLevel === RiskLevel.LOW,
+              ).length,
+              color: 'bg-green-100 text-green-700',
+            },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -452,8 +504,11 @@ export default function AdminVerificationPage() {
         </div>
 
         {/* Filter tabs */}
-        <div className="mb-6 flex items-center gap-2 overflow-x-auto">
+        <div className="mb-3 flex items-center gap-2 overflow-x-auto">
           <Filter className="h-4 w-4 shrink-0 text-gray-500" />
+          <span className="shrink-0 text-xs font-medium uppercase tracking-wide text-gray-500">
+            Status
+          </span>
           {FILTER_TABS.map((tab) => (
             <button
               key={tab.value}
@@ -465,6 +520,47 @@ export default function AdminVerificationPage() {
               }`}
             >
               {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* AI risk filter pills */}
+        <div className="mb-6 flex items-center gap-2 overflow-x-auto">
+          <Shield className="h-4 w-4 shrink-0 text-gray-500" />
+          <span className="shrink-0 text-xs font-medium uppercase tracking-wide text-gray-500">
+            AI risk
+          </span>
+          {(
+            [
+              { label: 'All', value: 'all' as const, dot: 'bg-gray-400' },
+              {
+                label: 'High',
+                value: RiskLevel.HIGH,
+                dot: 'bg-red-500',
+              },
+              {
+                label: 'Medium',
+                value: RiskLevel.MEDIUM,
+                dot: 'bg-yellow-500',
+              },
+              {
+                label: 'Low',
+                value: RiskLevel.LOW,
+                dot: 'bg-green-500',
+              },
+            ] as const
+          ).map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setRiskFilter(opt.value)}
+              className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                riskFilter === opt.value
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+              }`}
+            >
+              <span className={`h-2 w-2 rounded-full ${opt.dot}`} aria-hidden />
+              {opt.label}
             </button>
           ))}
         </div>
@@ -498,8 +594,16 @@ export default function AdminVerificationPage() {
                 v.overallStatus === VerificationStatus.PENDING ||
                 v.overallStatus === VerificationStatus.UNDER_REVIEW;
 
+              const isHighRiskRow = v.riskLevel === RiskLevel.HIGH;
               return (
-                <Card key={v.id} className="overflow-hidden">
+                <Card
+                  key={v.id}
+                  className={`overflow-hidden transition-shadow ${
+                    isHighRiskRow
+                      ? 'border-red-300 ring-1 ring-red-200 shadow-sm'
+                      : ''
+                  }`}
+                >
                   {/* Summary row */}
                   <button
                     type="button"
@@ -583,7 +687,11 @@ export default function AdminVerificationPage() {
                               <DocumentCard
                                 key={doc.id}
                                 doc={doc}
+                                tenantName={v.tenantName}
                                 onRerunAnalysis={handleRerunAnalysis}
+                                onPreviewImage={(url, fileName) =>
+                                  setPreviewImage({ url, fileName })
+                                }
                                 rerunLoadingId={rerunLoadingId}
                               />
                             ))}
@@ -710,6 +818,49 @@ export default function AdminVerificationPage() {
           </div>
         )}
       </main>
+
+      {/* Image lightbox modal */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setPreviewImage(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Preview of ${previewImage.fileName}`}
+        >
+          <button
+            type="button"
+            onClick={() => setPreviewImage(null)}
+            className="absolute right-4 top-4 rounded-full bg-white/90 p-2 text-gray-700 transition-colors hover:bg-white"
+            aria-label="Close preview"
+          >
+            <XCircle className="h-6 w-6" />
+          </button>
+          <div
+            className="relative max-h-[90vh] max-w-5xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={previewImage.url}
+              alt={previewImage.fileName}
+              className="max-h-[85vh] max-w-full rounded-lg shadow-2xl"
+            />
+            <div className="mt-3 flex items-center justify-between gap-4 text-white">
+              <p className="truncate text-sm font-medium">
+                {previewImage.fileName}
+              </p>
+              <a
+                href={previewImage.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/20"
+              >
+                Open in new tab
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

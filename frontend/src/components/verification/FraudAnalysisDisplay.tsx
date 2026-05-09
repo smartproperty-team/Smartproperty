@@ -4,10 +4,14 @@
 
 import {
   AlertTriangle,
+  CheckCircle2,
+  Eye,
   Info,
   Loader2,
   ShieldAlert,
   ShieldCheck,
+  Sparkles,
+  XCircle,
 } from 'lucide-react';
 import {
   FraudAnalysis,
@@ -227,11 +231,45 @@ export function FraudStatusPill({
 }
 
 // ─── Detailed analysis panel ─────────────────────────────
-interface FraudAnalysisPanelProps {
-  analysis: FraudAnalysis;
+export interface UserProfileForCompare {
+  fullName?: string | null;
 }
 
-export function FraudAnalysisPanel({ analysis }: FraudAnalysisPanelProps) {
+interface FraudAnalysisPanelProps {
+  analysis: FraudAnalysis;
+  userProfile?: UserProfileForCompare;
+}
+
+// Field key → friendly label map
+const OCR_FIELD_LABELS: Record<string, string> = {
+  claimed_name: 'Name on document',
+  claimed_income: 'Stated income',
+  date_of_birth: 'Date of birth',
+  id_number: 'ID number',
+  issuer: 'Issuer',
+  employer: 'Employer',
+  address: 'Address',
+  dates_found: 'Dates found',
+};
+
+function looseStringMatch(a: string, b: string): boolean {
+  const norm = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
+  const na = norm(a);
+  const nb = norm(b);
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+  // Token overlap heuristic: half the words appear in both
+  const aTokens = new Set(na.split(' '));
+  const bTokens = new Set(nb.split(' '));
+  let common = 0;
+  aTokens.forEach((t) => bTokens.has(t) && common++);
+  return common >= Math.min(aTokens.size, bTokens.size) / 2;
+}
+
+export function FraudAnalysisPanel({
+  analysis,
+  userProfile,
+}: FraudAnalysisPanelProps) {
   const s = riskStyle(analysis.riskLevel);
   const ocrFieldEntries = Object.entries(analysis.ocrFields ?? {});
 
@@ -347,35 +385,117 @@ export function FraudAnalysisPanel({ analysis }: FraudAnalysisPanelProps) {
         </div>
       )}
 
-      {/* LLM findings */}
+      {/* LLM findings — cleaner card style */}
       {analysis.llmFindings && analysis.llmFindings.length > 0 && (
-        <div className="mb-3">
-          <p className="mb-1 text-xs font-medium text-gray-600">
-            AI vision findings
-          </p>
-          <ul className="list-disc space-y-0.5 pl-5 text-xs text-gray-800">
+        <div className="mb-3 rounded-lg border border-purple-200 bg-purple-50/60 p-3">
+          <div className="mb-2 flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5 text-purple-600" />
+            <p className="text-xs font-semibold text-purple-900">
+              AI vision findings
+            </p>
+          </div>
+          <ul className="space-y-1.5">
             {analysis.llmFindings.map((finding, idx) => (
-              <li key={`finding-${idx}`}>{finding}</li>
+              <li
+                key={`finding-${idx}`}
+                className="flex items-start gap-2 text-xs text-gray-800"
+              >
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-purple-500" />
+                <span>{finding}</span>
+              </li>
             ))}
           </ul>
         </div>
       )}
 
-      {/* OCR fields */}
+      {/* OCR fields with profile comparison */}
       {ocrFieldEntries.length > 0 && (
         <div className="mb-3">
-          <p className="mb-1 text-xs font-medium text-gray-600">
-            Extracted fields (OCR)
+          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-600">
+            <Eye className="h-3.5 w-3.5" />
+            Extracted from document
           </p>
-          <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-            {ocrFieldEntries.map(([key, value]) => (
-              <div key={key} className="flex gap-1">
-                <dt className="font-medium text-gray-600">{key}:</dt>
-                <dd className="truncate text-gray-900">{String(value)}</dd>
-              </div>
-            ))}
-          </dl>
+          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+            <table className="w-full text-xs">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-2 py-1.5 text-left font-medium text-gray-600">
+                    Field
+                  </th>
+                  <th className="px-2 py-1.5 text-left font-medium text-gray-600">
+                    On document
+                  </th>
+                  {userProfile?.fullName && (
+                    <th className="px-2 py-1.5 text-left font-medium text-gray-600">
+                      User profile
+                    </th>
+                  )}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {ocrFieldEntries.map(([key, value]) => {
+                  const label = OCR_FIELD_LABELS[key] || key;
+                  const docValue = Array.isArray(value)
+                    ? value.join(', ')
+                    : String(value);
+                  const profileValue =
+                    key === 'claimed_name'
+                      ? userProfile?.fullName ?? ''
+                      : '';
+                  const showProfileMatch =
+                    !!userProfile?.fullName && key === 'claimed_name';
+                  const matches =
+                    showProfileMatch &&
+                    looseStringMatch(docValue, profileValue);
+                  return (
+                    <tr key={key}>
+                      <td className="px-2 py-1.5 font-medium text-gray-600">
+                        {label}
+                      </td>
+                      <td className="px-2 py-1.5 text-gray-900">
+                        {docValue}
+                      </td>
+                      {userProfile?.fullName && (
+                        <td className="px-2 py-1.5">
+                          {showProfileMatch ? (
+                            <span
+                              className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${
+                                matches
+                                  ? 'bg-green-50 text-green-700'
+                                  : 'bg-red-50 text-red-700'
+                              }`}
+                            >
+                              {matches ? (
+                                <CheckCircle2 className="h-3 w-3" />
+                              ) : (
+                                <XCircle className="h-3 w-3" />
+                              )}
+                              {profileValue}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
+      )}
+
+      {/* Raw OCR text (collapsed) */}
+      {analysis.ocrText && analysis.ocrText.trim().length > 0 && (
+        <details className="mb-3">
+          <summary className="cursor-pointer text-xs font-medium text-gray-600">
+            Raw extracted text
+          </summary>
+          <pre className="mt-1 max-h-40 overflow-auto rounded border border-gray-200 bg-gray-50 p-2 text-[11px] text-gray-700 whitespace-pre-wrap">
+            {analysis.ocrText}
+          </pre>
+        </details>
       )}
 
       {/* Skipped layers (collapsed) */}
