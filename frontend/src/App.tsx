@@ -35,9 +35,7 @@ const RegisterPage = lazy(() => import("./pages/auth/RegisterPage"));
 const ForgotPasswordPage = lazy(
   () => import("./pages/auth/ForgotPasswordPage"),
 );
-const ResetPasswordPage = lazy(
-  () => import("./pages/auth/ResetPasswordPage"),
-);
+const ResetPasswordPage = lazy(() => import("./pages/auth/ResetPasswordPage"));
 const VerifyEmailPage = lazy(() => import("./pages/auth/VerifyEmailPage"));
 const GoogleCallbackPage = lazy(
   () => import("./pages/auth/GoogleCallbackPage"),
@@ -67,11 +65,10 @@ const PaletteDemoPage = lazy(() => import("./pages/home/PaletteDemoPage"));
 const PreferencesOnboardingModal = lazy(
   () => import("./pages/onboarding/PreferencesOnboardingModal"),
 );
-const PushNotificationTestButton = lazy(
-  () =>
-    import("./components/notifications/PushNotificationTestButton").then(
-      (m) => ({ default: m.PushNotificationTestButton }),
-    ),
+const PushNotificationTestButton = lazy(() =>
+  import("./components/notifications/PushNotificationTestButton").then((m) => ({
+    default: m.PushNotificationTestButton,
+  })),
 );
 
 // Dashboard pages
