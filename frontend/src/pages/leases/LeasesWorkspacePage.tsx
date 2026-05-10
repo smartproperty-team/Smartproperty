@@ -250,6 +250,10 @@ export default function LeasesWorkspacePage() {
   );
   const [isDrawingSignature, setIsDrawingSignature] = useState(false);
   const [hasDrawnSignature, setHasDrawnSignature] = useState(false);
+  const [submittingSignature, setSubmittingSignature] = useState(false);
+  const [submittingOwnerDecision, setSubmittingOwnerDecision] = useState<
+    "approve" | "reject" | null
+  >(null);
   const signaturePadRef = useRef<HTMLCanvasElement | null>(null);
 
   const [renewalForm, setRenewalForm] = useState({
@@ -324,6 +328,65 @@ export default function LeasesWorkspacePage() {
       .filter((signature) => signature.signerId === selectedLease.tenantId)
       .slice(-1)[0];
   }, [selectedLease]);
+
+  const isLeaseSignable = useMemo(() => {
+    if (!selectedLease) return false;
+    return [
+      LeaseStatus.PENDING_SIGNATURE,
+      LeaseStatus.ACTIVE,
+      LeaseStatus.RENEWAL_PENDING,
+    ].includes(selectedLease.status);
+  }, [selectedLease]);
+
+  const leaseStatusMessage = useMemo(() => {
+    if (!selectedLease) return null;
+    switch (selectedLease.status) {
+      case LeaseStatus.DRAFT:
+        return {
+          title: "Lease is still a draft",
+          message:
+            "The lease must be finalized and moved to 'Pending signature' before it can be signed.",
+        };
+      case LeaseStatus.PENDING_OWNER_APPROVAL:
+        return {
+          title: "Awaiting owner approval",
+          message:
+            "The owner must approve the lease before signatures can be collected.",
+        };
+      case LeaseStatus.REJECTED:
+        return {
+          title: "Lease rejected",
+          message: "This lease was rejected and cannot be signed.",
+        };
+      case LeaseStatus.EXPIRED:
+        return {
+          title: "Lease expired",
+          message: "This lease has expired and is no longer signable.",
+        };
+      case LeaseStatus.TERMINATED:
+        return {
+          title: "Lease terminated",
+          message: "This lease has been terminated and is no longer signable.",
+        };
+      case LeaseStatus.CLOSED:
+        return {
+          title: "Lease closed",
+          message: "This lease is closed and is no longer signable.",
+        };
+      default:
+        return null;
+    }
+  }, [selectedLease]);
+
+  const currentUserSignature = useMemo(() => {
+    if (!selectedLease?.signatures?.length || !user?.id) {
+      return undefined;
+    }
+    const uid = String(user.id);
+    return selectedLease.signatures.find(
+      (signature) => String(signature.signerId) === uid,
+    );
+  }, [selectedLease, user?.id]);
 
   const bothPartiesSigned = useMemo(() => {
     if (!selectedLease?.signatures?.length) {
@@ -738,9 +801,59 @@ export default function LeasesWorkspacePage() {
     }
   };
 
+  const handleQuickOwnerDecision = async (
+    approved: boolean,
+    note?: string,
+  ) => {
+    if (!selectedLease || submittingOwnerDecision) return;
+    if (!approved) {
+      const reason =
+        note ??
+        window.prompt("Please provide a reason for rejecting this lease:") ??
+        "";
+      if (!reason.trim()) {
+        return;
+      }
+      setSubmittingOwnerDecision("reject");
+      try {
+        await leaseService.reviewOwnerDecision(selectedLease.id, {
+          approved: false,
+          note: reason.trim(),
+        });
+        setNotice("Lease rejected.");
+        setError(null);
+        await loadLeases();
+      } catch (err) {
+        setError(getApiErrorMessage(err, "Failed to reject lease."));
+      } finally {
+        setSubmittingOwnerDecision(null);
+      }
+      return;
+    }
+    setSubmittingOwnerDecision("approve");
+    try {
+      await leaseService.reviewOwnerDecision(selectedLease.id, {
+        approved: true,
+        note: note?.trim() || "Approved by owner",
+      });
+      setNotice("Lease approved — ready for signatures.");
+      setError(null);
+      await loadLeases();
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Failed to approve lease."));
+    } finally {
+      setSubmittingOwnerDecision(null);
+    }
+  };
+
   const handleSign = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!selectedLease) {
+    if (!selectedLease || submittingSignature) {
+      return;
+    }
+
+    if (currentUserSignature) {
+      setError("You have already signed this lease.");
       return;
     }
 
@@ -755,6 +868,9 @@ export default function LeasesWorkspacePage() {
       );
       return;
     }
+
+    setSubmittingSignature(true);
+    setError(null);
 
     try {
       let signatureProofDocumentId: string | undefined;
@@ -782,7 +898,7 @@ export default function LeasesWorkspacePage() {
           `Signed digitally by ${signatureForm.signerName.trim()}`,
         documentId: signatureProofDocumentId,
       });
-      setNotice("Lease signature recorded.");
+      setNotice("Lease signature recorded successfully.");
       setError(null);
       setSignatureForm((previous) => ({
         ...previous,
@@ -794,6 +910,8 @@ export default function LeasesWorkspacePage() {
       await loadLeases();
     } catch (signError) {
       setError(getApiErrorMessage(signError, "Failed to sign lease."));
+    } finally {
+      setSubmittingSignature(false);
     }
   };
 
@@ -1585,10 +1703,53 @@ export default function LeasesWorkspacePage() {
                   <h2 className="mb-3 text-lg font-semibold text-gray-900">
                     Sign Lease
                   </h2>
+
+                  {/* Signature progress panel — always visible */}
+                  <div className="mb-4 grid gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 sm:grid-cols-2">
+                    <div className="flex items-start gap-2">
+                      <div
+                        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                          ownerSignature
+                            ? "bg-emerald-500 text-white"
+                            : "bg-gray-300 text-gray-700"
+                        }`}
+                      >
+                        {ownerSignature ? "✓" : "○"}
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium text-gray-900">Owner</p>
+                        <p className="text-xs text-gray-600">
+                          {ownerSignature
+                            ? `Signed ${toDisplayDate(ownerSignature.signedAt)}`
+                            : "Awaiting signature"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div
+                        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                          tenantSignature
+                            ? "bg-emerald-500 text-white"
+                            : "bg-gray-300 text-gray-700"
+                        }`}
+                      >
+                        {tenantSignature ? "✓" : "○"}
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium text-gray-900">Tenant</p>
+                        <p className="text-xs text-gray-600">
+                          {tenantSignature
+                            ? `Signed ${toDisplayDate(tenantSignature.signedAt)}`
+                            : "Awaiting signature"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   {bothPartiesSigned ? (
                     <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
                       <p className="text-sm font-semibold text-emerald-900">
-                        Lease signed by both parties.
+                        ✅ Lease signed by both parties.
                       </p>
                       <p className="mt-1 text-sm text-emerald-800">
                         Owner signed on{" "}
@@ -1604,6 +1765,103 @@ export default function LeasesWorkspacePage() {
                           >
                             Activate Lease
                           </button>
+                        )}
+                    </div>
+                  ) : currentUserSignature ? (
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                      <p className="text-sm font-semibold text-blue-900">
+                        ✅ You signed this lease on{" "}
+                        {toDisplayDate(currentUserSignature.signedAt)}.
+                      </p>
+                      <p className="mt-1 text-sm text-blue-800">
+                        Waiting for the other party to sign. We'll notify you
+                        as soon as the lease is fully signed.
+                      </p>
+                    </div>
+                  ) : !isLeaseSignable ? (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                      <p className="text-sm font-semibold text-amber-900">
+                        ⚠️ {leaseStatusMessage?.title ?? "Cannot sign yet"}
+                      </p>
+                      <p className="mt-1 text-sm text-amber-800">
+                        {leaseStatusMessage?.message ??
+                          "The lease is not ready for signatures. Current status: " +
+                            selectedLease.status}
+                      </p>
+
+                      {/* Owner can approve/reject inline if status is PENDING_OWNER_APPROVAL */}
+                      {selectedLease.status ===
+                        LeaseStatus.PENDING_OWNER_APPROVAL &&
+                        canOwnerValidate && (
+                          <div className="mt-3 border-t border-amber-200 pt-3">
+                            <p className="text-sm font-medium text-amber-900">
+                              You are the owner of this lease.
+                            </p>
+                            <p className="mt-1 text-xs text-amber-800">
+                              Review the contract terms above and approve or
+                              reject below to move the lease forward.
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void handleQuickOwnerDecision(true)
+                                }
+                                disabled={submittingOwnerDecision !== null}
+                                className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {submittingOwnerDecision === "approve" ? (
+                                  <>
+                                    <svg
+                                      className="h-4 w-4 animate-spin"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                    >
+                                      <circle
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                        className="opacity-25"
+                                      />
+                                      <path
+                                        d="M4 12a8 8 0 0 1 8-8"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                        strokeLinecap="round"
+                                      />
+                                    </svg>
+                                    Approving…
+                                  </>
+                                ) : (
+                                  <>✓ Approve lease</>
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void handleQuickOwnerDecision(false)
+                                }
+                                disabled={submittingOwnerDecision !== null}
+                                className="inline-flex items-center gap-2 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {submittingOwnerDecision === "reject"
+                                  ? "Rejecting…"
+                                  : "✕ Reject"}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                      {/* Non-owners see who needs to approve */}
+                      {selectedLease.status ===
+                        LeaseStatus.PENDING_OWNER_APPROVAL &&
+                        !canOwnerValidate && (
+                          <p className="mt-3 border-t border-amber-200 pt-3 text-xs text-amber-800">
+                            Only the owner can approve this lease. We'll notify
+                            you as soon as it's ready to sign.
+                          </p>
                         )}
                     </div>
                   ) : (
@@ -1639,11 +1897,20 @@ export default function LeasesWorkspacePage() {
                           }
                           className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
                         >
-                          {Object.values(LeaseSignatureMethod).map((method) => (
-                            <option key={method} value={method}>
-                              {method}
-                            </option>
-                          ))}
+                          {Object.values(LeaseSignatureMethod).map((method) => {
+                            const labels: Record<string, string> = {
+                              [LeaseSignatureMethod.E_SIGNATURE]:
+                                "E-signature (digital)",
+                              [LeaseSignatureMethod.MANUAL]:
+                                "Manual (in person)",
+                              [LeaseSignatureMethod.OTP]: "OTP (SMS / email)",
+                            };
+                            return (
+                              <option key={method} value={method}>
+                                {labels[method] || method}
+                              </option>
+                            );
+                          })}
                         </select>
                       </label>
                       <label className="text-sm text-gray-700">
@@ -1719,9 +1986,40 @@ export default function LeasesWorkspacePage() {
                       <div className="md:col-span-2 flex gap-2">
                         <button
                           type="submit"
-                          className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                          disabled={
+                            submittingSignature ||
+                            !signatureForm.signerName.trim() ||
+                            !signatureForm.acceptedTerms
+                          }
+                          className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          Sign
+                          {submittingSignature ? (
+                            <>
+                              <svg
+                                className="h-4 w-4 animate-spin"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                              >
+                                <circle
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                  className="opacity-25"
+                                />
+                                <path
+                                  d="M4 12a8 8 0 0 1 8-8"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                  strokeLinecap="round"
+                                />
+                              </svg>
+                              Signing…
+                            </>
+                          ) : (
+                            "Sign"
+                          )}
                         </button>
                         {managementEnabled && (
                           <button
