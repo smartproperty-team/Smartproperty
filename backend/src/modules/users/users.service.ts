@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ObjectId } from 'mongodb';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import {
   User,
   UserPreferences,
@@ -195,6 +195,16 @@ export class UsersService {
       order: { createdAt: 'DESC' },
     });
     return users.map((u) => u.toJSON());
+  }
+
+  async findByRoles(roles: UserRole[]): Promise<User[]> {
+    if (roles.length === 0) {
+      return [];
+    }
+    return this.userRepository.find({
+      where: { role: In(roles) },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {

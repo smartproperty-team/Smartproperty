@@ -2,16 +2,16 @@
 // SmartProperty - Main App Component
 // ===========================================
 
-import { lazy, Suspense, useEffect, useRef } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import "./App.css";
-import { ProtectedRoute } from "./components/auth";
-import { PushNotificationTestButton } from "./components/notifications/PushNotificationTestButton";
-import { useLanguageStore } from "./i18n";
+import { lazy, Suspense, useEffect, useRef, type ComponentType } from 'react';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import './App.css';
+import { ProtectedRoute } from './components/auth';
+import { PushNotificationTestButton } from './components/notifications/PushNotificationTestButton';
+import { useLanguageStore } from './i18n';
 import {
   ApplicationsReviewPage,
   TenantApplicationsPage,
-} from "./pages/applications";
+} from './pages/applications';
 import {
   FacebookCallbackPage,
   ForgotPasswordPage,
@@ -20,6 +20,7 @@ import {
   RegisterPage,
   ResetPasswordPage,
   VerifyEmailPage,
+<<<<<<< Updated upstream
 } from "./pages/auth";
 import { HomePage, PaletteDemoPage } from "./pages/home";
 import { LeasesWorkspacePage } from "./pages/leases";
@@ -27,6 +28,14 @@ import { PreferencesOnboardingModal } from "./pages/onboarding";
 import authService from "./services/auth.service";
 import { pushNotificationService } from "./services/push-notification.service";
 import { useAuthStore, usePreferencesStore } from "./store";
+=======
+} from './pages/auth';
+import { HomePage, PaletteDemoPage } from './pages/home';
+import { PreferencesOnboardingModal } from './pages/onboarding';
+import authService from './services/auth.service';
+import { pushNotificationService } from './services/push-notification.service';
+import { useAuthStore, usePreferencesStore } from './store';
+>>>>>>> Stashed changes
 import {
   canAccessAdminUsers,
   canAccessLeases,
@@ -41,46 +50,99 @@ import {
   canReviewVerifications,
   canTrackMaintenanceRequests,
   isTenant,
-} from "./utils";
+} from './utils';
 
+<<<<<<< Updated upstream
 const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage"));
 const VerificationPage = lazy(
   () => import("./pages/dashboard/VerificationPage"),
 );
 const AdminVerificationPage = lazy(
   () => import("./pages/dashboard/AdminVerificationPage"),
+=======
+const formatError = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  if (typeof error === 'object' && error !== null) {
+    try {
+      return JSON.stringify(error);
+    } catch {
+      try {
+        return Object.prototype.toString.call(error);
+      } catch {
+        return '[object]';
+      }
+    }
+  }
+
+  return String(error);
+};
+
+const lazyWithSafeError = <T extends ComponentType<any>>(
+  loader: () => Promise<{ default: T }>,
+) =>
+  lazy(() =>
+    loader().catch((error) => {
+      throw new Error(formatError(error));
+    }),
+  );
+
+const DashboardPage = lazyWithSafeError(
+  () => import('./pages/dashboard/DashboardPage'),
+>>>>>>> Stashed changes
 );
-const AdminUsersPage = lazy(() => import("./pages/dashboard/AdminUsersPage"));
-const BranchManagerAgenciesPage = lazy(
-  () => import("./pages/dashboard/BranchManagerAgenciesPage"),
+const VerificationPage = lazyWithSafeError(
+  () => import('./pages/dashboard/VerificationPage'),
 );
-const BranchManagerAgencyOnboardingPage = lazy(
-  () => import("./pages/dashboard/BranchManagerAgencyOnboardingPage"),
+const AdminVerificationPage = lazyWithSafeError(
+  () => import('./pages/dashboard/AdminVerificationPage'),
+);
+const AdminUsersPage = lazyWithSafeError(
+  () => import('./pages/dashboard/AdminUsersPage'),
+);
+const BranchManagerAgenciesPage = lazyWithSafeError(
+  () => import('./pages/dashboard/BranchManagerAgenciesPage'),
+);
+const BranchManagerAgencyOnboardingPage = lazyWithSafeError(
+  () => import('./pages/dashboard/BranchManagerAgencyOnboardingPage'),
 );
 
-const PropertiesPage = lazy(() => import("./pages/properties/PropertiesPage"));
-const MyPropertiesPage = lazy(
-  () => import("./pages/properties/MyPropertiesPage"),
+const PropertiesPage = lazyWithSafeError(
+  () => import('./pages/properties/PropertiesPage'),
 );
-const PropertyFormPage = lazy(
-  () => import("./pages/properties/PropertyFormPage"),
+const MyPropertiesPage = lazyWithSafeError(
+  () => import('./pages/properties/MyPropertiesPage'),
 );
-const PropertyDetailPage = lazy(
-  () => import("./pages/properties/PropertyDetailPage"),
+const PropertyFormPage = lazyWithSafeError(
+  () => import('./pages/properties/PropertyFormPage'),
+);
+const PropertyDetailPage = lazyWithSafeError(
+  () => import('./pages/properties/PropertyDetailPage'),
 );
 const VirtualVisitFormPage = lazy(
   () => import("./pages/properties/VirtualVisitFormPage"),
 );
 
-const SettingsPage = lazy(() => import("./pages/settings/SettingsPage"));
-const MaintenanceRequestFormPage = lazy(
-  () => import("./pages/maintenance/MaintenanceRequestFormPage"),
+const SettingsPage = lazyWithSafeError(
+  () => import('./pages/settings/SettingsPage'),
 );
-const MyMaintenanceRequestsPage = lazy(
-  () => import("./pages/maintenance/MyMaintenanceRequestsPage"),
+const MaintenanceRequestFormPage = lazyWithSafeError(
+  () => import('./pages/maintenance/MaintenanceRequestFormPage'),
 );
-const ServiceProviderMaintenancePage = lazy(
-  () => import("./pages/maintenance/ServiceProviderMaintenancePage"),
+const MyMaintenanceRequestsPage = lazyWithSafeError(
+  () => import('./pages/maintenance/MyMaintenanceRequestsPage'),
+);
+const ServiceProviderMaintenancePage = lazyWithSafeError(
+  () => import('./pages/maintenance/ServiceProviderMaintenancePage'),
+);
+const MessagingPage = lazyWithSafeError(
+  () => import('./components/messaging/MessagingPage'),
 );
 const FavoritesPage = lazy(() => import("./pages/favorites/FavoritesPage"));
 const ReviewModerationPage = lazy(
@@ -93,10 +155,10 @@ function RouteLoadingFallback() {
       role="status"
       aria-live="polite"
       style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "40vh",
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '40vh',
       }}
     >
       Loading...
@@ -105,30 +167,31 @@ function RouteLoadingFallback() {
 }
 
 function getSettingsTabTitle(search: string): string {
-  const tab = new URLSearchParams(search).get("tab");
+  const tab = new URLSearchParams(search).get('tab');
 
   switch (tab) {
-    case "account":
-      return "Account Settings";
-    case "security":
-      return "Security Settings";
-    case "sessions":
-      return "Session Settings";
-    case "preferences":
-      return "Preference Settings";
-    case "workspace":
-      return "Workspace Settings";
+    case 'account':
+      return 'Account Settings';
+    case 'security':
+      return 'Security Settings';
+    case 'sessions':
+      return 'Session Settings';
+    case 'preferences':
+      return 'Preference Settings';
+    case 'workspace':
+      return 'Workspace Settings';
     default:
-      return "Settings";
+      return 'Settings';
   }
 }
 
 function getPageTitle(path: string, search: string): string {
-  if (path === "/settings") {
+  if (path === '/settings') {
     return `${getSettingsTabTitle(search)} | SmartProperty`;
   }
 
   const exactTitles: Record<string, string> = {
+<<<<<<< Updated upstream
     "/": "Home",
     "/design/palette": "Design Palette",
     "/login": "Sign In",
@@ -156,21 +219,48 @@ function getPageTitle(path: string, search: string): string {
     "/maintenance/requests/new": "Maintenance Request",
     "/maintenance/requests/mine": "My Maintenance Status",
     "/maintenance/requests/assigned": "Assigned Maintenance",
+=======
+    '/': 'Home',
+    '/design/palette': 'Design Palette',
+    '/login': 'Sign In',
+    '/register': 'Register',
+    '/forgot-password': 'Forgot Password',
+    '/reset-password': 'Reset Password',
+    '/verify-email': 'Verify Email',
+    '/dashboard': 'Dashboard',
+    '/sessions': 'Session Settings',
+    '/verification': 'Verification',
+    '/applications': 'My Applications',
+    '/applications/review': 'Review Applications',
+    '/super-administrator/verifications': 'Admin Verifications',
+    '/super-administrator/users': 'Admin Users',
+    '/branch-manager/agencies': 'My Agencies',
+    '/branch-manager/agencies/new': 'Agency Onboarding',
+    '/profile': 'Account Settings',
+    '/security/2fa': 'Security Settings',
+    '/properties': 'Properties',
+    '/properties/mine': 'My Properties',
+    '/properties/new': 'Add Property',
+    '/maintenance/requests/new': 'Maintenance Request',
+    '/maintenance/requests/mine': 'My Maintenance Status',
+    '/maintenance/requests/assigned': 'Assigned Maintenance',
+    '/messaging': 'Messages',
+>>>>>>> Stashed changes
   };
 
   if (exactTitles[path]) {
     return `${exactTitles[path]} | SmartProperty`;
   }
 
-  if (path.startsWith("/properties/") && path.endsWith("/edit")) {
-    return "Edit Property | SmartProperty";
+  if (path.startsWith('/properties/') && path.endsWith('/edit')) {
+    return 'Edit Property | SmartProperty';
   }
 
-  if (path.startsWith("/properties/")) {
-    return "Property Details | SmartProperty";
+  if (path.startsWith('/properties/')) {
+    return 'Property Details | SmartProperty';
   }
 
-  return "SmartProperty";
+  return 'SmartProperty';
 }
 
 function App() {
@@ -200,9 +290,9 @@ function App() {
   }, [language]);
 
   useEffect(() => {
-    const mainEl = document.querySelector("main");
+    const mainEl = document.querySelector('main');
     if (mainEl && !mainEl.id) {
-      mainEl.id = "main-content";
+      mainEl.id = 'main-content';
     }
   }, [location.pathname]);
 
@@ -216,6 +306,7 @@ function App() {
   // Bootstrap preferences after login
   useEffect(() => {
     if (!isAuthenticated || !user) return;
+    if (!isTenant(user)) return;
     if (promptedUserRef.current === user.id) return;
 
     let isCancelled = false;
@@ -255,7 +346,7 @@ function App() {
 
   return (
     <>
-      {location.pathname !== "/" && (
+      {location.pathname !== '/' && (
         <a href="#main-content" className="global-skip-link">
           Skip to main content
         </a>
@@ -347,6 +438,7 @@ function App() {
             }
           />
           <Route
+<<<<<<< Updated upstream
             path="/favorites"
             element={
               <ProtectedRoute>
@@ -391,6 +483,14 @@ function App() {
                 ) : (
                   <Navigate to="/dashboard" replace />
                 )}
+=======
+            path="/messaging"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <MessagingPage />
+                </Suspense>
+>>>>>>> Stashed changes
               </ProtectedRoute>
             }
           />

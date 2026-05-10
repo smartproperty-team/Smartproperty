@@ -2,10 +2,15 @@
 // SmartProperty - Auth Store (Zustand)
 // ===========================================
 
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { authService, clearTokens, getAccessToken } from "../services";
-import type { RegisterData, Session, User } from "../types/auth";
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import {
+  authService,
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+} from '../services';
+import type { RegisterData, Session, User } from '../types/auth';
 
 interface AuthState {
   user: User | null;
@@ -119,8 +124,8 @@ export const useAuthStore = create<AuthState>()(
           const backendMessage = apiError?.response?.data?.message;
           const message =
             (Array.isArray(backendMessage)
-              ? backendMessage.join(", ")
-              : backendMessage || apiError?.message) ?? "Login failed";
+              ? backendMessage.join(', ')
+              : backendMessage || apiError?.message) ?? 'Login failed';
           set({ isLoading: false, error: message });
           throw error;
         }
@@ -141,7 +146,7 @@ export const useAuthStore = create<AuthState>()(
             error instanceof Error
               ? error.message
               : (error as { response?: { data?: { message?: string } } })
-                  ?.response?.data?.message || "Registration failed";
+                  ?.response?.data?.message || 'Registration failed';
           set({ isLoading: false, error: message });
           throw error;
         }
@@ -180,10 +185,23 @@ export const useAuthStore = create<AuthState>()(
       },
 
       checkAuth: async () => {
-        const token = getAccessToken();
+        let token = getAccessToken();
+
         if (!token) {
-          set({ user: null, isAuthenticated: false });
-          return;
+          const refreshToken = getRefreshToken();
+          if (refreshToken) {
+            try {
+              const refreshed = await authService.refreshTokens(refreshToken);
+              token = refreshed.accessToken;
+            } catch {
+              clearTokens();
+              set({ user: null, isAuthenticated: false });
+              return;
+            }
+          } else {
+            set({ user: null, isAuthenticated: false });
+            return;
+          }
         }
 
         set({ isLoading: true });
@@ -222,7 +240,7 @@ export const useAuthStore = create<AuthState>()(
             error instanceof Error
               ? error.message
               : (error as { response?: { data?: { message?: string } } })
-                  ?.response?.data?.message || "Failed to change password";
+                  ?.response?.data?.message || 'Failed to change password';
           set({ isLoading: false, error: message });
           throw error;
         }
@@ -239,7 +257,7 @@ export const useAuthStore = create<AuthState>()(
               ? error.message
               : (error as { response?: { data?: { message?: string } } })
                   ?.response?.data?.message ||
-                "Failed to process forgot password";
+                'Failed to process forgot password';
           set({ isLoading: false, error: message });
           throw error;
         }
@@ -259,7 +277,7 @@ export const useAuthStore = create<AuthState>()(
             error instanceof Error
               ? error.message
               : (error as { response?: { data?: { message?: string } } })
-                  ?.response?.data?.message || "Failed to reset password";
+                  ?.response?.data?.message || 'Failed to reset password';
           set({ isLoading: false, error: message });
           throw error;
         }
@@ -288,7 +306,7 @@ export const useAuthStore = create<AuthState>()(
             error instanceof Error
               ? error.message
               : (error as { response?: { data?: { message?: string } } })
-                  ?.response?.data?.message || "Failed to verify email";
+                  ?.response?.data?.message || 'Failed to verify email';
           set({ isLoading: false, error: message });
           throw error;
         }
@@ -305,7 +323,7 @@ export const useAuthStore = create<AuthState>()(
               ? error.message
               : (error as { response?: { data?: { message?: string } } })
                   ?.response?.data?.message ||
-                "Failed to resend verification email";
+                'Failed to resend verification email';
           set({ isLoading: false, error: message });
           throw error;
         }
@@ -325,7 +343,7 @@ export const useAuthStore = create<AuthState>()(
             error instanceof Error
               ? error.message
               : (error as { response?: { data?: { message?: string } } })
-                  ?.response?.data?.message || "Failed to fetch sessions";
+                  ?.response?.data?.message || 'Failed to fetch sessions';
           set({ isLoading: false, error: message });
           throw error;
         }
@@ -346,14 +364,14 @@ export const useAuthStore = create<AuthState>()(
             error instanceof Error
               ? error.message
               : (error as { response?: { data?: { message?: string } } })
-                  ?.response?.data?.message || "Failed to revoke session";
+                  ?.response?.data?.message || 'Failed to revoke session';
           set({ isLoading: false, error: message });
           throw error;
         }
       },
     }),
     {
-      name: "auth-storage",
+      name: 'auth-storage',
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,

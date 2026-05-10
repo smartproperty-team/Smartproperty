@@ -2,28 +2,44 @@
 // SmartProperty - Property Form Page (Create/Edit)
 // ===========================================
 
-import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { HomeFooter, Navbar } from "../../components/layout";
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { HomeFooter, Navbar } from '../../components/layout';
 import AddressInput, {
   type AddressData,
-} from "../../components/properties/AddressInputOSM";
-import AiDescriptionPanel from "../../components/properties/AiDescriptionPanel";
-import { Stepper, type StepperStep } from "../../components/ui";
-import { useTranslation } from "../../i18n";
+} from '../../components/properties/AddressInputOSM';
+import AiDescriptionPanel from '../../components/properties/AiDescriptionPanel';
+import { Stepper, type StepperStep } from '../../components/ui';
+import { useTranslation } from '../../i18n';
 import {
   propertyService,
   type AiPropertySnapshot,
   type PriceSuggestionResponse,
-} from "../../services/property.service";
+} from '../../services/property.service';
 import type {
   CreatePropertyDto,
   Property,
   PropertyCategory,
   PropertyStatus,
   PropertyType,
-} from "../../types/property";
-import "./properties.css";
+} from '../../types/property';
+import './properties.css';
+
+const formatError = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+};
 
 // ===========================================
 // Icons
@@ -130,6 +146,7 @@ interface PendingImage {
 }
 
 const initialFormData: FormData = {
+<<<<<<< Updated upstream
   title: "",
   description: "",
   type: "apartment",
@@ -139,33 +156,42 @@ const initialFormData: FormData = {
   currency: "TND",
   virtualTour: "",
   generateVirtualTourFromPhotos: false,
+=======
+  title: '',
+  description: '',
+  type: 'apartment',
+  category: 'rental',
+  status: 'available',
+  price: '',
+  currency: 'TND',
+>>>>>>> Stashed changes
   address: {
-    street: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    country: "Tunisie",
+    street: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: 'Tunisie',
   },
-  bedrooms: "",
-  bathrooms: "",
-  area: "",
-  parkingSpaces: "",
+  bedrooms: '',
+  bathrooms: '',
+  area: '',
+  parkingSpaces: '',
   furnished: false,
   petFriendly: false,
-  amenities: "",
-  availableFrom: "",
-  availableTo: "",
+  amenities: '',
+  availableFrom: '',
+  availableTo: '',
 };
 
 const WIZARD_STEP_IDS = [
-  "details",
-  "address",
-  "amenities",
-  "pricing",
-  "photos",
+  'details',
+  'address',
+  'amenities',
+  'pricing',
+  'photos',
 ] as const;
 
-const PRICING_STEP_INDEX = WIZARD_STEP_IDS.indexOf("pricing");
+const PRICING_STEP_INDEX = WIZARD_STEP_IDS.indexOf('pricing');
 
 // ===========================================
 // Main Property Form Page
@@ -201,7 +227,7 @@ export default function PropertyFormPage() {
   );
   const buildAiSnapshot = useCallback((): AiPropertySnapshot => {
     const amenitiesList = formData.amenities
-      .split(",")
+      .split(',')
       .map((value) => value.trim())
       .filter(Boolean);
     return {
@@ -226,11 +252,11 @@ export default function PropertyFormPage() {
 
   const handleSuggestPrice = async () => {
     if (!formData.address.city) {
-      setPriceSuggestError("Please fill in the city first.");
+      setPriceSuggestError('Please fill in the city first.');
       return;
     }
     if (!formData.area || Number(formData.area) < 10) {
-      setPriceSuggestError("Please enter the area (min 10 m\u00b2).");
+      setPriceSuggestError('Please enter the area (min 10 m\u00b2).');
       return;
     }
 
@@ -240,7 +266,7 @@ export default function PropertyFormPage() {
 
     try {
       const amenitiesList = formData.amenities
-        .split(",")
+        .split(',')
         .map((v) => v.trim())
         .filter(Boolean);
 
@@ -274,7 +300,7 @@ export default function PropertyFormPage() {
       setPriceSuggestError(
         typedError.response?.data?.message ||
           typedError.message ||
-          "AI service unavailable",
+          'AI service unavailable',
       );
     } finally {
       setPriceSuggestLoading(false);
@@ -282,11 +308,11 @@ export default function PropertyFormPage() {
   };
 
   const wizardSteps: StepperStep[] = [
-    { id: "details", label: t.properties.form.steps.details },
-    { id: "address", label: t.properties.form.steps.address },
-    { id: "amenities", label: t.properties.form.steps.amenities },
-    { id: "pricing", label: t.properties.form.steps.pricing },
-    { id: "photos", label: t.properties.form.steps.photos },
+    { id: 'details', label: t.properties.form.steps.details },
+    { id: 'address', label: t.properties.form.steps.address },
+    { id: 'amenities', label: t.properties.form.steps.amenities },
+    { id: 'pricing', label: t.properties.form.steps.pricing },
+    { id: 'photos', label: t.properties.form.steps.photos },
   ];
 
   // Load existing property for editing
@@ -298,9 +324,9 @@ export default function PropertyFormPage() {
       const property = await propertyService.getProperty(id);
       setFormData({
         title: property.title,
-        description: property.description || "",
+        description: property.description || '',
         type: property.type,
-        category: property.category || "rental",
+        category: property.category || 'rental',
         status: property.status,
         price: property.price.toString(),
         currency: property.currency,
@@ -314,27 +340,27 @@ export default function PropertyFormPage() {
           country: property.address.country,
           coordinates: property.address.coordinates,
         },
-        bedrooms: property.features?.bedrooms?.toString() || "",
-        bathrooms: property.features?.bathrooms?.toString() || "",
-        area: property.features?.area?.toString() || "",
-        parkingSpaces: property.features?.parkingSpaces?.toString() || "",
+        bedrooms: property.features?.bedrooms?.toString() || '',
+        bathrooms: property.features?.bathrooms?.toString() || '',
+        area: property.features?.area?.toString() || '',
+        parkingSpaces: property.features?.parkingSpaces?.toString() || '',
         furnished: property.features?.furnished || false,
         petFriendly: property.features?.petFriendly || false,
-        amenities: property.features?.amenities?.join(", ") || "",
+        amenities: property.features?.amenities?.join(', ') || '',
         availableFrom:
-          property.features?.availabilityCalendar?.availableFrom || "",
-        availableTo: property.features?.availabilityCalendar?.availableTo || "",
+          property.features?.availabilityCalendar?.availableFrom || '',
+        availableTo: property.features?.availabilityCalendar?.availableTo || '',
       });
       setExistingImages(
         (property.images || []).map((img) => ({
           url: img.url,
-          key: img.key || "",
+          key: img.key || '',
         })),
       );
     } catch (err) {
-      console.error("Failed to load property:", err);
+      console.error('Failed to load property:', formatError(err));
       alert(t.properties.form.messages.loadError);
-      navigate("/properties");
+      navigate('/properties');
     } finally {
       setLoadingProperty(false);
     }
@@ -357,7 +383,7 @@ export default function PropertyFormPage() {
 
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: type === 'checkbox' ? checked : value,
     }));
 
     // Clear error when user types
@@ -370,7 +396,7 @@ export default function PropertyFormPage() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const validFiles = files.filter((file) => {
-      const isValid = file.type.startsWith("image/");
+      const isValid = file.type.startsWith('image/');
       const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB
       return isValid && isValidSize;
     });
@@ -390,7 +416,7 @@ export default function PropertyFormPage() {
       await propertyService.deleteImage(id, key);
       setExistingImages((prev) => prev.filter((img) => img.key !== key));
     } catch (err) {
-      console.error("Failed to delete image:", err);
+      console.error('Failed to delete image:', formatError(err));
       alert(t.properties.form.messages.deleteImageError);
     }
   };
@@ -398,20 +424,20 @@ export default function PropertyFormPage() {
   // Drag and drop handlers
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    e.currentTarget.classList.add("dragover");
+    e.currentTarget.classList.add('dragover');
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
-    e.currentTarget.classList.remove("dragover");
+    e.currentTarget.classList.remove('dragover');
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    e.currentTarget.classList.remove("dragover");
+    e.currentTarget.classList.remove('dragover');
 
     const files = Array.from(e.dataTransfer.files).filter((file) =>
-      file.type.startsWith("image/"),
+      file.type.startsWith('image/'),
     );
     setImages((prev) => [...prev, ...files]);
   };
@@ -513,7 +539,7 @@ export default function PropertyFormPage() {
     }
   };
 
-  const isPhotosStep = WIZARD_STEP_IDS[currentStep] === "photos";
+  const isPhotosStep = WIZARD_STEP_IDS[currentStep] === 'photos';
 
   // Save is triggered only from the explicit final-step button.
   const handleSaveProperty = async () => {
@@ -557,7 +583,7 @@ export default function PropertyFormPage() {
           petFriendly: formData.petFriendly,
           amenities: formData.amenities
             ? formData.amenities
-                .split(",")
+                .split(',')
                 .map((a) => a.trim())
                 .filter(Boolean)
             : undefined,
@@ -579,7 +605,7 @@ export default function PropertyFormPage() {
       const propertyId = property.id || property._id;
 
       if (!propertyId) {
-        throw new Error("Missing property id in response");
+        throw new Error('Missing property id in response');
       }
 
       // Upload new images if any
@@ -592,7 +618,7 @@ export default function PropertyFormPage() {
 
       navigate(`/properties/${propertyId}`);
     } catch (err) {
-      console.error("Failed to save property:", err);
+      console.error('Failed to save property:', formatError(err));
       alert(t.properties.form.messages.saveError);
     } finally {
       setLoading(false);
@@ -616,7 +642,7 @@ export default function PropertyFormPage() {
 
   const renderStepContent = () => {
     switch (WIZARD_STEP_IDS[currentStep]) {
-      case "details":
+      case 'details':
         return (
           <div className="form-section">
             <h3 className="form-section-title">
@@ -626,7 +652,7 @@ export default function PropertyFormPage() {
             <div className="form-grid">
               <div className="form-group full-width">
                 <label htmlFor="title">
-                  {t.properties.form.labels.title}{" "}
+                  {t.properties.form.labels.title}{' '}
                   <span className="required">*</span>
                 </label>
                 <input
@@ -636,7 +662,7 @@ export default function PropertyFormPage() {
                   value={formData.title}
                   onChange={handleChange}
                   placeholder={t.properties.form.placeholders.title}
-                  className={errors.title ? "error" : ""}
+                  className={errors.title ? 'error' : ''}
                 />
                 {errors.title && (
                   <span className="error-message">{errors.title}</span>
@@ -701,7 +727,7 @@ export default function PropertyFormPage() {
           </div>
         );
 
-      case "address":
+      case 'address':
         return (
           <div className="form-section">
             <h3 className="form-section-title">
@@ -722,7 +748,7 @@ export default function PropertyFormPage() {
           </div>
         );
 
-      case "amenities":
+      case 'amenities':
         return (
           <div className="form-section">
             <h3 className="form-section-title">
@@ -835,7 +861,7 @@ export default function PropertyFormPage() {
           </div>
         );
 
-      case "pricing":
+      case 'pricing':
         return (
           <div className="form-section">
             <h3 className="form-section-title">
@@ -845,7 +871,7 @@ export default function PropertyFormPage() {
             <div className="form-grid">
               <div className="form-group">
                 <label htmlFor="price">
-                  {t.properties.form.labels.price}{" "}
+                  {t.properties.form.labels.price}{' '}
                   <span className="required">*</span>
                 </label>
                 <input
@@ -857,7 +883,7 @@ export default function PropertyFormPage() {
                   value={formData.price}
                   onChange={handleChange}
                   placeholder={t.properties.form.placeholders.price}
-                  className={errors.price ? "error" : ""}
+                  className={errors.price ? 'error' : ''}
                 />
                 {errors.price && (
                   <span className="error-message">{errors.price}</span>
@@ -881,16 +907,16 @@ export default function PropertyFormPage() {
               </div>
 
               {/* AI Price Suggestion */}
-              <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                 <button
                   type="button"
                   onClick={handleSuggestPrice}
                   disabled={priceSuggestLoading}
                   className="btn-ai-trigger"
                   style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
                   }}
                 >
                   {priceSuggestLoading ? (
@@ -900,11 +926,11 @@ export default function PropertyFormPage() {
                         style={{
                           width: 16,
                           height: 16,
-                          border: "2px solid currentColor",
-                          borderTopColor: "transparent",
-                          borderRadius: "50%",
-                          display: "inline-block",
-                          animation: "spin 0.6s linear infinite",
+                          border: '2px solid currentColor',
+                          borderTopColor: 'transparent',
+                          borderRadius: '50%',
+                          display: 'inline-block',
+                          animation: 'spin 0.6s linear infinite',
                         }}
                       />
                       Analyzing...
@@ -917,7 +943,7 @@ export default function PropertyFormPage() {
                 {priceSuggestError && (
                   <span
                     className="error-message"
-                    style={{ display: "block", marginTop: "0.5rem" }}
+                    style={{ display: 'block', marginTop: '0.5rem' }}
                   >
                     {priceSuggestError}
                   </span>
@@ -926,71 +952,71 @@ export default function PropertyFormPage() {
                 {priceSuggestion && (
                   <div
                     style={{
-                      marginTop: "0.75rem",
-                      padding: "1rem",
-                      borderRadius: "8px",
-                      background: "var(--bg-secondary, #f4f6fa)",
-                      border: "1px solid var(--border-color, #e2e8f0)",
+                      marginTop: '0.75rem',
+                      padding: '1rem',
+                      borderRadius: '8px',
+                      background: 'var(--bg-secondary, #f4f6fa)',
+                      border: '1px solid var(--border-color, #e2e8f0)',
                     }}
                   >
                     <div
                       style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        flexWrap: "wrap",
-                        gap: "0.5rem",
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        flexWrap: 'wrap',
+                        gap: '0.5rem',
                       }}
                     >
                       <div>
                         <strong
-                          style={{ fontSize: "1.25rem", display: "block" }}
+                          style={{ fontSize: '1.25rem', display: 'block' }}
                         >
-                          Rent:{" "}
+                          Rent:{' '}
                           {(
                             priceSuggestion.rentalPrice ??
                             priceSuggestion.predictedPrice
-                          ).toLocaleString()}{" "}
+                          ).toLocaleString()}{' '}
                           {priceSuggestion.currency}/mo
                         </strong>
                         <strong
                           style={{
-                            display: "block",
-                            fontSize: "1.05rem",
-                            marginTop: "0.2rem",
+                            display: 'block',
+                            fontSize: '1.05rem',
+                            marginTop: '0.2rem',
                           }}
                         >
-                          Sale: {priceSuggestion.salePrice.toLocaleString()}{" "}
+                          Sale: {priceSuggestion.salePrice.toLocaleString()}{' '}
                           {priceSuggestion.currency}
                         </strong>
                       </div>
-                      <span style={{ fontSize: "0.85rem", opacity: 0.7 }}>
-                        Confidence:{" "}
+                      <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>
+                        Confidence:{' '}
                         {Math.round(priceSuggestion.confidence * 100)}%
                       </span>
                     </div>
                     <div
                       style={{
-                        fontSize: "0.85rem",
-                        marginTop: "0.35rem",
+                        fontSize: '0.85rem',
+                        marginTop: '0.35rem',
                         opacity: 0.7,
                       }}
                     >
-                      Range: {priceSuggestion.priceRange.low.toLocaleString()} -{" "}
-                      {priceSuggestion.priceRange.high.toLocaleString()}{" "}
-                      {priceSuggestion.currency}/mo | Sale range:{" "}
-                      {priceSuggestion.salePriceRange.low.toLocaleString()} -{" "}
-                      {priceSuggestion.salePriceRange.high.toLocaleString()}{" "}
-                      {priceSuggestion.currency} | Base rate:{" "}
+                      Range: {priceSuggestion.priceRange.low.toLocaleString()} -{' '}
+                      {priceSuggestion.priceRange.high.toLocaleString()}{' '}
+                      {priceSuggestion.currency}/mo | Sale range:{' '}
+                      {priceSuggestion.salePriceRange.low.toLocaleString()} -{' '}
+                      {priceSuggestion.salePriceRange.high.toLocaleString()}{' '}
+                      {priceSuggestion.currency} | Base rate:{' '}
                       {priceSuggestion.baseRatePerSqm} TND/m&sup2;
                     </div>
 
                     <div
                       style={{
-                        marginTop: "0.6rem",
-                        display: "flex",
-                        gap: "0.5rem",
-                        flexWrap: "wrap",
+                        marginTop: '0.6rem',
+                        display: 'flex',
+                        gap: '0.5rem',
+                        flexWrap: 'wrap',
                       }}
                     >
                       <button
@@ -999,7 +1025,7 @@ export default function PropertyFormPage() {
                         onClick={() =>
                           setFormData((prev) => ({
                             ...prev,
-                            category: "rental",
+                            category: 'rental',
                             price: (
                               priceSuggestion.rentalPrice ??
                               priceSuggestion.predictedPrice
@@ -1016,7 +1042,7 @@ export default function PropertyFormPage() {
                         onClick={() =>
                           setFormData((prev) => ({
                             ...prev,
-                            category: "sale",
+                            category: 'sale',
                             price: priceSuggestion.salePrice.toString(),
                             currency: priceSuggestion.currency,
                           }))
@@ -1028,9 +1054,9 @@ export default function PropertyFormPage() {
                     {priceSuggestion.factors.length > 0 && (
                       <ul
                         style={{
-                          margin: "0.5rem 0 0",
-                          paddingLeft: "1.25rem",
-                          fontSize: "0.85rem",
+                          margin: '0.5rem 0 0',
+                          paddingLeft: '1.25rem',
+                          fontSize: '0.85rem',
                         }}
                       >
                         {priceSuggestion.factors.map((f, i) => (
@@ -1068,7 +1094,7 @@ export default function PropertyFormPage() {
                   type="date"
                   value={formData.availableTo}
                   onChange={handleChange}
-                  className={errors.availableTo ? "error" : ""}
+                  className={errors.availableTo ? 'error' : ''}
                 />
                 {errors.availableTo && (
                   <span className="error-message">{errors.availableTo}</span>
@@ -1078,7 +1104,7 @@ export default function PropertyFormPage() {
           </div>
         );
 
-      case "photos":
+      case 'photos':
         return (
           <div className="form-section">
             <h3 className="form-section-title">
@@ -1089,7 +1115,7 @@ export default function PropertyFormPage() {
             {existingImages.length > 0 && (
               <div
                 className="image-preview-grid"
-                style={{ marginBottom: "1.5rem" }}
+                style={{ marginBottom: '1.5rem' }}
               >
                 {existingImages.map((img, index) => (
                   <div key={img.key || index} className="image-preview-item">
@@ -1120,14 +1146,14 @@ export default function PropertyFormPage() {
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              onClick={() => document.getElementById("image-input")?.click()}
+              onClick={() => document.getElementById('image-input')?.click()}
               role="button"
               tabIndex={0}
               aria-label={t.properties.form.image.uploadAriaLabel}
               onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
+                if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  document.getElementById("image-input")?.click();
+                  document.getElementById('image-input')?.click();
                 }
               }}
             >
@@ -1140,7 +1166,7 @@ export default function PropertyFormPage() {
                 accept="image/*"
                 multiple
                 onChange={handleImageChange}
-                style={{ display: "none" }}
+                style={{ display: 'none' }}
               />
             </div>
 
@@ -1204,15 +1230,15 @@ export default function PropertyFormPage() {
                 the previous wizard steps. */}
             <div
               className="form-group full-width"
-              style={{ marginTop: "1.5rem" }}
+              style={{ marginTop: '1.5rem' }}
             >
               <div
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: "0.75rem",
-                  flexWrap: "wrap",
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  flexWrap: 'wrap',
                 }}
               >
                 <label htmlFor="description">

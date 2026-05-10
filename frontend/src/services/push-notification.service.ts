@@ -39,7 +39,10 @@ class PushNotificationService {
 
       console.log('✅ Push Notification: Initialized successfully');
     } catch (error) {
-      console.error('❌ Push Notification: Initialization failed', error);
+      console.error(
+        '❌ Push Notification: Initialization failed',
+        this.formatError(error),
+      );
     }
   }
 
@@ -57,7 +60,7 @@ class PushNotificationService {
     } catch (error) {
       console.error(
         '❌ Push Notification: Service Worker registration failed',
-        error,
+        this.formatError(error),
       );
       throw error;
     }
@@ -89,7 +92,10 @@ class PushNotificationService {
         console.warn('⚠️  Push Notification: Permission denied by user');
       }
     } catch (error) {
-      console.error('❌ Push Notification: Permission request failed', error);
+      console.error(
+        '❌ Push Notification: Permission request failed',
+        this.formatError(error),
+      );
     }
   }
 
@@ -120,6 +126,23 @@ class PushNotificationService {
 
       console.log('✅ Push Notification: Got VAPID public key');
 
+      const existingSubscription =
+        await this.registration!.pushManager.getSubscription();
+
+      if (existingSubscription) {
+        const existingKey = this.bufferToBase64Url(
+          existingSubscription.options.applicationServerKey,
+        );
+
+        if (!existingKey || existingKey === this.vapidPublicKey) {
+          console.log('✅ Push Notification: Using existing subscription');
+          await this.sendSubscriptionToBackend(existingSubscription);
+          return;
+        }
+
+        await existingSubscription.unsubscribe();
+      }
+
       // Subscribe to push
       const subscription = await this.registration!.pushManager.subscribe({
         userVisibleOnly: true,
@@ -133,7 +156,10 @@ class PushNotificationService {
       // Send subscription to backend
       await this.sendSubscriptionToBackend(subscription);
     } catch (error) {
-      console.error('❌ Push Notification: Push subscription failed', error);
+      console.error(
+        '❌ Push Notification: Push subscription failed',
+        this.formatError(error),
+      );
     }
   }
 
@@ -162,11 +188,57 @@ class PushNotificationService {
         response.data,
       );
     } catch (error) {
-      console.error('❌ Push Notification: Failed to send subscription', error);
-      if ((error as any)?.response?.data) {
-        console.error('Backend error details:', (error as any).response.data);
+      console.error(
+        '❌ Push Notification: Failed to send subscription',
+        this.formatError(error),
+      );
+      const backendDetails = (error as { response?: { data?: unknown } })
+        ?.response?.data;
+      if (backendDetails) {
+        console.error(
+          'Backend error details:',
+          this.safeStringify(backendDetails),
+        );
       }
     }
+  }
+
+  private formatError(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return this.safeStringify(error);
+  }
+
+  private safeStringify(value: unknown): string {
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+
+  private bufferToBase64Url(buffer?: ArrayBuffer | null): string | null {
+    if (!buffer) {
+      return null;
+    }
+
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    bytes.forEach((b) => {
+      binary += String.fromCharCode(b);
+    });
+
+    return window
+      .btoa(binary)
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
   }
 
   /**

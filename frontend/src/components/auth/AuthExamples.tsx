@@ -4,13 +4,29 @@
 // This file contains example implementations of auth features
 // Copy and adapt these to your components as needed
 
-import { useAuth } from "@/hooks";
+import { useAuth } from '@/hooks';
 import {
   validateChangePasswordData,
   validateLoginData,
   validateRegistrationData,
-} from "@/utils";
-import { useState } from "react";
+} from '@/utils';
+import { useState } from 'react';
+
+const formatError = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+};
 
 // ===========================================
 // Example 1: Login Component
@@ -18,8 +34,8 @@ import { useState } from "react";
 
 export function LoginExample() {
   const { login, isLoading, error, clearError } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [validationErrors, setValidationErrors] = useState<
     Record<string, string>
   >({});
@@ -39,7 +55,7 @@ export function LoginExample() {
       await login({ email, password });
       // Redirect to dashboard on success
     } catch (err) {
-      console.error("Login error:", err);
+      console.error('Login error:', formatError(err));
       // Error already in auth store
     }
   };
@@ -54,7 +70,7 @@ export function LoginExample() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={`w-full px-4 py-2 border rounded-lg ${
-              validationErrors.email ? "border-red-500" : "border-gray-300"
+              validationErrors.email ? 'border-red-500' : 'border-gray-300'
             }`}
             placeholder="your@email.com"
           />
@@ -72,7 +88,7 @@ export function LoginExample() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className={`w-full px-4 py-2 border rounded-lg ${
-              validationErrors.password ? "border-red-500" : "border-gray-300"
+              validationErrors.password ? 'border-red-500' : 'border-gray-300'
             }`}
             placeholder="••••••••"
           />
@@ -92,7 +108,7 @@ export function LoginExample() {
           disabled={isLoading}
           className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium disabled:opacity-50"
         >
-          {isLoading ? "Logging in..." : "Login"}
+          {isLoading ? 'Logging in...' : 'Login'}
         </button>
       </div>
     </form>
@@ -106,12 +122,12 @@ export function LoginExample() {
 export function RegisterExample() {
   const { register, isLoading, error, clearError } = useAuth();
   const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    confirmPassword: "",
-    firstName: "",
-    lastName: "",
-    phone: "",
+    email: '',
+    password: '',
+    confirmPassword: '',
+    firstName: '',
+    lastName: '',
+    phone: '',
   });
   const [validationErrors, setValidationErrors] = useState<
     Record<string, string>
@@ -132,7 +148,7 @@ export function RegisterExample() {
       await register(formData);
       // Redirect to verify email page
     } catch (err) {
-      console.error("Registration error:", err);
+      console.error('Registration error:', formatError(err));
     }
   };
 
@@ -256,7 +272,7 @@ export function RegisterExample() {
           disabled={isLoading}
           className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium disabled:opacity-50"
         >
-          {isLoading ? "Registering..." : "Register"}
+          {isLoading ? 'Registering...' : 'Register'}
         </button>
       </div>
     </form>
@@ -270,9 +286,9 @@ export function RegisterExample() {
 export function ChangePasswordExample() {
   const { changePassword, isLoading, error, clearError } = useAuth();
   const [formData, setFormData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
   });
   const [validationErrors, setValidationErrors] = useState<
     Record<string, string>
@@ -295,14 +311,14 @@ export function ChangePasswordExample() {
       await changePassword(formData);
       setSuccess(true);
       setFormData({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
       });
       // Show success message for 3 seconds
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      console.error("Change password error:", err);
+      console.error('Change password error:', formatError(err));
     }
   };
 
@@ -378,7 +394,7 @@ export function ChangePasswordExample() {
           disabled={isLoading}
           className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium disabled:opacity-50"
         >
-          {isLoading ? "Changing..." : "Change Password"}
+          {isLoading ? 'Changing...' : 'Change Password'}
         </button>
       </div>
     </form>
@@ -407,7 +423,7 @@ export function SessionsExample() {
     try {
       await revokeSession(sessionId);
     } catch (err) {
-      console.error("Failed to revoke session:", err);
+      console.error('Failed to revoke session:', formatError(err));
     }
   };
 
@@ -419,7 +435,7 @@ export function SessionsExample() {
           disabled={localLoading}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium disabled:opacity-50"
         >
-          {localLoading ? "Loading..." : "Load Sessions"}
+          {localLoading ? 'Loading...' : 'Load Sessions'}
         </button>
       </div>
 
@@ -443,7 +459,7 @@ export function SessionsExample() {
                 </p>
                 <p className="text-sm text-gray-500">IP: {session.ipAddress}</p>
                 <p className="text-sm text-gray-500">
-                  Last active:{" "}
+                  Last active:{' '}
                   {new Date(session.lastActivityAt).toLocaleString()}
                 </p>
               </div>

@@ -2,24 +2,48 @@
 // SmartProperty - Properties List Page
 // ===========================================
 
-import { HomeFooter, Navbar } from "@/components/layout";
-import AdvancedPropertySearchBar from "@/components/properties/AdvancedPropertySearchBar";
-import PropertyMapView from "@/components/properties/PropertyMapView";
-import LocationPreferenceMap from "@/components/settings/LocationPreferenceMap";
-import { useTranslation } from "@/i18n";
-import { propertyService } from "@/services/property.service";
-import { useAuthStore } from "@/store";
-import { UserRole, type UserLocationPreference } from "@/types/auth";
+import { HomeFooter, Navbar } from '@/components/layout';
+import AdvancedPropertySearchBar from '@/components/properties/AdvancedPropertySearchBar';
+import PropertyMapView from '@/components/properties/PropertyMapView';
+import LocationPreferenceMap from '@/components/settings/LocationPreferenceMap';
+import { useTranslation } from '@/i18n';
+import { propertyService } from '@/services/property.service';
+import { useAuthStore } from '@/store';
+import { UserRole, type UserLocationPreference } from '@/types/auth';
 import type {
   Property,
   PropertyFilters,
   PropertyStatus,
   PropertyType,
+<<<<<<< Updated upstream
 } from "@/types/property";
 import { canManageFavorites, canManageProperties, isOwner } from "@/utils";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import "./properties.css";
+=======
+} from '@/types/property';
+import { canManageProperties, isOwner } from '@/utils';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import './properties.css';
+
+const formatError = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+};
+>>>>>>> Stashed changes
 
 // ===========================================
 // Icons
@@ -152,7 +176,7 @@ interface PropertyCardProps {
   isHighlighted?: boolean;
   onMouseEnter?: (id: string) => void;
   onMouseLeave?: () => void;
-  t: ReturnType<typeof import("@/i18n").useTranslation>;
+  t: ReturnType<typeof import('@/i18n').useTranslation>;
 }
 
 function PropertyCard({
@@ -167,7 +191,7 @@ function PropertyCard({
   onMouseLeave,
   t,
 }: PropertyCardProps) {
-  const propertyId = property.id || property._id || "";
+  const propertyId = property.id || property._id || '';
   const sortedImages = [...(property.images ?? [])].sort((a, b) => {
     if (a.isPrimary) return -1;
     if (b.isPrimary) return 1;
@@ -180,34 +204,34 @@ function PropertyCard({
   }, [propertyId, sortedImages.length]);
 
   const currentImage = sortedImages[selectedImageIndex] || sortedImages[0];
-  const imageUrl = currentImage?.url || "/placeholder-property.svg";
+  const imageUrl = currentImage?.url || '/placeholder-property.svg';
   const hasMultipleImages = sortedImages.length > 1;
 
   const statusLabel =
-    property.status === "available"
+    property.status === 'available'
       ? t.properties.available
-      : property.status === "rented"
+      : property.status === 'rented'
         ? t.properties.rented
-        : property.status === "maintenance"
+        : property.status === 'maintenance'
           ? t.properties.maintenance
           : t.properties.unlisted;
 
   const typeLabel =
-    property.type === "apartment"
+    property.type === 'apartment'
       ? t.properties.typeApartment
-      : property.type === "house"
+      : property.type === 'house'
         ? t.properties.typeHouse
-        : property.type === "villa"
+        : property.type === 'villa'
           ? t.properties.typeVilla
-          : property.type === "studio"
+          : property.type === 'studio'
             ? t.properties.typeStudio
-            : property.type === "condo"
+            : property.type === 'condo'
               ? t.properties.typeCondo
               : t.properties.typeLand;
 
   return (
     <article
-      className={`property-card${isHighlighted ? " highlighted" : ""}`}
+      className={`property-card${isHighlighted ? ' highlighted' : ''}`}
       aria-label={property.title}
       onMouseEnter={() => onMouseEnter?.(propertyId)}
       onMouseLeave={() => onMouseLeave?.()}
@@ -218,7 +242,7 @@ function PropertyCard({
           alt={property.title}
           loading="lazy"
           onError={(e) => {
-            (e.target as HTMLImageElement).src = "/placeholder-property.svg";
+            (e.target as HTMLImageElement).src = '/placeholder-property.svg';
           }}
         />
         <span className={`property-badge ${property.status}`}>
@@ -232,7 +256,7 @@ function PropertyCard({
                 key={`${propertyId}-img-${index}`}
                 type="button"
                 className={`property-image-dot ${
-                  index === selectedImageIndex ? "active" : ""
+                  index === selectedImageIndex ? 'active' : ''
                 }`}
                 aria-label={`Show image ${index + 1}`}
                 aria-pressed={index === selectedImageIndex}
@@ -283,7 +307,7 @@ function PropertyCard({
 
         <button
           type="button"
-          className={`btn-compare-toggle ${isCompared ? "active" : ""}`}
+          className={`btn-compare-toggle ${isCompared ? 'active' : ''}`}
           disabled={compareDisabled && !isCompared}
           onClick={() => onToggleCompare?.(property)}
         >
@@ -350,38 +374,38 @@ export default function PropertiesPage() {
   const [comparisonIds, setComparisonIds] = useState<string[]>([]);
   const [comparisonError, setComparisonError] = useState<string | null>(null);
   const [shareNotice, setShareNotice] = useState<{
-    type: "success" | "error";
+    type: 'success' | 'error';
     message: string;
   } | null>(null);
   const [sharingPropertyId, setSharingPropertyId] = useState<string | null>(
     null,
   );
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<"load" | null>(null);
+  const [error, setError] = useState<'load' | null>(null);
   const [total, setTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<PropertyFilters>({
     page: 1,
     limit: 12,
-    type: (searchParams.get("type") as PropertyType) || undefined,
-    status: (searchParams.get("status") as PropertyStatus) || undefined,
-    bedrooms: parsePositiveIntegerParam(searchParams.get("bedrooms")),
-    bathrooms: parsePositiveIntegerParam(searchParams.get("bathrooms")),
-    nearLat: parseNumberParam(searchParams.get("nearLat")),
-    nearLng: parseNumberParam(searchParams.get("nearLng")),
-    radiusKm: parsePositiveNumberParam(searchParams.get("radiusKm")),
-    city: searchParams.get("city") || undefined,
-    search: searchParams.get("search") || undefined,
+    type: (searchParams.get('type') as PropertyType) || undefined,
+    status: (searchParams.get('status') as PropertyStatus) || undefined,
+    bedrooms: parsePositiveIntegerParam(searchParams.get('bedrooms')),
+    bathrooms: parsePositiveIntegerParam(searchParams.get('bathrooms')),
+    nearLat: parseNumberParam(searchParams.get('nearLat')),
+    nearLng: parseNumberParam(searchParams.get('nearLng')),
+    radiusKm: parsePositiveNumberParam(searchParams.get('radiusKm')),
+    city: searchParams.get('city') || undefined,
+    search: searchParams.get('search') || undefined,
   });
 
   // Local state for text inputs (not linked to API calls until form submit)
-  const [searchText, setSearchText] = useState(filters.search || "");
-  const [cityText, setCityText] = useState(filters.city || "");
+  const [searchText, setSearchText] = useState(filters.search || '');
+  const [cityText, setCityText] = useState(filters.city || '');
   const [bedroomsText, setBedroomsText] = useState(
-    filters.bedrooms?.toString() || "",
+    filters.bedrooms?.toString() || '',
   );
   const [bathroomsText, setBathroomsText] = useState(
-    filters.bathrooms?.toString() || "",
+    filters.bathrooms?.toString() || '',
   );
   const [showNearbyPanel, setShowNearbyPanel] = useState(
     filters.nearLat !== undefined && filters.nearLng !== undefined,
@@ -398,31 +422,31 @@ export default function PropertiesPage() {
       : undefined,
   );
   const [nearbyLocationDraft, setNearbyLocationDraft] = useState(
-    nearbySelectionDraft?.label || "",
+    nearbySelectionDraft?.label || '',
   );
 
   const getPropertyId = (property: Property): string =>
-    property.id || property._id || "";
+    property.id || property._id || '';
 
   const getStatusLabel = (status: PropertyStatus): string =>
-    status === "available"
+    status === 'available'
       ? t.properties.available
-      : status === "rented"
+      : status === 'rented'
         ? t.properties.rented
-        : status === "maintenance"
+        : status === 'maintenance'
           ? t.properties.maintenance
           : t.properties.unlisted;
 
   const getTypeLabel = (type: PropertyType): string =>
-    type === "apartment"
+    type === 'apartment'
       ? t.properties.typeApartment
-      : type === "house"
+      : type === 'house'
         ? t.properties.typeHouse
-        : type === "villa"
+        : type === 'villa'
           ? t.properties.typeVilla
-          : type === "studio"
+          : type === 'studio'
             ? t.properties.typeStudio
-            : type === "condo"
+            : type === 'condo'
               ? t.properties.typeCondo
               : t.properties.typeLand;
 
@@ -436,16 +460,16 @@ export default function PropertiesPage() {
 
     if (from && to) {
       return t.properties.comparisonFromTo
-        .replace("{{from}}", from)
-        .replace("{{to}}", to);
+        .replace('{{from}}', from)
+        .replace('{{to}}', to);
     }
 
     if (from) {
-      return t.properties.comparisonFrom.replace("{{from}}", from);
+      return t.properties.comparisonFrom.replace('{{from}}', from);
     }
 
     if (to) {
-      return t.properties.comparisonUntil.replace("{{to}}", to);
+      return t.properties.comparisonUntil.replace('{{to}}', to);
     }
 
     return t.properties.comparisonNotSpecified;
@@ -462,8 +486,8 @@ export default function PropertiesPage() {
       setTotal(response.total);
       setCurrentPage(response.page);
     } catch (err) {
-      console.error("Failed to load properties:", err);
-      setError("load");
+      console.error('Failed to load properties:', formatError(err));
+      setError('load');
     } finally {
       setLoading(false);
     }
@@ -485,16 +509,16 @@ export default function PropertiesPage() {
   const updateUrlParams = useCallback(
     (f: PropertyFilters) => {
       const params = new URLSearchParams();
-      if (f.type) params.set("type", f.type);
-      if (f.status) params.set("status", f.status);
-      if (f.bedrooms !== undefined) params.set("bedrooms", String(f.bedrooms));
+      if (f.type) params.set('type', f.type);
+      if (f.status) params.set('status', f.status);
+      if (f.bedrooms !== undefined) params.set('bedrooms', String(f.bedrooms));
       if (f.bathrooms !== undefined)
-        params.set("bathrooms", String(f.bathrooms));
-      if (f.nearLat !== undefined) params.set("nearLat", String(f.nearLat));
-      if (f.nearLng !== undefined) params.set("nearLng", String(f.nearLng));
-      if (f.radiusKm !== undefined) params.set("radiusKm", String(f.radiusKm));
-      if (f.city) params.set("city", f.city);
-      if (f.search) params.set("search", f.search);
+        params.set('bathrooms', String(f.bathrooms));
+      if (f.nearLat !== undefined) params.set('nearLat', String(f.nearLat));
+      if (f.nearLng !== undefined) params.set('nearLng', String(f.nearLng));
+      if (f.radiusKm !== undefined) params.set('radiusKm', String(f.radiusKm));
+      if (f.city) params.set('city', f.city);
+      if (f.search) params.set('search', f.search);
       setSearchParams(params);
     },
     [setSearchParams],
@@ -523,13 +547,13 @@ export default function PropertiesPage() {
 
   // Handle reset filters
   const handleResetFilters = () => {
-    setSearchText("");
-    setCityText("");
-    setBedroomsText("");
-    setBathroomsText("");
+    setSearchText('');
+    setCityText('');
+    setBedroomsText('');
+    setBathroomsText('');
     setShowNearbyPanel(false);
     setNearbySelectionDraft(undefined);
-    setNearbyLocationDraft("");
+    setNearbyLocationDraft('');
     setFilters({ page: 1, limit: 12 });
     setSearchParams({});
   };
@@ -544,7 +568,7 @@ export default function PropertiesPage() {
     };
 
     setNearbySelectionDraft(undefined);
-    setNearbyLocationDraft("");
+    setNearbyLocationDraft('');
     setShowNearbyPanel(false);
     setFilters(clearedFilters);
     updateUrlParams(clearedFilters);
@@ -560,10 +584,10 @@ export default function PropertiesPage() {
           `${filters.nearLat.toFixed(4)}, ${filters.nearLng.toFixed(4)}`,
       };
       setNearbySelectionDraft(restored);
-      setNearbyLocationDraft(restored.label || "");
+      setNearbyLocationDraft(restored.label || '');
     } else {
       setNearbySelectionDraft(undefined);
-      setNearbyLocationDraft("");
+      setNearbyLocationDraft('');
     }
 
     setShowNearbyPanel(false);
@@ -614,8 +638,8 @@ export default function PropertiesPage() {
       return;
     }
 
-    const section = document.getElementById("comparison-panel");
-    section?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const section = document.getElementById('comparison-panel');
+    section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const copyToClipboard = async (text: string): Promise<boolean> => {
@@ -625,15 +649,15 @@ export default function PropertiesPage() {
         return true;
       }
 
-      const textarea = document.createElement("textarea");
+      const textarea = document.createElement('textarea');
       textarea.value = text;
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
       document.body.appendChild(textarea);
       textarea.focus();
       textarea.select();
 
-      const copied = document.execCommand("copy");
+      const copied = document.execCommand('copy');
       document.body.removeChild(textarea);
       return copied;
     } catch {
@@ -663,7 +687,7 @@ export default function PropertiesPage() {
           });
           return;
         } catch (error) {
-          if ((error as { name?: string }).name === "AbortError") {
+          if ((error as { name?: string }).name === 'AbortError') {
             return;
           }
         }
@@ -671,13 +695,13 @@ export default function PropertiesPage() {
 
       const copied = await copyToClipboard(shareUrl);
       setShareNotice({
-        type: copied ? "success" : "error",
+        type: copied ? 'success' : 'error',
         message: copied ? t.properties.shareCopied : t.properties.shareError,
       });
     } catch {
       const copied = await copyToClipboard(fallbackUrl);
       setShareNotice({
-        type: copied ? "success" : "error",
+        type: copied ? 'success' : 'error',
         message: copied ? t.properties.shareCopied : t.properties.shareError,
       });
     } finally {
@@ -689,7 +713,7 @@ export default function PropertiesPage() {
   const totalPages = Math.ceil(total / (filters.limit || 12));
   const handlePageChange = (page: number) => {
     setFilters({ ...filters, page });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -726,11 +750,11 @@ export default function PropertiesPage() {
               )}
               <button
                 type="button"
-                className={`btn-map-toggle${showMap ? " active" : ""}`}
+                className={`btn-map-toggle${showMap ? ' active' : ''}`}
                 onClick={() => setShowMap((prev) => !prev)}
               >
                 <MapIcon />
-                {showMap ? "Hide map" : "Show map"}
+                {showMap ? 'Hide map' : 'Show map'}
               </button>
             </div>
             <AdvancedPropertySearchBar
@@ -739,9 +763,9 @@ export default function PropertiesPage() {
               cityValue={cityText}
               onCityChange={setCityText}
               typeValue={filters.type}
-              onTypeChange={(value) => handleFilterChange("type", value)}
+              onTypeChange={(value) => handleFilterChange('type', value)}
               statusValue={filters.status}
-              onStatusChange={(value) => handleFilterChange("status", value)}
+              onStatusChange={(value) => handleFilterChange('status', value)}
               bedroomsValue={bedroomsText}
               onBedroomsChange={setBedroomsText}
               bathroomsValue={bathroomsText}
@@ -757,7 +781,7 @@ export default function PropertiesPage() {
                 nearbyLocationDraft ||
                 (nearbySelectionDraft?.coordinates
                   ? `${nearbySelectionDraft.coordinates.lat.toFixed(4)}, ${nearbySelectionDraft.coordinates.lng.toFixed(4)}`
-                  : "")
+                  : '')
               }
               nearbyHint={t.properties.nearbyHint}
               labels={{
@@ -795,7 +819,7 @@ export default function PropertiesPage() {
         {showNearbyPanel && (
           <section
             className="comparison-panel"
-            style={{ marginBottom: "1.5rem" }}
+            style={{ marginBottom: '1.5rem' }}
           >
             <LocationPreferenceMap
               value={nearbyLocationDraft}
@@ -805,7 +829,7 @@ export default function PropertiesPage() {
             />
             <div
               className="compare-toolbar-actions"
-              style={{ marginTop: "1rem" }}
+              style={{ marginTop: '1rem' }}
             >
               <button
                 type="button"
@@ -996,7 +1020,7 @@ export default function PropertiesPage() {
                     {comparedProperties.map((property) => (
                       <td key={`amenities-${getPropertyId(property)}`}>
                         {property.features?.amenities?.length
-                          ? property.features.amenities.join(", ")
+                          ? property.features.amenities.join(', ')
                           : t.properties.comparisonNone}
                       </td>
                     ))}
@@ -1023,7 +1047,7 @@ export default function PropertiesPage() {
           </div>
         ) : error ? (
           <div className="empty-state">
-            <p style={{ color: "#b91c1c" }}>{t.common.error}</p>
+            <p style={{ color: '#b91c1c' }}>{t.common.error}</p>
             <button className="btn-filter primary" onClick={loadProperties}>
               {t.properties.retry}
             </button>
@@ -1096,7 +1120,7 @@ export default function PropertiesPage() {
                           <span className="pagination-info">...</span>
                         )}
                         <button
-                          className={`pagination-btn ${page === currentPage ? "active" : ""}`}
+                          className={`pagination-btn ${page === currentPage ? 'active' : ''}`}
                           onClick={() => handlePageChange(page)}
                         >
                           {page}
@@ -1168,7 +1192,7 @@ export default function PropertiesPage() {
                         <span className="pagination-info">...</span>
                       )}
                       <button
-                        className={`pagination-btn ${page === currentPage ? "active" : ""}`}
+                        className={`pagination-btn ${page === currentPage ? 'active' : ''}`}
                         onClick={() => handlePageChange(page)}
                       >
                         {page}

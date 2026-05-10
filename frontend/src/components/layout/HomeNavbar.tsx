@@ -1,10 +1,11 @@
-import { LanguageToggle } from "@/components/ui";
-import { useTranslation } from "@/i18n";
+import { LanguageToggle } from '@/components/ui';
+import { useTranslation } from '@/i18n';
 import {
   authService,
   getAccessToken,
   getRefreshToken,
   notificationService,
+<<<<<<< Updated upstream
 } from "@/services";
 import type { Notification } from "@/services/notification.service";
 import { useAuthStore, usePreferencesStore } from "@/store";
@@ -15,27 +16,34 @@ import {
   isTenant,
   prefetchRoute,
 } from "@/utils";
+=======
+} from '@/services';
+import type { Notification } from '@/services/notification.service';
+import { useAuthStore, usePreferencesStore } from '@/store';
+import { isOwner, isTenant, prefetchRoute } from '@/utils';
+>>>>>>> Stashed changes
 import {
   BellRing,
   ChevronDown,
   LogOut,
   Menu,
+  MessageCircle,
   Monitor,
   Settings,
   User,
   X,
-} from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { io, type Socket } from "socket.io-client";
+} from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { io, type Socket } from 'socket.io-client';
 
 const resolveSocketBaseUrl = () => {
   const configuredApiUrl = import.meta.env.VITE_API_URL as string | undefined;
-  if (!configuredApiUrl || configuredApiUrl.startsWith("/")) {
+  if (!configuredApiUrl || configuredApiUrl.startsWith('/')) {
     return window.location.origin;
   }
 
-  return configuredApiUrl.replace(/\/api\/?$/, "");
+  return configuredApiUrl.replace(/\/api\/?$/, '');
 };
 
 export default function HomeNavbar() {
@@ -62,11 +70,11 @@ export default function HomeNavbar() {
   const dismissedSessionExpiryRef = useRef<number | null>(null);
 
   const navLinks = [
-    { to: "/", label: t.nav.home, hasDropdown: true },
-    { to: "/properties", label: t.nav.listings, hasDropdown: true },
-    { to: "/pages", label: t.nav.pages, hasDropdown: true },
-    { to: "/blog", label: t.nav.blog, hasDropdown: true },
-    { to: "/contact", label: t.nav.contact, hasDropdown: false },
+    { to: '/', label: t.nav.home, hasDropdown: true },
+    { to: '/properties', label: t.nav.listings, hasDropdown: true },
+    { to: '/pages', label: t.nav.pages, hasDropdown: true },
+    { to: '/blog', label: t.nav.blog, hasDropdown: true },
+    { to: '/contact', label: t.nav.contact, hasDropdown: false },
   ];
 
   const handleRoutePrefetch = useCallback((path: string) => {
@@ -92,12 +100,12 @@ export default function HomeNavbar() {
     if (!token) return null;
 
     try {
-      const payload = token.split(".")[1];
+      const payload = token.split('.')[1];
       if (!payload) return null;
-      const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
-      const normalized = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+      const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const normalized = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
       const parsed = JSON.parse(window.atob(normalized)) as { exp?: number };
-      return typeof parsed.exp === "number" ? parsed.exp * 1000 : null;
+      return typeof parsed.exp === 'number' ? parsed.exp * 1000 : null;
     } catch {
       return null;
     }
@@ -136,7 +144,7 @@ export default function HomeNavbar() {
       }
 
       const ctx = audioContextRef.current;
-      if (ctx.state === "suspended") {
+      if (ctx.state === 'suspended') {
         void ctx.resume();
       }
 
@@ -146,7 +154,7 @@ export default function HomeNavbar() {
         const oscillator = ctx.createOscillator();
         const gain = ctx.createGain();
 
-        oscillator.type = "triangle";
+        oscillator.type = 'triangle';
         oscillator.frequency.setValueAtTime(frequency, startAt);
         oscillator.frequency.exponentialRampToValueAtTime(
           frequency * 0.75,
@@ -193,10 +201,10 @@ export default function HomeNavbar() {
       auth: {
         token: `Bearer ${token}`,
       },
-      transports: ["websocket", "polling"],
+      transports: ['websocket', 'polling'],
     });
 
-    socket.on("notification:new", (incoming: Notification) => {
+    socket.on('notification:new', (incoming: Notification) => {
       if (notificationsAutoRefreshRef.current) {
         setNotifications((prev) => {
           if (prev.some((n) => n.id === incoming.id)) {
@@ -212,7 +220,7 @@ export default function HomeNavbar() {
       }
     });
 
-    socket.on("notification:count", (count: number) => {
+    socket.on('notification:count', (count: number) => {
       setUnreadCount(count);
     });
 
@@ -281,7 +289,7 @@ export default function HomeNavbar() {
     const refreshToken = getRefreshToken();
     if (!refreshToken) {
       await logout();
-      navigate("/login");
+      navigate('/login');
       return;
     }
 
@@ -292,7 +300,7 @@ export default function HomeNavbar() {
       setSessionWarningVisible(false);
     } catch {
       await logout();
-      navigate("/login");
+      navigate('/login');
     } finally {
       setIsExtendingSession(false);
     }
@@ -307,8 +315,8 @@ export default function HomeNavbar() {
         setShowNotifPanel(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -320,8 +328,8 @@ export default function HomeNavbar() {
         setShowUserDropdown(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const userPreferences = user ? getUserPreferences(user.id) : null;
@@ -335,25 +343,25 @@ export default function HomeNavbar() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key === 'Escape') {
         setMobileMenuOpen(false);
         setShowNotifPanel(false);
         setShowUserDropdown(false);
       }
     };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   useEffect(() => {
     if (mobileMenuOpen) {
-      document.body.style.overflow = "hidden";
-      mobileMenuRef.current?.querySelector("a")?.focus();
+      document.body.style.overflow = 'hidden';
+      mobileMenuRef.current?.querySelector('a')?.focus();
     } else {
-      document.body.style.overflow = "";
+      document.body.style.overflow = '';
     }
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = '';
     };
   }, [mobileMenuOpen]);
 
@@ -380,7 +388,7 @@ export default function HomeNavbar() {
               }}
               disabled={isExtendingSession}
             >
-              {isExtendingSession ? "..." : t.nav.staySignedIn}
+              {isExtendingSession ? '...' : t.nav.staySignedIn}
             </button>
             <button
               type="button"
@@ -440,7 +448,7 @@ export default function HomeNavbar() {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-menu"
-            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
           >
             {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
@@ -456,10 +464,10 @@ export default function HomeNavbar() {
                   onFocus={() => handleRoutePrefetch(link.to)}
                   className={`inline-flex whitespace-nowrap items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-semibold tracking-[0.01em] transition-colors ${
                     isActive
-                      ? "bg-[#FFC570] text-[#1A3263]"
-                      : "text-white/95 hover:bg-white/10 hover:text-white"
+                      ? 'bg-[#FFC570] text-[#1A3263]'
+                      : 'text-white/95 hover:bg-white/10 hover:text-white'
                   }`}
-                  aria-current={isActive ? "page" : undefined}
+                  aria-current={isActive ? 'page' : undefined}
                 >
                   <span>{link.label}</span>
                   {link.hasDropdown && (
@@ -489,7 +497,7 @@ export default function HomeNavbar() {
                   {user.avatar ? (
                     <img
                       src={user.avatar}
-                      alt={user.fullName || user.firstName || "User avatar"}
+                      alt={user.fullName || user.firstName || 'User avatar'}
                       className="h-full w-full object-cover"
                     />
                   ) : (
@@ -517,17 +525,17 @@ export default function HomeNavbar() {
                     type="button"
                     onClick={() => {
                       setShowUserDropdown(false);
-                      navigate("/profile");
+                      navigate('/profile');
                     }}
-                    onMouseEnter={() => handleRoutePrefetch("/profile")}
-                    onFocus={() => handleRoutePrefetch("/profile")}
+                    onMouseEnter={() => handleRoutePrefetch('/profile')}
+                    onFocus={() => handleRoutePrefetch('/profile')}
                     className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                   >
                     <span className="mr-3 flex h-4 w-4 items-center justify-center overflow-hidden rounded-full bg-indigo-100 text-indigo-600">
                       {user.avatar ? (
                         <img
                           src={user.avatar}
-                          alt={user.fullName || user.firstName || "User avatar"}
+                          alt={user.fullName || user.firstName || 'User avatar'}
                           className="h-full w-full object-cover"
                         />
                       ) : (
@@ -540,10 +548,10 @@ export default function HomeNavbar() {
                     type="button"
                     onClick={() => {
                       setShowUserDropdown(false);
-                      navigate("/dashboard");
+                      navigate('/dashboard');
                     }}
-                    onMouseEnter={() => handleRoutePrefetch("/dashboard")}
-                    onFocus={() => handleRoutePrefetch("/dashboard")}
+                    onMouseEnter={() => handleRoutePrefetch('/dashboard')}
+                    onFocus={() => handleRoutePrefetch('/dashboard')}
                     className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                   >
                     <Monitor className="mr-3 h-4 w-4" />
@@ -553,10 +561,10 @@ export default function HomeNavbar() {
                     type="button"
                     onClick={() => {
                       setShowUserDropdown(false);
-                      navigate("/settings");
+                      navigate('/settings');
                     }}
-                    onMouseEnter={() => handleRoutePrefetch("/settings")}
-                    onFocus={() => handleRoutePrefetch("/settings")}
+                    onMouseEnter={() => handleRoutePrefetch('/settings')}
+                    onFocus={() => handleRoutePrefetch('/settings')}
                     className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                   >
                     <Settings className="mr-3 h-4 w-4" />
@@ -600,7 +608,7 @@ export default function HomeNavbar() {
                       onClick={async () => {
                         setShowUserDropdown(false);
                         await logout();
-                        navigate("/login");
+                        navigate('/login');
                       }}
                       className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                     >
@@ -638,10 +646,10 @@ export default function HomeNavbar() {
                 type="button"
                 className={`inline-flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-full border px-3 transition-colors ${
                   unreadCount > 0
-                    ? "border-red-300 bg-red-500/25 text-red-100 hover:bg-red-500/35"
-                    : "border-white/45 bg-white/15 text-white hover:bg-white/25"
+                    ? 'border-red-300 bg-red-500/25 text-red-100 hover:bg-red-500/35'
+                    : 'border-white/45 bg-white/15 text-white hover:bg-white/25'
                 }`}
-                aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
+                aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
                 title="Notifications"
                 onClick={() => {
                   void handleNotificationPanelToggle();
@@ -727,7 +735,7 @@ export default function HomeNavbar() {
                           type="button"
                           key={n.id}
                           className={`flex w-full items-start gap-3 border-b border-gray-100 px-4 py-3 text-left transition-colors hover:bg-palette-background ${
-                            !n.isRead ? "bg-[#EFD2B0]/45" : "bg-white"
+                            !n.isRead ? 'bg-[#EFD2B0]/45' : 'bg-white'
                           }`}
                           onClick={async () => {
                             if (!n.isRead) {
@@ -742,11 +750,11 @@ export default function HomeNavbar() {
                           aria-label={`Notification: ${n.title}`}
                         >
                           <div className="pt-0.5 text-base">
-                            {n.type === "verification_approved"
-                              ? "✅"
-                              : n.type === "verification_rejected"
-                                ? "❌"
-                                : "🔔"}
+                            {n.type === 'verification_approved'
+                              ? '✅'
+                              : n.type === 'verification_rejected'
+                                ? '❌'
+                                : '🔔'}
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-semibold text-[#1A3263]">
@@ -757,12 +765,12 @@ export default function HomeNavbar() {
                             </p>
                             <span className="mt-1 inline-block text-[11px] text-gray-500">
                               {new Date(n.createdAt).toLocaleDateString(
-                                "en-US",
+                                'en-US',
                                 {
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
                                 },
                               )}
                             </span>
@@ -776,11 +784,24 @@ export default function HomeNavbar() {
             </div>
           )}
 
+          {user && (
+            <Link
+              to="/messaging"
+              onMouseEnter={() => handleRoutePrefetch('/messaging')}
+              onFocus={() => handleRoutePrefetch('/messaging')}
+              className="inline-flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-full border border-white/45 bg-white/15 px-3 text-white transition-colors hover:bg-white/25"
+              aria-label="Messages"
+              title="Messages"
+            >
+              <MessageCircle size={20} aria-hidden="true" />
+            </Link>
+          )}
+
           {isOwner(user) && (
             <Link
               to="/properties/new"
-              onMouseEnter={() => handleRoutePrefetch("/properties/new")}
-              onFocus={() => handleRoutePrefetch("/properties/new")}
+              onMouseEnter={() => handleRoutePrefetch('/properties/new')}
+              onFocus={() => handleRoutePrefetch('/properties/new')}
               className="inline-flex items-center gap-2 rounded-full bg-[#FFC570] px-4 py-2 text-xs font-bold uppercase tracking-wide text-[#1A3263] transition-colors hover:bg-[#f2b75e]"
             >
               <span>ADD LISTING</span>
@@ -798,7 +819,7 @@ export default function HomeNavbar() {
           id="mobile-menu"
           ref={mobileMenuRef}
           className={`overflow-hidden border-t border-white/20 bg-[#1A3263] transition-all duration-300 md:hidden ${
-            mobileMenuOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
+            mobileMenuOpen ? 'max-h-80 opacity-100' : 'max-h-0 opacity-0'
           }`}
           aria-hidden={!mobileMenuOpen}
         >

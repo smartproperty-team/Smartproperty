@@ -4,9 +4,23 @@
 
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
-// In development, use relative path to leverage Vite proxy
-// In production, use the full API URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+// In development, use the configured VITE_API_URL if present.
+// Fallback to localhost backend when Vite proxy is unavailable.
+const resolveApiBaseUrl = (): string => {
+  const configuredUrl = import.meta.env.VITE_API_URL?.trim();
+  if (
+    configuredUrl &&
+    (configuredUrl.startsWith('http://') ||
+      configuredUrl.startsWith('https://') ||
+      configuredUrl.startsWith('/'))
+  ) {
+    return configuredUrl;
+  }
+
+  return 'http://localhost:3000/api';
+};
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 // Create axios instance
 export const api = axios.create({

@@ -38,6 +38,7 @@ import { ApplicationsModule } from './modules/applications/applications.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { LeasesModule } from './modules/leases/leases.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
+import { MessagingModule } from './modules/messaging/messaging.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PropertiesModule } from './modules/properties/properties.module';
 import { ReviewsFavoritesModule } from './modules/reviews-favorites/reviews-favorites.module';
@@ -177,6 +178,7 @@ import { VerificationModule } from './modules/verification/verification.module';
     MaintenanceModule,
     UploadModule,
     VerificationModule,
+    MessagingModule,
     NotificationsModule,
   ],
   controllers: [AppController],

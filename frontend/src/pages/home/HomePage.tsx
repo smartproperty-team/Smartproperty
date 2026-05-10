@@ -4,6 +4,7 @@
 // WCAG 2.1 AA Compliant
 // ===========================================
 
+<<<<<<< Updated upstream
 import { HomeFooter, Navbar } from "@/components/layout";
 import { useTranslation } from "@/i18n";
 import { propertyService } from "@/services/property.service";
@@ -13,31 +14,40 @@ import type { Property as BackendProperty } from "@/types/property";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./home3.css";
+=======
+import { HomeFooter, Navbar } from '@/components/layout';
+import { useTranslation } from '@/i18n';
+import { propertyService } from '@/services/property.service';
+import type { Property as BackendProperty } from '@/types/property';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import './home3.css';
+>>>>>>> Stashed changes
 
 // City data - Famous cities in Tunisia
 const cities = [
-  { name: "Tunis", properties: 245, image: "/tq_bdn30ebwk5-m0bm-1500h.png" },
-  { name: "Sousse", properties: 178, image: "/tq_brzn8uwaca-vatm-1500h.png" },
-  { name: "Sfax", properties: 156, image: "/tq_eg61ro6xoc-8z2e-1500h.png" },
-  { name: "Hammamet", properties: 134, image: "/tq_ev3u-afbuo-tv-1500h.png" },
-  { name: "Djerba", properties: 98, image: "/tq_fqz__chb9i-7br-1500h.png" },
+  { name: 'Tunis', properties: 245, image: '/tq_bdn30ebwk5-m0bm-1500h.png' },
+  { name: 'Sousse', properties: 178, image: '/tq_brzn8uwaca-vatm-1500h.png' },
+  { name: 'Sfax', properties: 156, image: '/tq_eg61ro6xoc-8z2e-1500h.png' },
+  { name: 'Hammamet', properties: 134, image: '/tq_ev3u-afbuo-tv-1500h.png' },
+  { name: 'Djerba', properties: 98, image: '/tq_fqz__chb9i-7br-1500h.png' },
 ];
 
 // Property Card Component - Accessible
 function PropertyCard({ property }: { property: BackendProperty }) {
   const t = useTranslation();
-  const propertyId = property.id || property._id || "";
+  const propertyId = property.id || property._id || '';
   const primaryImage =
     property.images?.find((img) => img.isPrimary) || property.images?.[0];
-  const imageUrl = primaryImage?.url || "/placeholder-property.svg";
-  const listingType = property.status === "rented" ? "rent" : "sale";
+  const imageUrl = primaryImage?.url || '/placeholder-property.svg';
+  const listingType = property.status === 'rented' ? 'rent' : 'sale';
   const formattedPrice = `${property.price.toLocaleString()} ${property.currency}`;
-  const showMonthly = listingType === "rent";
+  const showMonthly = listingType === 'rent';
 
   return (
     <article
       className="property-card"
-      aria-label={`${property.title} - ${formattedPrice}${showMonthly ? `/${t.home.month}` : ""}`}
+      aria-label={`${property.title} - ${formattedPrice}${showMonthly ? `/${t.home.month}` : ''}`}
     >
       <div className="property-card-image">
         <img
@@ -47,16 +57,16 @@ function PropertyCard({ property }: { property: BackendProperty }) {
           width={400}
           height={220}
           onError={(e) => {
-            (e.target as HTMLImageElement).src = "/placeholder-property.svg";
+            (e.target as HTMLImageElement).src = '/placeholder-property.svg';
           }}
         />
         <span
           className={`property-badge ${listingType}`}
-          aria-label={listingType === "sale" ? t.home.forSale : t.home.forRent}
+          aria-label={listingType === 'sale' ? t.home.forSale : t.home.forRent}
         >
-          {listingType === "sale" ? t.home.forSale : t.home.forRent}
+          {listingType === 'sale' ? t.home.forSale : t.home.forRent}
         </span>
-        {property.status === "available" && (
+        {property.status === 'available' && (
           <span className="property-featured" aria-label={t.home.featured}>
             {t.home.featured}
           </span>
@@ -195,14 +205,14 @@ function RentalPropertyCard({ property }: { property: BackendProperty }) {
   const t = useTranslation();
   const address = property.address
     ? `${property.address.city}, ${property.address.country}`
-    : "Location unavailable";
+    : 'Location unavailable';
   const beds = property.features?.bedrooms ?? 0;
   const baths = property.features?.bathrooms ?? 0;
   const sqft = property.features?.area ?? 0;
   const primaryImage =
     property.images?.find((img) => img.isPrimary)?.url ??
     property.images?.[0]?.url ??
-    "/tq_1s1jvryd0n-ta2j-1500h.png";
+    '/tq_1s1jvryd0n-ta2j-1500h.png';
   const price = `${property.price.toLocaleString()} ${property.currency}`;
 
   return (
@@ -219,7 +229,7 @@ function RentalPropertyCard({ property }: { property: BackendProperty }) {
           height={220}
           onError={(e) => {
             (e.currentTarget as HTMLImageElement).src =
-              "/tq_1s1jvryd0n-ta2j-1500h.png";
+              '/tq_1s1jvryd0n-ta2j-1500h.png';
           }}
         />
         <span className="property-badge rent" aria-label={t.home.forRent}>
@@ -335,6 +345,7 @@ function RentalPropertyCard({ property }: { property: BackendProperty }) {
 
 export default function HomePage() {
   const t = useTranslation();
+<<<<<<< Updated upstream
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
   const currentUserPreferences = usePreferencesStore((state) =>
@@ -346,6 +357,13 @@ export default function HomePage() {
   const [propertyType, setPropertyType] = useState("");
   const [roomFilter, setRoomFilter] = useState("");
   const [priceFilter, setPriceFilter] = useState("");
+=======
+  const [activeTab, setActiveTab] = useState<'sale' | 'rent'>('sale');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [propertyType, setPropertyType] = useState('');
+  const [roomFilter, setRoomFilter] = useState('');
+  const [priceFilter, setPriceFilter] = useState('');
+>>>>>>> Stashed changes
   const [properties, setProperties] = useState<BackendProperty[]>([]);
   const mainContentRef = useRef<HTMLElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -422,15 +440,24 @@ export default function HomePage() {
           budgetRange.length === 2;
 
         const response = await propertyService.getProperties({
-          status: "available",
+          status: 'available',
           limit: 6,
           minPrice: hasBudgetRange ? budgetRange[0] : undefined,
           maxPrice: hasBudgetRange ? budgetRange[1] : undefined,
         });
         setRentalProperties(response.properties || []);
       } catch (err) {
-        console.error("Failed to fetch rental properties:", err);
-        setRentalError("Unable to load properties at the moment.");
+        const formatError = (error: unknown): string => {
+          if (error instanceof Error) return error.message;
+          if (typeof error === 'string') return error;
+          try {
+            return JSON.stringify(error);
+          } catch {
+            return String(error);
+          }
+        };
+        console.error('Failed to fetch rental properties:', formatError(err));
+        setRentalError('Unable to load properties at the moment.');
       } finally {
         setRentalLoading(false);
       }
@@ -462,12 +489,21 @@ export default function HomePage() {
       e.preventDefault();
       // Navigate to search results
       const params = new URLSearchParams();
+<<<<<<< Updated upstream
       params.set("listingType", activeTab);
       if (propertyType) params.set("type", propertyType);
       if (searchQuery) params.set("search", searchQuery);
       if (roomFilter) params.set("bedrooms", roomFilter);
       if (priceFilter) params.set("priceRange", priceFilter);
       navigate(`/properties?${params.toString()}`);
+=======
+      params.set('listingType', activeTab);
+      if (propertyType) params.set('type', propertyType);
+      if (searchQuery) params.set('search', searchQuery);
+      if (roomFilter) params.set('bedrooms', roomFilter);
+      if (priceFilter) params.set('priceRange', priceFilter);
+      window.location.href = `/properties?${params.toString()}`;
+>>>>>>> Stashed changes
     },
     [activeTab, priceFilter, propertyType, roomFilter, searchQuery],
   );
@@ -475,7 +511,7 @@ export default function HomePage() {
   // Skip to main content
   const skipToMain = useCallback(() => {
     mainContentRef.current?.focus();
-    mainContentRef.current?.scrollIntoView({ behavior: "smooth" });
+    mainContentRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
   return (
@@ -510,20 +546,20 @@ export default function HomePage() {
             aria-label="Property type"
           >
             <button
-              className={`search-tab-btn ${activeTab === "sale" ? "active" : ""}`}
-              onClick={() => setActiveTab("sale")}
+              className={`search-tab-btn ${activeTab === 'sale' ? 'active' : ''}`}
+              onClick={() => setActiveTab('sale')}
               role="tab"
-              aria-selected={activeTab === "sale"}
+              aria-selected={activeTab === 'sale'}
               aria-controls="search-panel"
               id="tab-sale"
             >
               {t.home.forBuy}
             </button>
             <button
-              className={`search-tab-btn ${activeTab === "rent" ? "active" : ""}`}
-              onClick={() => setActiveTab("rent")}
+              className={`search-tab-btn ${activeTab === 'rent' ? 'active' : ''}`}
+              onClick={() => setActiveTab('rent')}
               role="tab"
-              aria-selected={activeTab === "rent"}
+              aria-selected={activeTab === 'rent'}
               aria-controls="search-panel"
               id="tab-rent"
             >
@@ -621,7 +657,7 @@ export default function HomePage() {
 
       {/* Main Content */}
       <main id="main-content" ref={mainContentRef} tabIndex={-1}>
-        {" "}
+        {' '}
         {/* Best Deals Section */}
         <section className="properties-section" aria-labelledby="deals-title">
           <div className="section-container">

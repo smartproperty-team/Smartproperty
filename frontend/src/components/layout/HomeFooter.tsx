@@ -2,7 +2,7 @@
 // SmartProperty - Home Footer Component
 // ===========================================
 
-import { Link } from "react-router-dom";
+import { Link } from 'react-router-dom';
 
 export default function HomeFooter() {
   return (
@@ -173,11 +173,15 @@ export default function HomeFooter() {
             >
               <input
                 type="text"
+                id="footer-full-name"
+                name="fullName"
                 placeholder="Full Name"
                 aria-label="Full Name"
               />
               <input
                 type="email"
+                id="footer-email"
+                name="email"
                 placeholder="Your@email.com"
                 aria-label="Email address"
               />

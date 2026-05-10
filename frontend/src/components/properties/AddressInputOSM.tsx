@@ -5,9 +5,25 @@
 // Based on OpenStreetMap data - 100% FREE
 // ESLint disable for external API types
 
-import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "../../i18n";
-import MapPicker from "./MapPicker";
+import { useEffect, useId, useRef, useState } from 'react';
+import { useTranslation } from '../../i18n';
+import MapPicker from './MapPicker';
+
+const formatError = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+};
 
 export interface AddressData {
   street: string;
@@ -42,7 +58,7 @@ const addressToSearchString = (address: AddressData): string => {
   if (address.state) parts.push(address.state);
   if (address.zipCode) parts.push(address.zipCode);
   if (address.country) parts.push(address.country);
-  return parts.join(", ");
+  return parts.join(', ');
 };
 
 // Search using Nominatim (FREE OpenStreetMap geocoding)
@@ -52,14 +68,14 @@ const searchAddress = async (query: string) => {
       `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(query)}`,
       {
         headers: {
-          "User-Agent": "SmartProperty-App",
+          'User-Agent': 'SmartProperty-App',
         },
       },
     );
-    if (!response.ok) throw new Error("Search failed");
+    if (!response.ok) throw new Error('Search failed');
     return await response.json();
   } catch (error) {
-    console.error("❌ Address search failed:", error);
+    console.error('❌ Address search failed:', formatError(error));
     return [];
   }
 };
@@ -70,6 +86,7 @@ export default function AddressInput({
   errors,
   disabled = false,
 }: AddressInputProps) {
+  const baseId = useId();
   const t = useTranslation();
   const [searchQuery, setSearchQuery] = useState(addressToSearchString(value));
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -104,8 +121,8 @@ export default function AddressInput({
   // Handle address selection from search results
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleSelectAddress = async (result: any) => {
-    console.log("📍 Selected address:", result.display_name);
-    console.log("📦 Address parts:", result.address);
+    console.log('📍 Selected address:', result.display_name);
+    console.log('📦 Address parts:', result.address);
 
     const addressParts = result.address || {};
 
@@ -114,7 +131,7 @@ export default function AddressInput({
     if (addressParts.house_number) streetParts.push(addressParts.house_number);
     if (addressParts.road) streetParts.push(addressParts.road);
     if (addressParts.street) streetParts.push(addressParts.street);
-    let street = streetParts.join(" ").trim();
+    let street = streetParts.join(' ').trim();
 
     // Extract city (try multiple fields)
     let city = (
@@ -123,7 +140,7 @@ export default function AddressInput({
       addressParts.village ||
       addressParts.municipality ||
       addressParts.hamlet ||
-      ""
+      ''
     ).trim();
 
     // Extract state/region
@@ -131,34 +148,34 @@ export default function AddressInput({
       addressParts.state ||
       addressParts.province ||
       addressParts.region ||
-      ""
+      ''
     ).trim();
 
     // Extract postal code
-    const zipCode = (addressParts.postcode || "").trim();
+    const zipCode = (addressParts.postcode || '').trim();
 
     // Extract country
-    let country = (addressParts.country || "").trim();
+    let country = (addressParts.country || '').trim();
 
     // Fallback: If street or city is empty, try to extract from display_name
     if (!street || !city || !country) {
-      const displayParts = (result.display_name || "")
-        .split(",")
+      const displayParts = (result.display_name || '')
+        .split(',')
         .map((p: string) => p.trim());
 
       if (!street && displayParts.length > 0) {
         street = displayParts[0]; // First part is usually the street
-        console.log("⚠️ Street extracted from display_name:", street);
+        console.log('⚠️ Street extracted from display_name:', street);
       }
 
       if (!city && displayParts.length > 1) {
         city = displayParts[1]; // Second part is usually the city
-        console.log("⚠️ City extracted from display_name:", city);
+        console.log('⚠️ City extracted from display_name:', city);
       }
 
       if (!country && displayParts.length > 0) {
         country = displayParts[displayParts.length - 1]; // Last part is usually the country
-        console.log("⚠️ Country extracted from display_name:", country);
+        console.log('⚠️ Country extracted from display_name:', country);
       }
     }
 
@@ -166,8 +183,8 @@ export default function AddressInput({
       street:
         street || t.properties.form.addressHelper.fallback.streetUnavailable,
       city: city || t.properties.form.addressHelper.fallback.cityUnspecified,
-      state: state || "",
-      zipCode: zipCode || "",
+      state: state || '',
+      zipCode: zipCode || '',
       country:
         country || t.properties.form.addressHelper.fallback.countryUnspecified,
       coordinates: {
@@ -176,12 +193,12 @@ export default function AddressInput({
       },
     };
 
-    console.log("✅ Parsed address:");
+    console.log('✅ Parsed address:');
     console.table({
       Rue: newAddress.street,
       Ville: newAddress.city,
-      État: newAddress.state || "(vide)",
-      "Code postal": newAddress.zipCode || "(vide)",
+      État: newAddress.state || '(vide)',
+      'Code postal': newAddress.zipCode || '(vide)',
       Pays: newAddress.country,
       Latitude: newAddress.coordinates?.lat || 0,
       Longitude: newAddress.coordinates?.lng || 0,
@@ -199,7 +216,7 @@ export default function AddressInput({
 
   // Handle address selection from map
   const handleMapAddressSelect = (address: AddressData) => {
-    console.log("🗺️ Address selected from map:", address);
+    console.log('🗺️ Address selected from map:', address);
     onChange(address);
     setSearchQuery(`${address.street}, ${address.city}, ${address.country}`);
 
@@ -217,15 +234,15 @@ export default function AddressInput({
   };
 
   // Handle coordinate change
-  const handleCoordinateChange = (field: "lat" | "lng", val: string) => {
+  const handleCoordinateChange = (field: 'lat' | 'lng', val: string) => {
     const numValue = parseFloat(val);
     if (isNaN(numValue)) return;
 
     onChange({
       ...value,
       coordinates: {
-        lat: field === "lat" ? numValue : value.coordinates?.lat || 0,
-        lng: field === "lng" ? numValue : value.coordinates?.lng || 0,
+        lat: field === 'lat' ? numValue : value.coordinates?.lat || 0,
+        lng: field === 'lng' ? numValue : value.coordinates?.lng || 0,
       },
     });
   };
@@ -241,7 +258,7 @@ export default function AddressInput({
     <div className="address-input-container">
       {/* Search with OpenStreetMap */}
       <div className="form-group full-width">
-        <label htmlFor="address-search" className="sr-only">
+        <label htmlFor={`${baseId}-address-search`} className="sr-only">
           {t.properties.form.addressHelper.searchPlaceholder}
         </label>
 
@@ -251,39 +268,39 @@ export default function AddressInput({
           onClick={() => setIsMapPickerOpen(true)}
           disabled={disabled}
           style={{
-            width: "100%",
-            padding: "0.875rem",
-            marginBottom: "1rem",
-            backgroundColor: "#10b981",
-            color: "white",
-            border: "none",
-            borderRadius: "6px",
-            fontSize: "0.95rem",
+            width: '100%',
+            padding: '0.875rem',
+            marginBottom: '1rem',
+            backgroundColor: '#10b981',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            fontSize: '0.95rem',
             fontWeight: 600,
-            cursor: disabled ? "not-allowed" : "pointer",
-            transition: "background-color 0.2s",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "0.5rem",
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            transition: 'background-color 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
           }}
           onMouseEnter={(e) => {
             if (!disabled) {
-              (e.target as HTMLElement).style.backgroundColor = "#059669";
+              (e.target as HTMLElement).style.backgroundColor = '#059669';
             }
           }}
           onMouseLeave={(e) => {
             if (!disabled) {
-              (e.target as HTMLElement).style.backgroundColor = "#10b981";
+              (e.target as HTMLElement).style.backgroundColor = '#10b981';
             }
           }}
         >
-          <span style={{ fontSize: "1.2rem" }}>🗺️</span>
+          <span style={{ fontSize: '1.2rem' }}>🗺️</span>
           <span>{t.properties.form.addressHelper.mapButton}</span>
         </button>
-        <div style={{ position: "relative" }}>
+        <div style={{ position: 'relative' }}>
           <input
-            id="address-search"
+            id={`${baseId}-address-search`}
             type="text"
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
@@ -291,22 +308,22 @@ export default function AddressInput({
             placeholder={t.properties.form.addressHelper.searchPlaceholder}
             disabled={disabled}
             style={{
-              width: "100%",
-              padding: "0.75rem",
-              border: "1px solid #ddd",
-              borderRadius: "4px",
-              fontSize: "0.95rem",
+              width: '100%',
+              padding: '0.75rem',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              fontSize: '0.95rem',
             }}
           />
 
           {searching && (
             <div
               style={{
-                position: "absolute",
-                right: "10px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                fontSize: "0.8rem",
+                position: 'absolute',
+                right: '10px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                fontSize: '0.8rem',
               }}
             >
               ⏳ {t.properties.form.addressHelper.searching}
@@ -317,18 +334,18 @@ export default function AddressInput({
           {showResults && searchResults.length > 0 && (
             <div
               style={{
-                position: "absolute",
-                top: "100%",
+                position: 'absolute',
+                top: '100%',
                 left: 0,
                 right: 0,
-                backgroundColor: "white",
-                border: "1px solid #ddd",
-                borderTop: "none",
-                borderRadius: "0 0 4px 4px",
-                maxHeight: "300px",
-                overflowY: "auto",
+                backgroundColor: 'white',
+                border: '1px solid #ddd',
+                borderTop: 'none',
+                borderRadius: '0 0 4px 4px',
+                maxHeight: '300px',
+                overflowY: 'auto',
                 zIndex: 1000,
-                boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
               }}
             >
               {searchResults.map((result, index) => (
@@ -337,31 +354,31 @@ export default function AddressInput({
                   key={index}
                   onClick={() => handleSelectAddress(result)}
                   style={{
-                    width: "100%",
-                    padding: "0.75rem",
-                    borderBottom: "1px solid #f0f0f0",
-                    borderLeft: "none",
-                    borderRight: "none",
-                    borderTop: "none",
-                    backgroundColor: "white",
-                    textAlign: "left",
-                    cursor: "pointer",
-                    transition: "background-color 0.2s",
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderBottom: '1px solid #f0f0f0',
+                    borderLeft: 'none',
+                    borderRight: 'none',
+                    borderTop: 'none',
+                    backgroundColor: 'white',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s',
                   }}
                   onMouseEnter={(e) => {
                     (e.currentTarget as HTMLElement).style.backgroundColor =
-                      "#f5f5f5";
+                      '#f5f5f5';
                   }}
                   onMouseLeave={(e) => {
                     (e.currentTarget as HTMLElement).style.backgroundColor =
-                      "white";
+                      'white';
                   }}
                 >
-                  <div style={{ fontSize: "0.9rem", fontWeight: "500" }}>
-                    📍 {result.display_name.split(",").slice(0, 3).join(", ")}
+                  <div style={{ fontSize: '0.9rem', fontWeight: '500' }}>
+                    📍 {result.display_name.split(',').slice(0, 3).join(', ')}
                   </div>
-                  <small style={{ color: "#666" }}>
-                    {result.display_name.split(",").slice(3).join(", ")}
+                  <small style={{ color: '#666' }}>
+                    {result.display_name.split(',').slice(3).join(', ')}
                   </small>
                 </button>
               ))}
@@ -373,9 +390,9 @@ export default function AddressInput({
             !searching && (
               <small
                 style={{
-                  display: "block",
-                  color: "#888",
-                  marginTop: "0.25rem",
+                  display: 'block',
+                  color: '#888',
+                  marginTop: '0.25rem',
                 }}
               ></small>
             )}
@@ -385,13 +402,13 @@ export default function AddressInput({
         {showSuccessMessage && (
           <div
             style={{
-              marginTop: "0.75rem",
-              padding: "0.75rem",
-              backgroundColor: "#d4edda",
-              color: "#155724",
-              border: "1px solid #c3e6cb",
-              borderRadius: "4px",
-              fontSize: "0.9rem",
+              marginTop: '0.75rem',
+              padding: '0.75rem',
+              backgroundColor: '#d4edda',
+              color: '#155724',
+              border: '1px solid #c3e6cb',
+              borderRadius: '4px',
+              fontSize: '0.9rem',
             }}
           >
             {t.properties.form.addressHelper.successMessage}
@@ -400,21 +417,21 @@ export default function AddressInput({
       </div>
 
       {/* Manual Address Fields */}
-      <div className="form-grid" style={{ marginTop: "1.5rem" }}>
+      <div className="form-grid" style={{ marginTop: '1.5rem' }}>
         <div className="form-group full-width">
-          <label htmlFor="street">
-            {t.properties.form.addressHelper.fields.street}{" "}
+          <label htmlFor={`${baseId}-street`}>
+            {t.properties.form.addressHelper.fields.street}{' '}
             <span className="required">*</span>
           </label>
           <input
-            id="street"
+            id={`${baseId}-street`}
             name="street"
             type="text"
             value={value.street}
-            onChange={(e) => handleManualChange("street", e.target.value)}
+            onChange={(e) => handleManualChange('street', e.target.value)}
             placeholder={t.properties.form.addressHelper.placeholders.street}
             disabled={disabled}
-            className={errors?.street ? "error" : ""}
+            className={errors?.street ? 'error' : ''}
           />
           {errors?.street && (
             <span className="error-message">{errors.street}</span>
@@ -422,67 +439,67 @@ export default function AddressInput({
         </div>
 
         <div className="form-group">
-          <label htmlFor="city">
-            {t.properties.form.addressHelper.fields.city}{" "}
+          <label htmlFor={`${baseId}-city`}>
+            {t.properties.form.addressHelper.fields.city}{' '}
             <span className="required">*</span>
           </label>
           <input
-            id="city"
+            id={`${baseId}-city`}
             name="city"
             type="text"
             value={value.city}
-            onChange={(e) => handleManualChange("city", e.target.value)}
+            onChange={(e) => handleManualChange('city', e.target.value)}
             placeholder={t.properties.form.addressHelper.placeholders.city}
             disabled={disabled}
-            className={errors?.city ? "error" : ""}
+            className={errors?.city ? 'error' : ''}
           />
           {errors?.city && <span className="error-message">{errors.city}</span>}
         </div>
 
         <div className="form-group">
-          <label htmlFor="state">
+          <label htmlFor={`${baseId}-state`}>
             {t.properties.form.addressHelper.fields.state}
           </label>
           <input
-            id="state"
+            id={`${baseId}-state`}
             name="state"
             type="text"
             value={value.state}
-            onChange={(e) => handleManualChange("state", e.target.value)}
+            onChange={(e) => handleManualChange('state', e.target.value)}
             placeholder={t.properties.form.addressHelper.placeholders.state}
             disabled={disabled}
           />
         </div>
 
         <div className="form-group">
-          <label htmlFor="zipCode">
+          <label htmlFor={`${baseId}-zipCode`}>
             {t.properties.form.addressHelper.fields.zipCode}
           </label>
           <input
-            id="zipCode"
+            id={`${baseId}-zipCode`}
             name="zipCode"
             type="text"
             value={value.zipCode}
-            onChange={(e) => handleManualChange("zipCode", e.target.value)}
+            onChange={(e) => handleManualChange('zipCode', e.target.value)}
             placeholder={t.properties.form.addressHelper.placeholders.zipCode}
             disabled={disabled}
           />
         </div>
 
         <div className="form-group full-width">
-          <label htmlFor="country">
-            {t.properties.form.addressHelper.fields.country}{" "}
+          <label htmlFor={`${baseId}-country`}>
+            {t.properties.form.addressHelper.fields.country}{' '}
             <span className="required">*</span>
           </label>
           <input
-            id="country"
+            id={`${baseId}-country`}
             name="country"
             type="text"
             value={value.country}
-            onChange={(e) => handleManualChange("country", e.target.value)}
+            onChange={(e) => handleManualChange('country', e.target.value)}
             placeholder={t.properties.form.addressHelper.placeholders.country}
             disabled={disabled}
-            className={errors?.country ? "error" : ""}
+            className={errors?.country ? 'error' : ''}
           />
           {errors?.country && (
             <span className="error-message">{errors.country}</span>
@@ -493,33 +510,33 @@ export default function AddressInput({
       {/* Coordinates Display */}
       <details
         style={{
-          marginTop: "1.5rem",
-          padding: "1rem",
-          backgroundColor: "#f5f5f5",
-          borderRadius: "4px",
-          cursor: "pointer",
+          marginTop: '1.5rem',
+          padding: '1rem',
+          backgroundColor: '#f5f5f5',
+          borderRadius: '4px',
+          cursor: 'pointer',
         }}
       >
-        <summary style={{ fontWeight: "bold", color: "#333" }}>
+        <summary style={{ fontWeight: 'bold', color: '#333' }}>
           📍 {t.properties.form.addressHelper.coordinates.summary}
         </summary>
-        <div className="form-grid" style={{ marginTop: "1rem" }}>
+        <div className="form-grid" style={{ marginTop: '1rem' }}>
           <div className="form-group">
-            <label htmlFor="lat">
+            <label htmlFor={`${baseId}-lat`}>
               {t.properties.form.addressHelper.fields.latitude}
             </label>
             <input
-              id="lat"
+              id={`${baseId}-lat`}
               type="number"
               step="0.0001"
-              value={value.coordinates?.lat || ""}
-              onChange={(e) => handleCoordinateChange("lat", e.target.value)}
+              value={value.coordinates?.lat || ''}
+              onChange={(e) => handleCoordinateChange('lat', e.target.value)}
               placeholder={
                 t.properties.form.addressHelper.placeholders.latitudeExample
               }
               disabled={disabled}
             />
-            <small style={{ color: "#666" }}>
+            <small style={{ color: '#666' }}>
               {value.coordinates?.lat
                 ? `✅ ${value.coordinates.lat}`
                 : t.properties.form.addressHelper.coordinates.autoFilled}
@@ -527,21 +544,21 @@ export default function AddressInput({
           </div>
 
           <div className="form-group">
-            <label htmlFor="lng">
+            <label htmlFor={`${baseId}-lng`}>
               {t.properties.form.addressHelper.fields.longitude}
             </label>
             <input
-              id="lng"
+              id={`${baseId}-lng`}
               type="number"
               step="0.0001"
-              value={value.coordinates?.lng || ""}
-              onChange={(e) => handleCoordinateChange("lng", e.target.value)}
+              value={value.coordinates?.lng || ''}
+              onChange={(e) => handleCoordinateChange('lng', e.target.value)}
               placeholder={
                 t.properties.form.addressHelper.placeholders.longitudeExample
               }
               disabled={disabled}
             />
-            <small style={{ color: "#666" }}>
+            <small style={{ color: '#666' }}>
               {value.coordinates?.lng
                 ? `✅ ${value.coordinates.lng}`
                 : t.properties.form.addressHelper.coordinates.autoFilled}
@@ -549,7 +566,7 @@ export default function AddressInput({
           </div>
         </div>
         <small
-          style={{ color: "#666", display: "block", marginTop: "0.75rem" }}
+          style={{ color: '#666', display: 'block', marginTop: '0.75rem' }}
         >
           {t.properties.form.addressHelper.coordinates.help}
         </small>

@@ -9,6 +9,22 @@ import api from '../../services/api';
 import { useAuthStore } from '../../store';
 import { UserRole } from '../../types';
 
+const formatError = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+};
+
 export function PushNotificationTestButton() {
   const { user } = useAuthStore();
   const [showModal, setShowModal] = useState(false);
@@ -47,7 +63,7 @@ export function PushNotificationTestButton() {
         : response.data?.data || [];
       setTenants(tenantsList);
     } catch (error) {
-      console.error('Failed to load tenants:', error);
+      console.error('Failed to load tenants:', formatError(error));
       setTenants([]);
     }
   };

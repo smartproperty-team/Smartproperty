@@ -2,6 +2,7 @@
 // SmartProperty - Property Detail Page
 // ===========================================
 
+<<<<<<< Updated upstream
 import { HomeFooter, Navbar } from "@/components/layout";
 import AiDescriptionPanel from "@/components/properties/AiDescriptionPanel";
 import HotspotEditor from "@/components/properties/HotspotEditor";
@@ -11,10 +12,17 @@ import VirtualTourViewer from "@/components/properties/VirtualTourViewer";
 import PropertyReviewsSection from "@/components/reviews/PropertyReviewsSection";
 import { useTranslation } from "@/i18n";
 import applicationService from "@/services/application.service";
+=======
+import { HomeFooter, Navbar } from '@/components/layout';
+import AiDescriptionPanel from '@/components/properties/AiDescriptionPanel';
+import { useTranslation } from '@/i18n';
+import applicationService from '@/services/application.service';
+>>>>>>> Stashed changes
 import {
   propertyService,
   type AiPropertySnapshot,
   type PropertyShareData,
+<<<<<<< Updated upstream
 } from "@/services/property.service";
 import reviewsFavoritesService from "@/services/reviews-favorites.service";
 import { useAuthStore } from "@/store";
@@ -39,6 +47,37 @@ import {
 } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import "./properties.css";
+=======
+} from '@/services/property.service';
+import { useAuthStore } from '@/store';
+import { ApplicationStatus } from '@/types/application';
+import type { Property, PropertyImage } from '@/types/property';
+import { canManageProperties, isTenant } from '@/utils';
+import L from 'leaflet';
+import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
+import iconUrl from 'leaflet/dist/images/marker-icon.png';
+import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
+import 'leaflet/dist/leaflet.css';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import './properties.css';
+
+const formatError = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+};
+>>>>>>> Stashed changes
 
 const ACTIVE_APPLICATION_STATUSES = new Set<ApplicationStatus>([
   ApplicationStatus.SUBMITTED,
@@ -55,7 +94,7 @@ L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
 // Custom pin icon — vivid green, larger, stands out on the map
 const createPinIcon = () =>
   L.divIcon({
-    className: "",
+    className: '',
     html: `
       <div style="position:relative;width:32px;height:42px;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.35))">
         <svg viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg" width="32" height="42">
@@ -92,7 +131,7 @@ async function nominatimSearch(query: string): Promise<NominatimResult | null> {
       `?format=json&limit=1&addressdetails=1` +
       `&q=${encodeURIComponent(query)}`;
     const res = await fetch(url, {
-      headers: { "User-Agent": "SmartProperty-App", "Accept-Language": "en" },
+      headers: { 'User-Agent': 'SmartProperty-App', 'Accept-Language': 'en' },
     });
     const data: NominatimResult[] = await res.json();
     return data.length > 0 ? data[0] : null;
@@ -102,24 +141,24 @@ async function nominatimSearch(query: string): Promise<NominatimResult | null> {
 }
 
 async function geocodeAddress(
-  address: Property["address"],
+  address: Property['address'],
 ): Promise<{ lat: number; lng: number; zoom: number } | null> {
   const { street, city, state, zipCode, country } = address;
 
   // Strategy 1 — full precision: street + city + state + zip + country
   const full = [street, city, state, zipCode, country]
     .filter(Boolean)
-    .join(", ");
+    .join(', ');
   const r1 = await nominatimSearch(full);
   if (r1) return { lat: parseFloat(r1.lat), lng: parseFloat(r1.lon), zoom: 17 };
 
   // Strategy 2 — street + city + country
-  const mid = [street, city, country].filter(Boolean).join(", ");
+  const mid = [street, city, country].filter(Boolean).join(', ');
   const r2 = await nominatimSearch(mid);
   if (r2) return { lat: parseFloat(r2.lat), lng: parseFloat(r2.lon), zoom: 16 };
 
   // Strategy 3 — city + state + country (neighbourhood level)
-  const broad = [city, state, country].filter(Boolean).join(", ");
+  const broad = [city, state, country].filter(Boolean).join(', ');
   const r3 = await nominatimSearch(broad);
   if (r3) return { lat: parseFloat(r3.lat), lng: parseFloat(r3.lon), zoom: 13 };
 
@@ -130,15 +169,15 @@ async function geocodeAddress(
 // Property Map Component (Leaflet)
 // ===========================================
 interface PropertyMapProps {
-  address: Property["address"];
+  address: Property['address'];
   title: string;
 }
 
 type AccuracyLevel =
-  | "exactSaved"
-  | "exactStreet"
-  | "streetLevel"
-  | "approximate";
+  | 'exactSaved'
+  | 'exactStreet'
+  | 'streetLevel'
+  | 'approximate';
 
 function PropertyMap({ address, title }: PropertyMapProps) {
   const t = useTranslation();
@@ -175,7 +214,7 @@ function PropertyMap({ address, title }: PropertyMapProps) {
 
       mapInstanceRef.current = map;
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution:
           '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19,
@@ -185,11 +224,11 @@ function PropertyMap({ address, title }: PropertyMapProps) {
       if (zoom >= 16) {
         L.circle([lat, lng], {
           radius: 40,
-          color: "#10b981",
-          fillColor: "#10b981",
+          color: '#10b981',
+          fillColor: '#10b981',
           fillOpacity: 0.08,
           weight: 1.5,
-          dashArray: "4 4",
+          dashArray: '4 4',
         }).addTo(map);
       }
 
@@ -199,8 +238,8 @@ function PropertyMap({ address, title }: PropertyMapProps) {
           `<div style="min-width:160px">
             <div style="font-weight:700;font-size:0.9rem;margin-bottom:4px;color:#1e293b">${title}</div>
             <div style="font-size:0.78rem;color:#64748b;line-height:1.4">
-              ${address.street ? `${address.street}<br>` : ""}
-              ${address.city}${address.state ? `, ${address.state}` : ""}<br>
+              ${address.street ? `${address.street}<br>` : ''}
+              ${address.city}${address.state ? `, ${address.state}` : ''}<br>
               ${address.country}
             </div>
             ${
@@ -225,7 +264,7 @@ function PropertyMap({ address, title }: PropertyMapProps) {
           address.coordinates.lat,
           address.coordinates.lng,
           17,
-          "exactSaved",
+          'exactSaved',
         );
         return;
       }
@@ -235,10 +274,10 @@ function PropertyMap({ address, title }: PropertyMapProps) {
       if (result) {
         const accuracy: AccuracyLevel =
           result.zoom >= 17
-            ? "exactStreet"
+            ? 'exactStreet'
             : result.zoom >= 16
-              ? "streetLevel"
-              : "approximate";
+              ? 'streetLevel'
+              : 'approximate';
         initMap(result.lat, result.lng, result.zoom, accuracy);
       } else {
         setMapError(true);
@@ -261,19 +300,19 @@ function PropertyMap({ address, title }: PropertyMapProps) {
       // Deep-link to exact pin on OpenStreetMap
       window.open(
         `https://www.openstreetmap.org/?mlat=${resolvedCoords.lat}&mlon=${resolvedCoords.lng}#map=17/${resolvedCoords.lat}/${resolvedCoords.lng}`,
-        "_blank",
-        "noopener",
+        '_blank',
+        'noopener',
       );
     } else {
       const query = encodeURIComponent(
         [address.street, address.city, address.state, address.country]
           .filter(Boolean)
-          .join(", "),
+          .join(', '),
       );
       window.open(
         `https://www.openstreetmap.org/search?query=${query}`,
-        "_blank",
-        "noopener",
+        '_blank',
+        'noopener',
       );
     }
   };
@@ -282,19 +321,19 @@ function PropertyMap({ address, title }: PropertyMapProps) {
     if (resolvedCoords) {
       window.open(
         `https://www.google.com/maps?q=${resolvedCoords.lat},${resolvedCoords.lng}`,
-        "_blank",
-        "noopener",
+        '_blank',
+        'noopener',
       );
     } else {
       const query = encodeURIComponent(
         [address.street, address.city, address.state, address.country]
           .filter(Boolean)
-          .join(", "),
+          .join(', '),
       );
       window.open(
         `https://www.google.com/maps/search/?api=1&query=${query}`,
-        "_blank",
-        "noopener",
+        '_blank',
+        'noopener',
       );
     }
   };
@@ -307,9 +346,9 @@ function PropertyMap({ address, title }: PropertyMapProps) {
           {accuracyKey && (
             <span
               className={`property-map-accuracy ${
-                accuracyKey === "approximate"
-                  ? "property-map-accuracy--approximate"
-                  : "property-map-accuracy--exact"
+                accuracyKey === 'approximate'
+                  ? 'property-map-accuracy--approximate'
+                  : 'property-map-accuracy--exact'
               }`}
             >
               <svg
@@ -449,7 +488,7 @@ function PropertyMap({ address, title }: PropertyMapProps) {
           address.country,
         ]
           .filter(Boolean)
-          .join(", ")}
+          .join(', ')}
       </p>
     </div>
   );
@@ -658,6 +697,12 @@ function ImageGallery({ images }: ImageGalleryProps) {
         <img
           src={mainImage?.url}
           alt={mainImage?.caption || t.propertyDetail.galleryAlt}
+<<<<<<< Updated upstream
+=======
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = '/placeholder-property.svg';
+          }}
+>>>>>>> Stashed changes
         />
       </div>
       {images.length > 1 && (
@@ -672,12 +717,28 @@ function ImageGallery({ images }: ImageGalleryProps) {
             >
               <img
                 src={img.url}
+<<<<<<< Updated upstream
                 alt={
                   img.caption || `${t.propertyDetail.galleryAlt} ${index + 2}`
                 }
               />
               {images.length > 5 && index === 3 && (
                 <div className="gallery-more">+{images.length - 5}</div>
+=======
+                alt={img.caption || t.propertyDetail.galleryAlt}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src =
+                    '/placeholder-property.svg';
+                }}
+              />
+              {index === 1 && images.length > 3 && (
+                <div className="gallery-more">
+                  {t.propertyDetail.morePhotos.replace(
+                    '{{count}}',
+                    String(images.length - 3),
+                  )}
+                </div>
+>>>>>>> Stashed changes
               )}
             </button>
           ))}
@@ -1049,7 +1110,7 @@ export default function PropertyDetailPage() {
   const canUseFavorites = canManageFavorites(user);
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<"load" | null>(null);
+  const [error, setError] = useState<'load' | null>(null);
   const [shareData, setShareData] = useState<PropertyShareData | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
@@ -1110,7 +1171,7 @@ export default function PropertyDetailPage() {
         setProperty(updated);
         setAiPanelOpen(false);
       } catch (err) {
-        console.error("Failed to apply AI description:", err);
+        console.error('Failed to apply AI description:', formatError(err));
         setAiSaveError(t.propertyDetail.aiDescription.saveError);
       }
     },
@@ -1144,8 +1205,8 @@ export default function PropertyDetailPage() {
       const data = await propertyService.getProperty(id);
       setProperty(data);
     } catch (err) {
-      console.error("Failed to load property:", err);
-      setError("load");
+      console.error('Failed to load property:', formatError(err));
+      setError('load');
     } finally {
       setLoading(false);
     }
@@ -1388,9 +1449,9 @@ export default function PropertyDetailPage() {
     if (window.confirm(t.propertyDetail.deleteConfirm)) {
       try {
         await propertyService.deleteProperty(propertyId);
-        navigate("/properties");
+        navigate('/properties');
       } catch (err) {
-        console.error("Failed to delete property:", err);
+        console.error('Failed to delete property:', formatError(err));
         alert(t.propertyDetail.deleteError);
       }
     }
@@ -1429,15 +1490,15 @@ export default function PropertyDetailPage() {
         return true;
       }
 
-      const textarea = document.createElement("textarea");
+      const textarea = document.createElement('textarea');
       textarea.value = text;
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
       document.body.appendChild(textarea);
       textarea.focus();
       textarea.select();
 
-      const copied = document.execCommand("copy");
+      const copied = document.execCommand('copy');
       document.body.removeChild(textarea);
       return copied;
     } catch {
@@ -1455,7 +1516,7 @@ export default function PropertyDetailPage() {
     if (!id) {
       return {
         shareUrl: getFallbackShareUrl(),
-        qrCode: "",
+        qrCode: '',
       };
     }
 
@@ -1500,7 +1561,7 @@ export default function PropertyDetailPage() {
         url: data.shareUrl || getFallbackShareUrl(),
       });
     } catch (error) {
-      if ((error as { name?: string }).name !== "AbortError") {
+      if ((error as { name?: string }).name !== 'AbortError') {
         setShareMessage(t.propertyDetail.shareError);
       }
     }
@@ -1586,8 +1647,8 @@ export default function PropertyDetailPage() {
             <h1 className="property-detail-title">{property.title}</h1>
             <p className="property-detail-address">
               <LocationIcon />
-              {property.address.street}, {property.address.city},{" "}
-              {property.address.state} {property.address.zipCode},{" "}
+              {property.address.street}, {property.address.city},{' '}
+              {property.address.state} {property.address.zipCode},{' '}
               {property.address.country}
             </p>
             {property.agency?.name && (
@@ -1690,7 +1751,7 @@ export default function PropertyDetailPage() {
                           spaces > 1
                             ? t.propertyDetail.parkingPlural
                             : t.propertyDetail.parkingSingle
-                        ).replace("{{count}}", String(spaces));
+                        ).replace('{{count}}', String(spaces));
                       })()}
                     </span>
                   </div>
@@ -1768,9 +1829,9 @@ export default function PropertyDetailPage() {
               <div className="property-description">
                 <div
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
                   }}
                 >
                   <h3>{t.propertyDetail.description}</h3>
@@ -1787,7 +1848,7 @@ export default function PropertyDetailPage() {
                 </div>
                 {property.description && <p>{property.description}</p>}
                 {aiSaveError && (
-                  <p role="alert" style={{ color: "#a32020" }}>
+                  <p role="alert" style={{ color: '#a32020' }}>
                     {aiSaveError}
                   </p>
                 )}
@@ -1946,7 +2007,7 @@ export default function PropertyDetailPage() {
                       }
                     }}
                   >
-                    {checkingApplication ? "Checking..." : "Apply Now"}
+                    {checkingApplication ? 'Checking...' : 'Apply Now'}
                   </Link>
                 )}
               </div>
@@ -1986,7 +2047,7 @@ export default function PropertyDetailPage() {
                     type="button"
                     className="btn-ai-trigger"
                     onClick={() => setAiPanelOpen(true)}
-                    style={{ width: "100%" }}
+                    style={{ width: '100%' }}
                     data-testid="ai-description-cta-sidebar"
                   >
                     {t.propertyDetail.aiDescription.cta}
@@ -2055,15 +2116,15 @@ export default function PropertyDetailPage() {
                     </p>
                   )}
                   <p>
-                    <strong>{t.propertyDetail.propertyId}:</strong>{" "}
+                    <strong>{t.propertyDetail.propertyId}:</strong>{' '}
                     {property.id || property._id}
                   </p>
                   <p>
-                    <strong>{t.propertyDetail.createdAt}:</strong>{" "}
+                    <strong>{t.propertyDetail.createdAt}:</strong>{' '}
                     {new Date(property.createdAt).toLocaleDateString()}
                   </p>
                   <p>
-                    <strong>{t.propertyDetail.updatedAt}:</strong>{" "}
+                    <strong>{t.propertyDetail.updatedAt}:</strong>{' '}
                     {new Date(property.updatedAt).toLocaleDateString()}
                   </p>
                 </div>

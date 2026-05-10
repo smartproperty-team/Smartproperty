@@ -1,53 +1,68 @@
-import { HomeFooter, Navbar } from "@/components/layout";
-import { Button, Input, Stepper, type StepperStep } from "@/components/ui";
-import { maintenanceService } from "@/services/maintenance.service";
-import { propertyService } from "@/services/property.service";
-import { useAuthStore } from "@/store";
-import { UserRole } from "@/types/auth";
+import { HomeFooter, Navbar } from '@/components/layout';
+import { Button, Input, Stepper, type StepperStep } from '@/components/ui';
+import { maintenanceService } from '@/services/maintenance.service';
+import { propertyService } from '@/services/property.service';
+import { useAuthStore } from '@/store';
+import { UserRole } from '@/types/auth';
 import type {
   CreateMaintenanceRequestDto,
   EntryPermissionOption,
   MaintenanceCategory,
   MaintenancePriority,
-} from "@/types/maintenance";
-import type { Property } from "@/types/property";
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+} from '@/types/maintenance';
+import type { Property } from '@/types/property';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+const formatError = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+};
 
 const steps: StepperStep[] = [
-  { id: "basics", label: "Request basics" },
-  { id: "description", label: "Description" },
-  { id: "media", label: "Media evidence" },
-  { id: "access", label: "Access & contact" },
-  { id: "review", label: "Review & submit" },
+  { id: 'basics', label: 'Request basics' },
+  { id: 'description', label: 'Description' },
+  { id: 'media', label: 'Media evidence' },
+  { id: 'access', label: 'Access & contact' },
+  { id: 'review', label: 'Review & submit' },
 ];
 
 type FormErrors = Partial<Record<string, string>>;
 
 const categoryOptions: Array<{ value: MaintenanceCategory; label: string }> = [
-  { value: "plumbing", label: "Plumbing" },
-  { value: "electrical", label: "Electrical" },
-  { value: "hvac", label: "HVAC" },
-  { value: "appliance", label: "Appliance" },
-  { value: "structural", label: "Structural" },
-  { value: "security", label: "Security" },
-  { value: "other", label: "Other" },
+  { value: 'plumbing', label: 'Plumbing' },
+  { value: 'electrical', label: 'Electrical' },
+  { value: 'hvac', label: 'HVAC' },
+  { value: 'appliance', label: 'Appliance' },
+  { value: 'structural', label: 'Structural' },
+  { value: 'security', label: 'Security' },
+  { value: 'other', label: 'Other' },
 ];
 
 const priorityOptions: Array<{ value: MaintenancePriority; label: string }> = [
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
-  { value: "emergency", label: "Emergency" },
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'emergency', label: 'Emergency' },
 ];
 
 const entryOptions: Array<{ value: EntryPermissionOption; label: string }> = [
-  { value: "presence_required", label: "Presence required during visit" },
+  { value: 'presence_required', label: 'Presence required during visit' },
   {
-    value: "can_enter_with_key",
-    label: "Can enter with key / building access",
+    value: 'can_enter_with_key',
+    label: 'Can enter with key / building access',
   },
-  { value: "call_before_entry", label: "Call before entry" },
+  { value: 'call_before_entry', label: 'Call before entry' },
 ];
 
 export default function MaintenanceRequestFormPage() {
@@ -61,21 +76,21 @@ export default function MaintenanceRequestFormPage() {
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
 
   const [formData, setFormData] = useState({
-    propertyId: "",
-    issueTitle: "",
-    category: "" as "" | MaintenanceCategory,
-    priority: "" as "" | MaintenancePriority,
+    propertyId: '',
+    issueTitle: '',
+    category: '' as '' | MaintenanceCategory,
+    priority: '' as '' | MaintenancePriority,
     emergency: false,
-    description: "",
-    locationInProperty: "",
-    firstSeenAt: "",
+    description: '',
+    locationInProperty: '',
+    firstSeenAt: '',
     isBlockingUsage: false,
-    preferredVisitWindows: "",
-    contactPhone: user?.phone || "",
-    entryPermission: "" as "" | EntryPermissionOption,
-    emergencyContactName: "",
-    emergencyContactPhone: "",
-    emergencyContactRelation: "",
+    preferredVisitWindows: '',
+    contactPhone: user?.phone || '',
+    entryPermission: '' as '' | EntryPermissionOption,
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+    emergencyContactRelation: '',
   });
 
   useEffect(() => {
@@ -98,7 +113,7 @@ export default function MaintenanceRequestFormPage() {
         const result = await propertyService.getProperties(filters);
         setPropertyOptions(result.properties || []);
       } catch (error) {
-        console.error("Failed to load properties:", error);
+        console.error('Failed to load properties:', formatError(error));
       } finally {
         setLoadingProperties(false);
       }
@@ -106,8 +121,8 @@ export default function MaintenanceRequestFormPage() {
   }, [user?.id, user?.role]);
 
   const mediaRequired =
-    formData.priority === "high" ||
-    formData.priority === "emergency" ||
+    formData.priority === 'high' ||
+    formData.priority === 'emergency' ||
     formData.emergency;
 
   const currentStepHasErrors = (step: number) => {
@@ -155,7 +170,7 @@ export default function MaintenanceRequestFormPage() {
     const date = new Date(formData.firstSeenAt);
 
     if (date > new Date()) {
-      newErrors.firstSeenAt = "First seen date cannot be in the future.";
+      newErrors.firstSeenAt = 'First seen date cannot be in the future.';
     }
   };
 
@@ -164,25 +179,25 @@ export default function MaintenanceRequestFormPage() {
 
     if (step === 0 && strict) {
       if (!formData.propertyId) {
-        newErrors.propertyId = "Property is required.";
+        newErrors.propertyId = 'Property is required.';
       }
 
       if (!formData.issueTitle.trim()) {
-        newErrors.issueTitle = "Issue title is required.";
+        newErrors.issueTitle = 'Issue title is required.';
       }
 
       if (!formData.category) {
-        newErrors.category = "Category is required.";
+        newErrors.category = 'Category is required.';
       }
 
       if (!formData.priority) {
-        newErrors.priority = "Priority is required.";
+        newErrors.priority = 'Priority is required.';
       }
     }
 
     if (step === 1 && strict) {
       if (!formData.description.trim()) {
-        newErrors.description = "Detailed description is required.";
+        newErrors.description = 'Detailed description is required.';
       }
 
       validateDates(newErrors);
@@ -190,16 +205,16 @@ export default function MaintenanceRequestFormPage() {
 
     if (step === 2 && strict && mediaRequired && mediaFiles.length < 1) {
       newErrors.media =
-        "At least one media file is required for high or emergency requests.";
+        'At least one media file is required for high or emergency requests.';
     }
 
     if (step === 3 && strict) {
       if (!formData.contactPhone.trim()) {
-        newErrors.contactPhone = "Contact phone is required.";
+        newErrors.contactPhone = 'Contact phone is required.';
       }
 
       if (!formData.entryPermission) {
-        newErrors.entryPermission = "Entry permission is required.";
+        newErrors.entryPermission = 'Entry permission is required.';
       }
 
       if (
@@ -208,12 +223,12 @@ export default function MaintenanceRequestFormPage() {
           !formData.emergencyContactPhone.trim())
       ) {
         newErrors.emergencyContact =
-          "Emergency contact name and phone are required.";
+          'Emergency contact name and phone are required.';
       }
     }
 
     if (step === 0 && !strict && !formData.propertyId) {
-      newErrors.propertyId = "Property is required to save a draft.";
+      newErrors.propertyId = 'Property is required to save a draft.';
     }
 
     if (step === 1 && !strict) {
@@ -251,7 +266,7 @@ export default function MaintenanceRequestFormPage() {
       isBlockingUsage: formData.isBlockingUsage,
       media: mapMedia(),
       preferredVisitWindows: formData.preferredVisitWindows
-        .split("\n")
+        .split('\n')
         .map((line) => line.trim())
         .filter(Boolean),
       contactPhone: formData.contactPhone || undefined,
@@ -278,19 +293,19 @@ export default function MaintenanceRequestFormPage() {
 
     for (const file of incoming) {
       const type = file.type;
-      const isAllowed = type.startsWith("image/") || type.startsWith("video/");
+      const isAllowed = type.startsWith('image/') || type.startsWith('video/');
 
       if (!isAllowed) {
         rejected.push(`${file.name}: unsupported file type`);
         continue;
       }
 
-      const isVideo = type.startsWith("video/");
+      const isVideo = type.startsWith('video/');
       const maxBytes = isVideo ? 25 * 1024 * 1024 : 10 * 1024 * 1024;
 
       if (file.size > maxBytes) {
         rejected.push(
-          `${file.name}: ${isVideo ? "video max 25MB" : "image max 10MB"}`,
+          `${file.name}: ${isVideo ? 'video max 25MB' : 'image max 10MB'}`,
         );
         continue;
       }
@@ -301,7 +316,7 @@ export default function MaintenanceRequestFormPage() {
     if (rejected.length > 0) {
       setErrors((prev) => ({
         ...prev,
-        media: `Some files were rejected: ${rejected.join(", ")}`,
+        media: `Some files were rejected: ${rejected.join(', ')}`,
       }));
     } else if (errors.media) {
       setErrors((prev) => ({ ...prev, media: undefined }));
@@ -318,10 +333,10 @@ export default function MaintenanceRequestFormPage() {
     setLoading(true);
     try {
       await maintenanceService.createRequest(toPayload(true));
-      navigate("/maintenance/requests/mine");
+      navigate('/maintenance/requests/mine');
     } catch (error) {
-      console.error("Failed to save maintenance draft:", error);
-      alert("Could not save draft. Please review the form and try again.");
+      console.error('Failed to save maintenance draft:', formatError(error));
+      alert('Could not save draft. Please review the form and try again.');
     } finally {
       setLoading(false);
     }
@@ -335,11 +350,14 @@ export default function MaintenanceRequestFormPage() {
     setLoading(true);
     try {
       await maintenanceService.createRequest(toPayload(false));
-      navigate("/maintenance/requests/mine");
+      navigate('/maintenance/requests/mine');
     } catch (error) {
-      console.error("Failed to submit maintenance request:", error);
+      console.error(
+        'Failed to submit maintenance request:',
+        formatError(error),
+      );
       alert(
-        "Could not submit the request. Please review validation and retry.",
+        'Could not submit the request. Please review validation and retry.',
       );
     } finally {
       setLoading(false);
@@ -425,7 +443,7 @@ export default function MaintenanceRequestFormPage() {
                   </label>
                   <select
                     value={formData.propertyId}
-                    onChange={(e) => setField("propertyId", e.target.value)}
+                    onChange={(e) => setField('propertyId', e.target.value)}
                     className="h-10 w-full rounded-lg border border-home-border px-3 text-sm"
                     disabled={loadingProperties}
                   >
@@ -447,7 +465,7 @@ export default function MaintenanceRequestFormPage() {
                   label="Issue title"
                   required
                   value={formData.issueTitle}
-                  onChange={(e) => setField("issueTitle", e.target.value)}
+                  onChange={(e) => setField('issueTitle', e.target.value)}
                   error={errors.issueTitle}
                 />
 
@@ -457,7 +475,7 @@ export default function MaintenanceRequestFormPage() {
                   </label>
                   <select
                     value={formData.category}
-                    onChange={(e) => setField("category", e.target.value)}
+                    onChange={(e) => setField('category', e.target.value)}
                     className="h-10 w-full rounded-lg border border-home-border px-3 text-sm"
                   >
                     <option value="">Select category</option>
@@ -480,7 +498,7 @@ export default function MaintenanceRequestFormPage() {
                   </label>
                   <select
                     value={formData.priority}
-                    onChange={(e) => setField("priority", e.target.value)}
+                    onChange={(e) => setField('priority', e.target.value)}
                     className="h-10 w-full rounded-lg border border-home-border px-3 text-sm"
                   >
                     <option value="">Select priority</option>
@@ -501,7 +519,7 @@ export default function MaintenanceRequestFormPage() {
                   <input
                     type="checkbox"
                     checked={formData.emergency}
-                    onChange={(e) => setField("emergency", e.target.checked)}
+                    onChange={(e) => setField('emergency', e.target.checked)}
                   />
                   Emergency request
                 </label>
@@ -516,7 +534,7 @@ export default function MaintenanceRequestFormPage() {
                   </label>
                   <textarea
                     value={formData.description}
-                    onChange={(e) => setField("description", e.target.value)}
+                    onChange={(e) => setField('description', e.target.value)}
                     rows={5}
                     className="w-full rounded-lg border border-home-border px-3 py-2 text-sm"
                     placeholder="Describe issue symptoms, frequency, and impact"
@@ -532,7 +550,7 @@ export default function MaintenanceRequestFormPage() {
                   label="Location in property"
                   value={formData.locationInProperty}
                   onChange={(e) =>
-                    setField("locationInProperty", e.target.value)
+                    setField('locationInProperty', e.target.value)
                   }
                   placeholder="Kitchen, bathroom, bedroom..."
                 />
@@ -541,7 +559,7 @@ export default function MaintenanceRequestFormPage() {
                   type="datetime-local"
                   label="First seen date/time"
                   value={formData.firstSeenAt}
-                  onChange={(e) => setField("firstSeenAt", e.target.value)}
+                  onChange={(e) => setField('firstSeenAt', e.target.value)}
                   error={errors.firstSeenAt}
                 />
 
@@ -550,7 +568,7 @@ export default function MaintenanceRequestFormPage() {
                     type="checkbox"
                     checked={formData.isBlockingUsage}
                     onChange={(e) =>
-                      setField("isBlockingUsage", e.target.checked)
+                      setField('isBlockingUsage', e.target.checked)
                     }
                   />
                   Issue is blocking normal usage
@@ -619,7 +637,7 @@ export default function MaintenanceRequestFormPage() {
                     rows={3}
                     value={formData.preferredVisitWindows}
                     onChange={(e) =>
-                      setField("preferredVisitWindows", e.target.value)
+                      setField('preferredVisitWindows', e.target.value)
                     }
                     className="w-full rounded-lg border border-home-border px-3 py-2 text-sm"
                     placeholder="One line per window (e.g., Mon-Fri 09:00-12:00)"
@@ -630,7 +648,7 @@ export default function MaintenanceRequestFormPage() {
                   label="Owner/Branch Manager phone"
                   required
                   value={formData.contactPhone}
-                  onChange={(e) => setField("contactPhone", e.target.value)}
+                  onChange={(e) => setField('contactPhone', e.target.value)}
                   error={errors.contactPhone}
                 />
 
@@ -641,7 +659,7 @@ export default function MaintenanceRequestFormPage() {
                   <select
                     value={formData.entryPermission}
                     onChange={(e) =>
-                      setField("entryPermission", e.target.value)
+                      setField('entryPermission', e.target.value)
                     }
                     className="h-10 w-full rounded-lg border border-home-border px-3 text-sm"
                   >
@@ -666,7 +684,7 @@ export default function MaintenanceRequestFormPage() {
                       required
                       value={formData.emergencyContactName}
                       onChange={(e) =>
-                        setField("emergencyContactName", e.target.value)
+                        setField('emergencyContactName', e.target.value)
                       }
                     />
                     <Input
@@ -674,14 +692,14 @@ export default function MaintenanceRequestFormPage() {
                       required
                       value={formData.emergencyContactPhone}
                       onChange={(e) =>
-                        setField("emergencyContactPhone", e.target.value)
+                        setField('emergencyContactPhone', e.target.value)
                       }
                     />
                     <Input
                       label="Emergency contact relation"
                       value={formData.emergencyContactRelation}
                       onChange={(e) =>
-                        setField("emergencyContactRelation", e.target.value)
+                        setField('emergencyContactRelation', e.target.value)
                       }
                     />
                     {errors.emergencyContact && (
@@ -706,31 +724,31 @@ export default function MaintenanceRequestFormPage() {
                       <dd className="font-medium text-home-text">
                         {propertyOptions.find(
                           (p) => p.id === formData.propertyId,
-                        )?.title || "N/A"}
+                        )?.title || 'N/A'}
                       </dd>
                     </div>
                     <div>
                       <dt className="text-home-text-muted">Issue title</dt>
                       <dd className="font-medium text-home-text">
-                        {formData.issueTitle || "N/A"}
+                        {formData.issueTitle || 'N/A'}
                       </dd>
                     </div>
                     <div>
                       <dt className="text-home-text-muted">Category</dt>
                       <dd className="font-medium text-home-text">
-                        {formData.category || "N/A"}
+                        {formData.category || 'N/A'}
                       </dd>
                     </div>
                     <div>
                       <dt className="text-home-text-muted">Priority</dt>
                       <dd className="font-medium text-home-text">
-                        {formData.priority || "N/A"}
+                        {formData.priority || 'N/A'}
                       </dd>
                     </div>
                     <div>
                       <dt className="text-home-text-muted">Emergency</dt>
                       <dd className="font-medium text-home-text">
-                        {formData.emergency ? "Yes" : "No"}
+                        {formData.emergency ? 'Yes' : 'No'}
                       </dd>
                     </div>
                     <div>
@@ -761,7 +779,7 @@ export default function MaintenanceRequestFormPage() {
         </Stepper>
 
         <div className="mt-4 text-sm text-home-text-muted">
-          Need a quick exit? Return to{" "}
+          Need a quick exit? Return to{' '}
           <Link to="/dashboard" className="text-home-primary underline">
             dashboard
           </Link>
