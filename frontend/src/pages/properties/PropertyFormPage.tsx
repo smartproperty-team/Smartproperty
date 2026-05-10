@@ -3,7 +3,7 @@
 // ===========================================
 
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { HomeFooter, Navbar } from "../../components/layout";
 import AddressInput, {
   type AddressData,
@@ -128,6 +128,11 @@ interface FormData {
 interface PendingImage {
   file: File;
 }
+
+// Virtual tour constraints
+const VIRTUAL_TOUR_MIN_IMAGES = 8;
+const VIRTUAL_TOUR_MIN_WIDTH = 1024;
+const VIRTUAL_TOUR_MIN_HEIGHT = 768;
 
 const initialFormData: FormData = {
   title: "",
@@ -374,7 +379,10 @@ export default function PropertyFormPage() {
       const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB
       return isValid && isValidSize;
     });
-       setImages((prev) => [...prev, ...validFiles]);
+    setImages((prev) => [
+      ...prev,
+      ...validFiles.map((f) => ({ file: f })),
+    ]);
   };
 
   // Handle image removal
@@ -413,7 +421,10 @@ export default function PropertyFormPage() {
     const files = Array.from(e.dataTransfer.files).filter((file) =>
       file.type.startsWith("image/"),
     );
-    setImages((prev) => [...prev, ...files]);
+    setImages((prev) => [
+      ...prev,
+      ...files.map((f) => ({ file: f })),
+    ]);
   };
 
   // Validate form
@@ -586,7 +597,7 @@ export default function PropertyFormPage() {
       if (images.length > 0) {
         await propertyService.uploadImages(
           propertyId,
-          images,
+          images.map((i) => i.file),
         );
       }
 
@@ -1121,7 +1132,6 @@ export default function PropertyFormPage() {
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={() => document.getElementById("image-input")?.click()}
-              role="button"
               tabIndex={0}
               aria-label={t.properties.form.image.uploadAriaLabel}
               onKeyDown={(e) => {
@@ -1181,23 +1191,23 @@ export default function PropertyFormPage() {
 
             {images.length > 0 && (
               <div className="image-preview-grid">
-                {images.map((file, index) => (
-                  <div key={index} className="image-preview-item">
-                    <img
-                       src={URL.createObjectURL(file)}
-                       alt={`Preview ${index + 1}`}
-                    />
-                    <button
-                      type="button"
-                      className="image-preview-remove"
-                      onClick={() => handleRemoveImage(index)}
-                      aria-label={`Remove image ${index + 1}`}
-                    >
-                      <CloseIcon />
-                    </button>
-                  </div>
-                ))}
-              </div>
+                  {images.map((img, index) => (
+                    <div key={`${img.file.name}-${index}`} className="image-preview-item">
+                      <img
+                         src={URL.createObjectURL(img.file)}
+                         alt={`Preview ${index + 1}`}
+                      />
+                      <button
+                        type="button"
+                        className="image-preview-remove"
+                        onClick={() => handleRemoveImage(index)}
+                        aria-label={`Remove image ${index + 1}`}
+                      >
+                        <CloseIcon />
+                      </button>
+                    </div>
+                  ))}
+                </div>
             )}
 
             {/* Description (final step) - generated from the data entered in
@@ -1249,61 +1259,72 @@ export default function PropertyFormPage() {
             />
           </div>
         );
-
       default:
-                    </div>
-                <div className="wizard-nav-primary">
-                  {currentStep !== PRICING_STEP_INDEX && (
-                    <button
-                      type="button"
-                      className="btn-ai-trigger"
-                      onClick={jumpToPricingStep}
-                    >
-                      Predict price (AI)
-                    </button>
-                  )}
+        return null;
+    }
+  };
+
+  return (
+    <div className="property-form-page">
+      <Navbar />
+      <main className="property-form-container">
+        <div className="wizard">
+          <Stepper
+            steps={wizardSteps}
+            currentStep={currentStep}
+            onStepChange={handleStepChange}
+            actions={
+              <div className="wizard-nav-primary">
+                {currentStep !== PRICING_STEP_INDEX && (
                   <button
                     type="button"
-                    className="btn-cancel"
-                    onClick={handlePreviousStep}
-                    disabled={currentStep === 0}
+                    className="btn-ai-trigger"
+                    onClick={jumpToPricingStep}
                   >
-                    {t.properties.previous}
+                    Predict price (AI)
                   </button>
+                )}
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={handlePreviousStep}
+                  disabled={currentStep === 0}
+                >
+                  {t.properties.previous}
+                </button>
 
-                  {!isPhotosStep ? (
-                    <button
-                      type="button"
-                      className="btn-submit"
-                      onClick={handleNextStep}
-                    >
-                      {t.properties.next}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn-submit"
-                      onClick={() => {
-                        void handleSaveProperty();
-                      }}
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <>
-                          <span
-                            className="loading-spinner"
-                            style={{ width: 18, height: 18 }}
-                          />
-                          {t.properties.form.actions.saving}
-                        </>
-                      ) : isEditing ? (
-                        t.properties.form.actions.update
-                      ) : (
-                        t.properties.form.actions.create
-                      )}
-                    </button>
-                  )}
-                </div>
+                {!isPhotosStep ? (
+                  <button
+                    type="button"
+                    className="btn-submit"
+                    onClick={handleNextStep}
+                  >
+                    {t.properties.next}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn-submit"
+                    onClick={() => {
+                      void handleSaveProperty();
+                    }}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <span
+                          className="loading-spinner"
+                          style={{ width: 18, height: 18 }}
+                        />
+                        {t.properties.form.actions.saving}
+                      </>
+                    ) : isEditing ? (
+                      t.properties.form.actions.update
+                    ) : (
+                      t.properties.form.actions.create
+                    )}
+                  </button>
+                )}
               </div>
             }
           >
