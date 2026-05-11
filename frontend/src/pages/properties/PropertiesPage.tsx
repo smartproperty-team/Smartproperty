@@ -342,6 +342,13 @@ export default function PropertiesPage() {
     const parsed = parseNumberParam(value);
     return parsed !== undefined && parsed > 0 ? parsed : undefined;
   };
+  const parseCategoryParam = (
+    value: string | null,
+  ): PropertyFilters["category"] => {
+    return value === "sale" || value === "rental" || value === "management"
+      ? value
+      : undefined;
+  };
   const [showMap, setShowMap] = useState(true);
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(
     null,
@@ -365,6 +372,7 @@ export default function PropertiesPage() {
     limit: 12,
     type: (searchParams.get("type") as PropertyType) || undefined,
     status: (searchParams.get("status") as PropertyStatus) || undefined,
+    category: parseCategoryParam(searchParams.get("category")),
     bedrooms: parsePositiveIntegerParam(searchParams.get("bedrooms")),
     bathrooms: parsePositiveIntegerParam(searchParams.get("bathrooms")),
     nearLat: parseNumberParam(searchParams.get("nearLat")),
@@ -426,6 +434,24 @@ export default function PropertiesPage() {
               ? t.properties.typeCondo
               : t.properties.typeLand;
 
+  const areFiltersEqual = (left: PropertyFilters, right: PropertyFilters) =>
+    left.page === right.page &&
+    left.limit === right.limit &&
+    left.type === right.type &&
+    left.status === right.status &&
+    left.category === right.category &&
+    left.minPrice === right.minPrice &&
+    left.maxPrice === right.maxPrice &&
+    left.bedrooms === right.bedrooms &&
+    left.bathrooms === right.bathrooms &&
+    left.nearLat === right.nearLat &&
+    left.nearLng === right.nearLng &&
+    left.radiusKm === right.radiusKm &&
+    left.city === right.city &&
+    left.search === right.search &&
+    left.ownerId === right.ownerId &&
+    left.managerId === right.managerId;
+
   const comparedProperties = properties.filter((property) =>
     comparisonIds.includes(getPropertyId(property)),
   );
@@ -474,6 +500,27 @@ export default function PropertiesPage() {
   }, [loadProperties]);
 
   useEffect(() => {
+    const nextFilters: PropertyFilters = {
+      page: 1,
+      limit: 12,
+      type: (searchParams.get("type") as PropertyType) || undefined,
+      status: (searchParams.get("status") as PropertyStatus) || undefined,
+      category: parseCategoryParam(searchParams.get("category")),
+      bedrooms: parsePositiveIntegerParam(searchParams.get("bedrooms")),
+      bathrooms: parsePositiveIntegerParam(searchParams.get("bathrooms")),
+      nearLat: parseNumberParam(searchParams.get("nearLat")),
+      nearLng: parseNumberParam(searchParams.get("nearLng")),
+      radiusKm: parsePositiveNumberParam(searchParams.get("radiusKm")),
+      city: searchParams.get("city") || undefined,
+      search: searchParams.get("search") || undefined,
+    };
+
+    setFilters((current) =>
+      areFiltersEqual(current, nextFilters) ? current : nextFilters,
+    );
+  }, [searchParams]);
+
+  useEffect(() => {
     setComparisonIds((prev) =>
       prev.filter((id) =>
         properties.some((property) => getPropertyId(property) === id),
@@ -487,6 +534,7 @@ export default function PropertiesPage() {
       const params = new URLSearchParams();
       if (f.type) params.set("type", f.type);
       if (f.status) params.set("status", f.status);
+      if (f.category) params.set("category", f.category);
       if (f.bedrooms !== undefined) params.set("bedrooms", String(f.bedrooms));
       if (f.bathrooms !== undefined)
         params.set("bathrooms", String(f.bathrooms));

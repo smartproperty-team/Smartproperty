@@ -52,6 +52,8 @@ export default function HomeNavbar() {
   const notificationSocketRef = useRef<Socket | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const notifPanelRef = useRef<HTMLDivElement>(null);
+  const [showListingsDropdown, setShowListingsDropdown] = useState(false);
+  const listingsDropdownRef = useRef<HTMLDivElement>(null);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const [sessionWarningVisible, setSessionWarningVisible] = useState(false);
@@ -319,6 +321,19 @@ export default function HomeNavbar() {
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
+        listingsDropdownRef.current &&
+        !listingsDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowListingsDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
         userDropdownRef.current &&
         !userDropdownRef.current.contains(e.target as Node)
       ) {
@@ -343,12 +358,17 @@ export default function HomeNavbar() {
       if (e.key === "Escape") {
         setMobileMenuOpen(false);
         setShowNotifPanel(false);
+        setShowListingsDropdown(false);
         setShowUserDropdown(false);
       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  useEffect(() => {
+    setShowListingsDropdown(false);
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     if (mobileMenuOpen) {
@@ -452,6 +472,72 @@ export default function HomeNavbar() {
 
           <div className="hidden min-w-0 flex-1 flex-wrap items-center justify-center gap-1.5 md:flex">
             {navLinks.map((link) => {
+              if (link.to === "/properties") {
+                const isActive = location.pathname === "/properties";
+                return (
+                  <div
+                    key={link.to}
+                    className="relative"
+                    ref={listingsDropdownRef}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setShowListingsDropdown((prev) => !prev)}
+                      onMouseEnter={() => handleRoutePrefetch("/properties")}
+                      onFocus={() => handleRoutePrefetch("/properties")}
+                      className={`inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-semibold tracking-[0.01em] transition-colors ${
+                        isActive
+                          ? "bg-[#FFC570] text-[#1A3263]"
+                          : "text-white/95 hover:bg-white/10 hover:text-white"
+                      }`}
+                      aria-current={isActive ? "page" : undefined}
+                      aria-haspopup="menu"
+                      aria-expanded={showListingsDropdown}
+                      aria-controls="listings-menu"
+                    >
+                      <span>{link.label}</span>
+                      <ChevronDown
+                        size={15}
+                        strokeWidth={2.25}
+                        aria-hidden="true"
+                      />
+                    </button>
+
+                    {showListingsDropdown && (
+                      <div
+                        id="listings-menu"
+                        className="absolute left-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-white/15 bg-[#183057] p-1 shadow-[0_20px_45px_rgba(15,23,42,0.28)]"
+                        role="menu"
+                        aria-label={link.label}
+                      >
+                        {[
+                          { label: t.home.forSale, category: "sale" as const },
+                          {
+                            label: t.home.forRent,
+                            category: "rental" as const,
+                          },
+                        ].map((item) => (
+                          <Link
+                            key={item.category}
+                            to={`/properties?category=${item.category}`}
+                            onClick={() => setShowListingsDropdown(false)}
+                            onMouseEnter={() =>
+                              handleRoutePrefetch(
+                                `/properties?category=${item.category}`,
+                              )
+                            }
+                            className="block rounded-lg px-4 py-3 text-sm font-semibold text-white/95 transition-colors hover:bg-white/10 hover:text-[#FFC570]"
+                            role="menuitem"
+                          >
+                            {item.label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               const isActive = location.pathname === link.to;
               return (
                 <Link
@@ -810,19 +896,66 @@ export default function HomeNavbar() {
           aria-hidden={!mobileMenuOpen}
         >
           <div className="space-y-1 px-4 py-3 sm:px-6">
-            {navLinks.map((link) => (
-              <Link
-                key={`mobile-${link.to}`}
-                to={link.to}
-                onFocus={() => handleRoutePrefetch(link.to)}
-                className="block rounded-lg px-3 py-2.5 text-base font-semibold text-white/95 transition-colors hover:bg-white/10 hover:text-[#FFC570]"
-                onClick={() => setMobileMenuOpen(false)}
-                tabIndex={mobileMenuOpen ? 0 : -1}
-                aria-hidden={!mobileMenuOpen}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              if (link.to === "/properties") {
+                return (
+                  <div key={`mobile-${link.to}`} className="space-y-2">
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-base font-semibold text-white/95 transition-colors hover:bg-white/10 hover:text-[#FFC570]"
+                      onClick={() => setShowListingsDropdown((prev) => !prev)}
+                      onFocus={() => handleRoutePrefetch(link.to)}
+                      tabIndex={mobileMenuOpen ? 0 : -1}
+                      aria-expanded={showListingsDropdown}
+                      aria-controls="mobile-listings-menu"
+                    >
+                      <span>{link.label}</span>
+                      <ChevronDown size={16} aria-hidden="true" />
+                    </button>
+                    {showListingsDropdown && (
+                      <div id="mobile-listings-menu" className="space-y-1 pl-3">
+                        <Link
+                          to="/properties?category=sale"
+                          onClick={() => {
+                            setMobileMenuOpen(false);
+                            setShowListingsDropdown(false);
+                          }}
+                          className="block rounded-lg px-3 py-2 text-sm font-semibold text-white/85 transition-colors hover:bg-white/10 hover:text-[#FFC570]"
+                          tabIndex={mobileMenuOpen ? 0 : -1}
+                        >
+                          {t.home.forSale}
+                        </Link>
+                        <Link
+                          to="/properties?category=rental"
+                          onClick={() => {
+                            setMobileMenuOpen(false);
+                            setShowListingsDropdown(false);
+                          }}
+                          className="block rounded-lg px-3 py-2 text-sm font-semibold text-white/85 transition-colors hover:bg-white/10 hover:text-[#FFC570]"
+                          tabIndex={mobileMenuOpen ? 0 : -1}
+                        >
+                          {t.home.forRent}
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={`mobile-${link.to}`}
+                  to={link.to}
+                  onFocus={() => handleRoutePrefetch(link.to)}
+                  className="block rounded-lg px-3 py-2.5 text-base font-semibold text-white/95 transition-colors hover:bg-white/10 hover:text-[#FFC570]"
+                  onClick={() => setMobileMenuOpen(false)}
+                  tabIndex={mobileMenuOpen ? 0 : -1}
+                  aria-hidden={!mobileMenuOpen}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </nav>
