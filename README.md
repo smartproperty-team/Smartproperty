@@ -31,10 +31,9 @@ The system is built as a set of cooperating services: a React/TypeScript fronten
 
 | Listings | 3D house tour |
 | :---: | :---: |
-| ![Listings](docs/screenshots/matching.png) | ![Price prediction](docs/screenshots/price-prediction.png) |
-| ![Accounting management](docs/screenshots/listings.png) 
+| ![Listings](docs/screenshots/listings.png) | ![3D house tour](docs/screenshots/3d-tour.png) |
 
-
+![Accounting management](docs/screenshots/accounting.png)
 
 <!-- Optional but strong: a short demo GIF of the app in action.
 ![Demo](docs/screenshots/demo.gif)
@@ -188,11 +187,9 @@ npm run test:cov
   show service health, request latency/throughput, and resource usage if you have them.
 -->
 
-
-
 | Grafana dashboard | Prometheus targets |
 | :---: | :---: |
-|![Grafana dashboard — service health & performance](docs/screenshots/grafana-dashboard.png) | ![Prometheus targets up](docs/screenshots/prometheus-targets.png) |
+| ![Grafana dashboard — service health & performance](docs/screenshots/grafana-dashboard.png) | ![Prometheus targets up](docs/screenshots/prometheus-targets.png) |
 
 ## Roadmap
 <!-- TODO: keep, edit, or delete — a short honest roadmap signals active thinking -->
@@ -208,4 +205,5 @@ npm run test:cov
 - GitHub: [@waeldaagi](https://github.com/waeldaagi)
 
 ## License
-<!-- TODO: add a license if you want one. MIT is the common, permissive choice for showcase repos. -->
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
