@@ -188,11 +188,11 @@ npm run test:cov
   show service health, request latency/throughput, and resource usage if you have them.
 -->
 
-![Grafana dashboard — service health & performance](docs/screenshots/grafana-dashboard.png)
+
 
 | Request latency & throughput | Prometheus targets |
 | :---: | :---: |
-| ![Grafana — latency and throughput](docs/screenshots/grafana-metrics.png) | ![Prometheus targets up](docs/screenshots/prometheus-targets.png) |
+|![Grafana dashboard — service health & performance](docs/screenshots/grafana-dashboard.png) | ![Prometheus targets up](docs/screenshots/prometheus-targets.png) |
 
 ## Roadmap
 <!-- TODO: keep, edit, or delete — a short honest roadmap signals active thinking -->
