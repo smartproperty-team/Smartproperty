@@ -31,11 +31,10 @@ The system is built as a set of cooperating services: a React/TypeScript fronten
 
 | AI tenant matching | 3D house tour |
 | :---: | :---: |
-| ![AI tenant matching](docs/screenshots/matching.png) | ![Price prediction](docs/screenshots/price-prediction.png) |
+| ![Listings](docs/screenshots/matching.png) | ![Price prediction](docs/screenshots/price-prediction.png) |
 
 | Listings management | Tenant management |
 | :---: | :---: |
-| ![Listings](docs/screenshots/listings.png) | ![Tenants](docs/screenshots/tenants.png) |
 
 <!-- Optional but strong: a short demo GIF of the app in action.
 ![Demo](docs/screenshots/demo.gif)
