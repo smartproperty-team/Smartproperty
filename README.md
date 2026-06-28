@@ -19,10 +19,26 @@
 
 The system is built as a set of cooperating services: a React/TypeScript frontend, a NestJS REST API, a dedicated Python/FastAPI machine-learning service, MongoDB for persistence, and Redis for caching — all containerized and shipped through a Jenkins CI/CD pipeline with quality gates and full observability.
 
-<!-- TODO: add 2–3 screenshots and a short demo GIF here. They do more for this repo than any paragraph. -->
-<!-- Example:
-![Dashboard](docs/screenshots/dashboard.png)
-![AI matching](docs/screenshots/matching.png)
+## Screenshots
+
+<!--
+  Put your image files in a docs/screenshots/ folder in this repo, then update the
+  filenames below to match. Use lowercase names with no spaces (e.g. dashboard.png).
+  Add or remove rows so the grid matches the screenshots you actually have.
+-->
+
+![SmartProperty dashboard](docs/screenshots/dashboard.png)
+
+| AI tenant matching | Rental-price prediction |
+| :---: | :---: |
+| ![AI tenant matching](docs/screenshots/matching.png) | ![Price prediction](docs/screenshots/price-prediction.png) |
+
+| Listings management | Tenant management |
+| :---: | :---: |
+| ![Listings](docs/screenshots/listings.png) | ![Tenants](docs/screenshots/tenants.png) |
+
+<!-- Optional but strong: a short demo GIF of the app in action.
+![Demo](docs/screenshots/demo.gif)
 -->
 
 ## Key features
@@ -167,7 +183,17 @@ npm run test:cov
 - **Prometheus** scrapes metrics from the API and ML service.
 - **Grafana** visualizes service health and performance.
 
-<!-- TODO (optional): screenshot a Grafana dashboard here — it's strong proof of the observability work. -->
+<!--
+  Add your monitoring screenshots to docs/screenshots/ and update the names below.
+  A live Grafana board with real metrics is strong proof of the observability work —
+  show service health, request latency/throughput, and resource usage if you have them.
+-->
+
+![Grafana dashboard — service health & performance](docs/screenshots/grafana-dashboard.png)
+
+| Request latency & throughput | Prometheus targets |
+| :---: | :---: |
+| ![Grafana — latency and throughput](docs/screenshots/grafana-metrics.png) | ![Prometheus targets up](docs/screenshots/prometheus-targets.png) |
 
 ## Roadmap
 <!-- TODO: keep, edit, or delete — a short honest roadmap signals active thinking -->
