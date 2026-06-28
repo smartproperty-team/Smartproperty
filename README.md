@@ -190,7 +190,7 @@ npm run test:cov
 
 
 
-| Request latency & throughput | Prometheus targets |
+| Grafana dashboard | Prometheus targets |
 | :---: | :---: |
 |![Grafana dashboard — service health & performance](docs/screenshots/grafana-dashboard.png) | ![Prometheus targets up](docs/screenshots/prometheus-targets.png) |
 
