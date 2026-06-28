@@ -29,12 +29,11 @@ The system is built as a set of cooperating services: a React/TypeScript fronten
 
 ![SmartProperty dashboard](docs/screenshots/dashboard.png)
 
-| AI tenant matching | 3D house tour |
+| Listings | 3D house tour |
 | :---: | :---: |
 | ![Listings](docs/screenshots/matching.png) | ![Price prediction](docs/screenshots/price-prediction.png) |
 
-| Listings management | Tenant management |
-| :---: | :---: |
+
 
 <!-- Optional but strong: a short demo GIF of the app in action.
 ![Demo](docs/screenshots/demo.gif)
