@@ -32,7 +32,7 @@ The system is built as a set of cooperating services: a React/TypeScript fronten
 | Listings | 3D house tour |
 | :---: | :---: |
 | ![Listings](docs/screenshots/matching.png) | ![Price prediction](docs/screenshots/price-prediction.png) |
-| ![Accounting management](docs/screenshots/listings.png) |
+| ![Accounting management](docs/screenshots/listings.png) 
 
 
 
