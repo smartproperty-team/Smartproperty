@@ -16,8 +16,14 @@ const compression = require('compression');
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
+  const isProduction = process.env.NODE_ENV === 'production';
+
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+    // Debug/verbose logging leaks internal state and request detail.
+    // Keep it to development only.
+    logger: isProduction
+      ? ['error', 'warn', 'log']
+      : ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
   const configService = app.get(ConfigService);
@@ -48,8 +54,14 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl, Swagger)
-      if (!origin || allowedOrigins.includes(origin)) {
+      // Origin-less requests (curl, server-to-server, Swagger UI) are allowed
+      // outside production only. In production every browser request carries an
+      // Origin, so accepting a missing one just weakens the allowlist.
+      if (!origin) {
+        callback(null, !isProduction);
+        return;
+      }
+      if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error(`CORS: origin ${origin} not allowed`));
@@ -82,7 +94,7 @@ async function bootstrap() {
   // =====================
   // Swagger Documentation
   // =====================
-  if (nodeEnv !== 'production') {
+  if (!isProduction) {
     const config = new DocumentBuilder()
       .setTitle('SmartProperty API')
       .setDescription(

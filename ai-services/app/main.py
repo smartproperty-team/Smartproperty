@@ -49,9 +49,11 @@ AI-powered features for the SmartProperty platform:
 - 📊 **Market Analytics** - Trend analysis and insights
         """,
         version="1.0.0",
-        docs_url=f"{settings.api_prefix}/docs",
-        redoc_url=f"{settings.api_prefix}/redoc",
-        openapi_url=f"{settings.api_prefix}/openapi.json",
+        # Interactive API docs expose the full endpoint surface and schemas.
+        # Serve them outside production only, matching the NestJS backend.
+        docs_url=f"{settings.api_prefix}/docs" if settings.debug else None,
+        redoc_url=f"{settings.api_prefix}/redoc" if settings.debug else None,
+        openapi_url=f"{settings.api_prefix}/openapi.json" if settings.debug else None,
         lifespan=lifespan,
     )
     
