@@ -2,6 +2,8 @@
 // SmartProperty - Clear Users Collection
 // ===========================================
 
+import './load-env';
+
 import { DataSource } from 'typeorm';
 import { User } from '../modules/users/entities/user.entity';
 

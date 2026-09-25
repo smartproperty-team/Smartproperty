@@ -2,14 +2,7 @@
 // SmartProperty - User Seed Script
 // ===========================================
 
-import { config as loadEnvFile } from 'dotenv';
-
-// The seed script runs standalone via ts-node, outside Nest, so nothing has
-// loaded .env for it. Load the same files the app does before reading any
-// environment variable below.
-for (const envFile of ['.env', '.env.development', '.env.local']) {
-  loadEnvFile({ path: envFile });
-}
+import './load-env';
 
 import * as bcrypt from 'bcrypt';
 import { ObjectId } from 'mongodb';

@@ -2,6 +2,8 @@
 // SmartProperty - Agency Seed Script
 // ===========================================
 
+import './load-env';
+
 import { ObjectId } from 'mongodb';
 import { DataSource } from 'typeorm';
 import {
