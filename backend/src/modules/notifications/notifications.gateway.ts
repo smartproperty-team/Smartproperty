@@ -21,7 +21,17 @@ export class NotificationsGateway implements OnGatewayConnection {
   @WebSocketServer()
   private server: Server;
 
-  constructor(private readonly configService: ConfigService) {}
+  private readonly jwtSecret: string;
+
+  constructor(private readonly configService: ConfigService) {
+    const secret = this.configService.get<string>('jwt.secret');
+    if (!secret) {
+      // Resolved once at startup so a socket handshake can never fall back
+      // to a guessable key at request time.
+      throw new Error('jwt.secret is not configured; refusing to start.');
+    }
+    this.jwtSecret = secret;
+  }
 
   private getUserRoom(userId: string): string {
     return `user:${userId}`;
@@ -49,10 +59,10 @@ export class NotificationsGateway implements OnGatewayConnection {
     }
 
     try {
-      const payload = jwt.verify(
-        token,
-        this.configService.get<string>('jwt.secret') || 'default_jwt_secret',
-      ) as { sub?: string; id?: string };
+      const payload = jwt.verify(token, this.jwtSecret) as {
+        sub?: string;
+        id?: string;
+      };
 
       const userId = payload.sub || payload.id;
       if (!userId) {

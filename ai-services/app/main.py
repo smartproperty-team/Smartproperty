@@ -2,6 +2,7 @@
 # SmartProperty AI Services - Main Application
 # ===========================================
 
+import sys
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -12,6 +13,21 @@ from app.core.config import settings
 from app.api.v1.router import api_router
 from app.core.database import connect_to_mongo, close_mongo_connection
 from app.core.redis import connect_to_redis, close_redis_connection
+
+
+def configure_logging() -> None:
+    """Apply the configured log level to loguru.
+
+    Without this, settings.log_level was never read and changing it (or
+    setting LOG_LEVEL) had no effect on what actually got logged.
+    """
+    logger.remove()
+    logger.add(
+        sys.stderr,
+        level=settings.log_level.upper(),
+        backtrace=settings.debug,
+        diagnose=settings.debug,
+    )
 
 
 @asynccontextmanager
@@ -34,6 +50,8 @@ async def lifespan(app: FastAPI):
 
 def create_application() -> FastAPI:
     """Create and configure the FastAPI application."""
+
+    configure_logging()
     
     app = FastAPI(
         title=settings.app_name,
@@ -93,4 +111,5 @@ if __name__ == "__main__":
         host=settings.host,
         port=settings.port,
         reload=settings.debug,
+        log_level=settings.log_level.lower(),
     )

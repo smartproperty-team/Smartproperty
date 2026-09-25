@@ -116,3 +116,7 @@ backend/dist/tsconfig.build.tsbuildinfo
 smartproperty-backend.tar
 smartproperty-frontend.tar
 .claude/worktrees/determined-ishizaka-ef18e8/
+
+# npm workspaces: the root package-lock.json is authoritative
+frontend/package-lock.json
+backend/package-lock.json

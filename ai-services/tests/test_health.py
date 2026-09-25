@@ -4,6 +4,7 @@
 
 from fastapi.testclient import TestClient
 
+from app.core.config import settings
 from app.main import app
 
 
@@ -22,19 +23,30 @@ def test_health_check():
     assert "environment" in data
 
 
-def test_api_docs_available():
-    """Test that API docs are accessible."""
+def test_api_docs_follow_debug_setting():
+    """Docs are served only when debug is enabled.
+
+    They expose the full endpoint surface, so they must be absent in a
+    production configuration (debug=False, the default).
+    """
     response = client.get("/api/v1/docs")
-    
-    assert response.status_code == 200
+
+    if settings.debug:
+        assert response.status_code == 200
+    else:
+        assert response.status_code == 404
 
 
-def test_openapi_schema():
-    """Test OpenAPI schema is available."""
+def test_openapi_schema_follows_debug_setting():
+    """The OpenAPI schema is gated the same way as the docs UI."""
     response = client.get("/api/v1/openapi.json")
-    
+
+    if not settings.debug:
+        assert response.status_code == 404
+        return
+
     assert response.status_code == 200
-    
+
     data = response.json()
     assert "openapi" in data
     assert "info" in data

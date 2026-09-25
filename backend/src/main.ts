@@ -16,12 +16,14 @@ const compression = require('compression');
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
-  const isProduction = process.env.NODE_ENV === 'production';
+  // The logger has to be chosen before the app exists, so it can only read
+  // the real process environment. ConfigModule has not loaded .env yet here.
+  const bootstrapIsProduction = process.env.NODE_ENV === 'production';
 
   const app = await NestFactory.create(AppModule, {
     // Debug/verbose logging leaks internal state and request detail.
     // Keep it to development only.
-    logger: isProduction
+    logger: bootstrapIsProduction
       ? ['error', 'warn', 'log']
       : ['error', 'warn', 'log', 'debug', 'verbose'],
   });
@@ -30,12 +32,25 @@ async function bootstrap() {
   const port = configService.get<number>('app.port') || 3000;
   const nodeEnv = configService.get<string>('app.nodeEnv') || 'development';
 
+  // Everything below runs after ConfigModule has loaded the .env files, so
+  // use the resolved value: NODE_ENV supplied via backend/.env rather than
+  // the process environment would otherwise silently disable these guards.
+  const isProduction = nodeEnv === 'production';
+
+  if (isProduction && !bootstrapIsProduction) {
+    logger.warn(
+      'NODE_ENV=production came from a .env file, not the process environment. ' +
+        'Debug log levels were already applied at bootstrap. ' +
+        'Set NODE_ENV in the real environment for production deployments.',
+    );
+  }
+
   // =====================
   // Security Middleware
   // =====================
   app.use(
     helmet({
-      contentSecurityPolicy: nodeEnv === 'production' ? undefined : false,
+      contentSecurityPolicy: isProduction ? undefined : false,
       crossOriginEmbedderPolicy: false,
     }),
   );

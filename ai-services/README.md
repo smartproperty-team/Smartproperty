@@ -200,10 +200,17 @@ mypy app/
 
 ## Environment Variables
 
+> **Note:** `DEBUG` defaults to `false`. The interactive docs
+> (`/api/v1/docs`), ReDoc and the OpenAPI schema are served **only** when
+> `DEBUG=true`, and `DEBUG` also drives uvicorn's `--reload`. Set
+> `DEBUG=true` locally to browse the API.
+
+
 | Variable      | Description                          | Default     |
 | ------------- | ------------------------------------ | ----------- |
 | `APP_ENV`     | Environment (development/production) | development |
-| `DEBUG`       | Debug mode                           | true        |
+| `DEBUG`       | Debug mode; also gates the docs routes | false     |
+| `LOG_LEVEL`   | Logging level (DEBUG/INFO/WARNING)   | INFO        |
 | `PORT`        | API port                             | 8000        |
 | `MONGODB_URI` | MongoDB connection string            | -           |
 | `REDIS_HOST`  | Redis host                           | localhost   |

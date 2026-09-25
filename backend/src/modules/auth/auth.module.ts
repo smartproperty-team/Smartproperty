@@ -66,12 +66,20 @@ const facebookStrategyFactory: Provider = {
     // JWT
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('jwt.secret') || 'default_jwt_secret',
-        signOptions: {
-          expiresIn: configService.get<number>('jwt.expiresInSeconds') || 3600,
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const secret = configService.get<string>('jwt.secret');
+        if (!secret) {
+          // This is the signing key. Falling back to a literal would let
+          // anyone who has read the repo mint valid tokens.
+          throw new Error('jwt.secret is not configured; refusing to start.');
+        }
+        return {
+          secret,
+          signOptions: {
+            expiresIn: configService.get<number>('jwt.expiresInSeconds') || 3600,
+          },
+        };
+      },
       inject: [ConfigService],
     }),
   ],
