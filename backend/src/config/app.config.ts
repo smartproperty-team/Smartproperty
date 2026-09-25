@@ -10,6 +10,17 @@ export const appConfig = registerAs('app', () => ({
   port: parseInt(process.env.PORT || '3000', 10),
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
 
+  // CORS_ORIGIN may legitimately be a comma-separated allow-list. Links in
+  // emails need exactly one canonical origin, so resolve it once here rather
+  // than making every caller re-split the string.
+  frontendUrl:
+    process.env.FRONTEND_URL ||
+    (process.env.CORS_ORIGIN || 'http://localhost:5173')
+      .split(',')
+      .map((value) => value.trim())
+      .find((value) => Boolean(value) && value !== '*') ||
+    'http://localhost:5173',
+
   // API Versioning
   apiPrefix: 'api',
   apiVersion: 'v1',

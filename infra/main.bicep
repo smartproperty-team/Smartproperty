@@ -186,6 +186,9 @@ resource backend 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'NODE_ENV', value: 'production' }
             { name: 'PORT', value: '3000' }
             { name: 'CORS_ORIGIN', value: effectiveCorsOrigin }
+            // Always a single origin, even when CORS_ORIGIN is a list, so
+            // email links never get built from a comma-joined string.
+            { name: 'FRONTEND_URL', value: frontendOrigin }
             { name: 'THROTTLE_LIMIT', value: string(throttleLimit) }
             { name: 'LOG_LEVEL', value: 'info' }
             { name: 'MONGODB_URI', secretRef: 'mongodb-uri' }

@@ -125,6 +125,8 @@ jobs:
           template: infra/main.bicep
           parameters: >-
             backendImage=${{ needs.build-image.outputs.image }}
+            ghcrUsername=${{ github.actor }}
+            ghcrToken=${{ secrets.GHCR_PULL_TOKEN }}
             jwtSecret=${{ secrets.JWT_SECRET }}
             jwtRefreshSecret=${{ secrets.JWT_REFRESH_SECRET }}
             corsOrigin=${{ secrets.CORS_ORIGIN }}
