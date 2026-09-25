@@ -15,8 +15,15 @@ targetScope = 'resourceGroup'
 @description('Short name used as a prefix for every resource.')
 param appName string = 'smartproperty'
 
-@description('Azure region. Keep everything in one region; cross-region traffic costs money.')
-param location string = resourceGroup().location
+@description('Region for the API and its logs. Keep this equal to the database region: the API talks to it on every request.')
+param location string = 'northeurope'
+
+@description('''
+Region for the Static Web App. Static Web Apps is offered in only five
+regions and West Europe is the sole European one, so it cannot sit next to
+the API. It is CDN-fronted, so its origin region has little practical effect.
+''')
+param staticWebAppLocation string = 'westeurope'
 
 @description('Container image for the API, e.g. ghcr.io/<owner>/smartproperty-backend:<sha>.')
 param backendImage string
@@ -188,7 +195,7 @@ resource backend 'Microsoft.App/containerApps@2024-03-01' = {
 // ---------------------------------------------------------------
 resource staticWebApp 'Microsoft.Web/staticSites@2023-01-01' = {
   name: staticWebAppName
-  location: location
+  location: staticWebAppLocation
   sku: {
     name: 'Free'
     tier: 'Free'
