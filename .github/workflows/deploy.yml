@@ -1,0 +1,215 @@
+# ===========================================
+# SmartProperty - Build and deploy to Azure
+# ===========================================
+# Authenticates with OIDC federated credentials. No Azure secret is stored
+# in GitHub: the workflow exchanges a short-lived GitHub token for an Azure
+# one at run time. See infra/README.md for the one-time setup.
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      deploy_infra:
+        description: 'Run the Bicep deployment as well'
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AZURE_RESOURCE_GROUP: rg-smartproperty
+  AZURE_LOCATION: westeurope
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/smartproperty-backend
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write   # required for OIDC
+
+jobs:
+  # ---------------------------------------------------------------
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck backend
+        # Must run inside backend/: it pins TypeScript 4.9 while the root
+        # hoists 5.9, and 5.9 rejects this tsconfig's ignoreDeprecations value.
+        run: npx tsc --noEmit -p tsconfig.json
+        working-directory: backend
+
+      - name: Build frontend
+        run: npm run build --prefix frontend
+        env:
+          # Placeholder only: the real build happens in deploy-frontend,
+          # once the API URL is known. This job just proves it compiles.
+          VITE_API_URL: https://example.invalid/api
+
+  # ---------------------------------------------------------------
+  build-image:
+    name: Build and push API image
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve image tag
+        id: meta
+        run: echo "image=${{ env.IMAGE_NAME }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          target: prod
+          push: true
+          # Immutable SHA tag so a rollback is one command against a known
+          # good build, plus a moving latest for convenience.
+          tags: |
+            ${{ steps.meta.outputs.image }}
+            ${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------------------------------------------------------------
+  deploy-backend:
+    name: Deploy API
+    needs: build-image
+    runs-on: ubuntu-latest
+    outputs:
+      api_url: ${{ steps.urls.outputs.api_url }}
+      swa_url: ${{ steps.urls.outputs.swa_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy infrastructure
+        if: github.event_name == 'push' || inputs.deploy_infra
+        uses: azure/arm-deploy@v2
+        with:
+          scope: resourcegroup
+          resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
+          template: infra/main.bicep
+          parameters: >-
+            backendImage=${{ needs.build-image.outputs.image }}
+            mongodbUri=${{ secrets.MONGODB_URI }}
+            mongodbUsername=${{ secrets.MONGODB_USERNAME }}
+            mongodbPassword=${{ secrets.MONGODB_PASSWORD }}
+            jwtSecret=${{ secrets.JWT_SECRET }}
+            jwtRefreshSecret=${{ secrets.JWT_REFRESH_SECRET }}
+            corsOrigin=${{ secrets.CORS_ORIGIN }}
+          failOnStdErr: false
+
+      - name: Roll the API to this image
+        run: |
+          az containerapp update \
+            --name ca-smartproperty-api \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --image "${{ needs.build-image.outputs.image }}"
+
+      - name: Read deployed URLs
+        id: urls
+        run: |
+          api_fqdn=$(az containerapp show \
+            --name ca-smartproperty-api \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          swa_host=$(az staticwebapp show \
+            --name swa-smartproperty \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --query defaultHostname -o tsv)
+          echo "api_url=https://${api_fqdn}/api" >> "$GITHUB_OUTPUT"
+          echo "swa_url=https://${swa_host}" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke test the health endpoint
+        run: |
+          api_url="${{ steps.urls.outputs.api_url }}"
+          for attempt in $(seq 1 12); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "${api_url}/health" || true)
+            if [ "$code" = "200" ]; then
+              echo "healthy after ${attempt} attempt(s)"
+              exit 0
+            fi
+            echo "attempt ${attempt}: got ${code}, retrying..."
+            sleep 10
+          done
+          echo "API never became healthy. Recent logs:"
+          az containerapp logs show \
+            --name ca-smartproperty-api \
+            --resource-group "$AZURE_RESOURCE_GROUP" --tail 60 || true
+          exit 1
+
+  # ---------------------------------------------------------------
+  deploy-frontend:
+    name: Deploy frontend
+    needs: [build-image, deploy-backend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        # VITE_* variables are substituted at build time and frozen into the
+        # bundle, so the API URL has to be known here, not at runtime.
+        env:
+          VITE_API_URL: ${{ needs.deploy-backend.outputs.api_url }}
+        run: npm run build --prefix frontend
+
+      - name: Deploy to Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: frontend/dist
+          skip_app_build: true
+
+      - name: Summary
+        run: |
+          {
+            echo "### Deployed"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Frontend | ${{ needs.deploy-backend.outputs.swa_url }} |"
+            echo "| API | ${{ needs.deploy-backend.outputs.api_url }} |"
+            echo "| Image | \`${{ needs.build-image.outputs.image }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
