@@ -23,6 +23,11 @@ async function seedUsers() {
       process.env.MONGODB_URI ||
       'mongodb://smartproperty_user:smartproperty_pass_2024@localhost:27017/smartproperty?authSource=admin',
     database: process.env.MONGODB_DATABASE || 'smartproperty',
+    // Cosmos DB's Mongo API rejects retryable writes outright. The
+    // connection string carries retrywrites=false, but TypeORM builds its
+    // own driver options and the setting is lost, so every write fails
+    // with "Retryable writes are not supported". Set it explicitly.
+    retryWrites: process.env.MONGODB_RETRY_WRITES !== 'false',
     entities: [User],
     synchronize: false, // Don't sync schema, just insert data
   });

@@ -125,6 +125,22 @@ connection string and key with `listConnectionStrings()` and `listKeys()`,
 which ARM resolves at deploy time. No database credential is ever typed by
 hand or stored in CI.
 
+## Database
+
+The app runs against **MongoDB Atlas** (free M0), not the Cosmos account this
+template creates. Cosmos DB's RU-based Mongo API requires an index for every
+sorted field and supports only a subset of the aggregation pipeline. This
+codebase has 42 sorted queries, three aggregation pipelines, and one endpoint
+that sorts on a user-supplied field - so the set of required indexes is not
+knowable ahead of time and a missing one fails at runtime, not at build time.
+
+The vCore tier has none of these limits, but its free tier is not offered in
+any region this subscription's policy allows.
+
+Set `MONGODB_URI` on the container app to the Atlas connection string.
+`MONGODB_RETRY_WRITES` may be left unset; it exists only to disable retryable
+writes, which Cosmos rejects and Atlas supports.
+
 ## First deployment
 
 Always `what-if` first. It prints exactly what would change and creates

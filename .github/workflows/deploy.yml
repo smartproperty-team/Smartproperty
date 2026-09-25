@@ -102,6 +102,11 @@ jobs:
     name: Deploy API
     needs: build-image
     runs-on: ubuntu-latest
+    # Skipped until Azure credentials exist. Creating them needs an Entra app
+    # registration, which this tenant does not permit for student accounts, so
+    # deployment is currently manual. Gating keeps test and build-image green
+    # rather than failing the whole run on a missing secret.
+    if: vars.AZURE_DEPLOY_ENABLED == 'true'
     outputs:
       app_name: ${{ steps.appname.outputs.name }}
       api_url: ${{ steps.urls.outputs.api_url }}
@@ -176,6 +181,7 @@ jobs:
     name: Deploy frontend
     needs: [build-image, deploy-backend]
     runs-on: ubuntu-latest
+    if: vars.AZURE_DEPLOY_ENABLED == 'true'
     steps:
       - uses: actions/checkout@v4
 

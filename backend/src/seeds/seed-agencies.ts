@@ -83,6 +83,9 @@ async function seedAgencies() {
     type: 'mongodb',
     url: MONGODB_URI,
     database: MONGODB_DATABASE,
+    // Cosmos DB's Mongo API rejects retryable writes; TypeORM drops the
+    // retrywrites=false from the connection string, so set it explicitly.
+    retryWrites: process.env.MONGODB_RETRY_WRITES !== 'false',
     entities: [Agency, User],
     synchronize: false,
   });

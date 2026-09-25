@@ -83,6 +83,11 @@ import { VerificationModule } from './modules/verification/verification.module';
         type: 'mongodb',
         url: configService.get<string>('database.uri'),
         database: configService.get<string>('database.database'),
+        // Retryable writes are a resilience feature and stay on by default.
+        // Cosmos DB's RU Mongo API rejects them outright, and TypeORM drops
+        // retrywrites=false from the connection string when building its
+        // driver options, so MONGODB_RETRY_WRITES=false is the escape hatch.
+        retryWrites: process.env.MONGODB_RETRY_WRITES !== 'false',
         entities: [join(__dirname, '**', '*.entity.{ts,js}')],
         synchronize: false, // Disabled to avoid index conflicts with existing MongoDB schema
         logging: configService.get<string>('app.nodeEnv') === 'development',
