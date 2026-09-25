@@ -55,7 +55,11 @@ param jwtSecret string
 @minLength(32)
 param jwtRefreshSecret string
 
-@description('Allowed browser origin(s) for CORS, comma separated. Set to the Static Web App URL after its first deploy.')
+@description('''
+Extra allowed browser origin(s) for CORS, comma separated. The static site's
+own URL is always included automatically, so this is only needed for a custom
+domain or a local dev origin.
+''')
 param corsOrigin string = ''
 
 @description('Requests per throttle window. In-memory storage means this is per replica.')
@@ -69,6 +73,12 @@ param minReplicas int = 1
 var logAnalyticsName = 'log-${appName}'
 var environmentName = 'cae-${appName}'
 var backendAppName = 'ca-${appName}-api'
+// primaryEndpoints.web carries a trailing slash; an Origin header never does,
+// so it is trimmed here or every request would fail the allow-list comparison.
+var frontendEndpoint = frontendStorage.properties.primaryEndpoints.web
+var frontendOrigin = substring(frontendEndpoint, 0, max(length(frontendEndpoint) - 1, 0))
+var effectiveCorsOrigin = empty(corsOrigin) ? frontendOrigin : '${frontendOrigin},${corsOrigin}'
+
 var cosmosAccountName = 'cosmos-${appName}-${uniqueString(resourceGroup().id)}'
 // Storage account names: 3-24 chars, lowercase letters and digits only.
 var frontendStorageName = take('stweb${appName}${uniqueString(resourceGroup().id)}', 24)
@@ -175,7 +185,7 @@ resource backend 'Microsoft.App/containerApps@2024-03-01' = {
             // preloads .env files, but nothing ships one to this image.
             { name: 'NODE_ENV', value: 'production' }
             { name: 'PORT', value: '3000' }
-            { name: 'CORS_ORIGIN', value: corsOrigin }
+            { name: 'CORS_ORIGIN', value: effectiveCorsOrigin }
             { name: 'THROTTLE_LIMIT', value: string(throttleLimit) }
             { name: 'LOG_LEVEL', value: 'info' }
             { name: 'MONGODB_URI', secretRef: 'mongodb-uri' }
