@@ -42,8 +42,20 @@ async function seedUsers() {
       return;
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash('Password123!', 10);
+    // Seed password. The default is a well-known value published in this
+    // repository's docs, so it must not be used anywhere reachable from the
+    // internet. Set SEED_PASSWORD to something private for any deployed
+    // environment, and refuse the default outright in production.
+    const seedPassword = process.env.SEED_PASSWORD || 'Password123!';
+
+    if (process.env.NODE_ENV === 'production' && !process.env.SEED_PASSWORD) {
+      throw new Error(
+        'Refusing to seed production with the default public password. ' +
+          'Set SEED_PASSWORD to a private value first.',
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(seedPassword, 12);
 
     // Sample users to seed (2 users per role)
     const users: Partial<User>[] = [
@@ -282,7 +294,7 @@ async function seedUsers() {
     users.forEach((user) => {
       console.log(`   Email: ${user.email}`);
       console.log(`   Role: ${user.role}`);
-      console.log(`   Password: Password123!`);
+      console.log(`   Password: ${seedPassword}`);
       console.log('   ---');
     });
 

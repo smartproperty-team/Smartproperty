@@ -22,7 +22,6 @@ export interface ApiInfo {
   endpoints: {
     health: string;
     docs: string;
-    graphql: string;
   };
 }
 
@@ -61,7 +60,6 @@ export class AppService {
       endpoints: {
         health: `${baseUrl}/api/health`,
         docs: `${baseUrl}/api/docs`,
-        graphql: `${baseUrl}/graphql`,
       },
     };
   }
