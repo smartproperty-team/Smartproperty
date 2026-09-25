@@ -7,15 +7,15 @@ import { compression } from "vite-plugin-compression2";
 export default defineConfig({
   plugins: [
     react(),
-    // Gzip compression for production builds
-    compression({ algorithm: "gzip", threshold: 1024 }),
-    // Brotli compression for production builds (better ratio)
-    compression({ algorithm: "brotliCompress", threshold: 1024 }),
+    // Gzip + Brotli for production builds. One plugin instance takes both:
+    // the previous two calls passed `algorithm`, which this version ignores.
+    compression({ algorithms: ["gzip", "brotliCompress"], threshold: 1024 }),
   ],
 
   build: {
-    // Enable minification for JS and CSS (improves FCP & LCP)
-    minify: "esbuild",
+    // Vite 7 is rolldown-based and minifies with oxc; "esbuild" requires the
+    // separate esbuild package, which this project has never installed.
+    minify: true,
     cssMinify: true,
     // Target modern browsers for smaller output
     target: "es2020",

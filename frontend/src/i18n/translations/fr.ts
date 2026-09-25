@@ -115,6 +115,16 @@ export const fr: Translations = {
 
   // ---- Properties Page ----
   properties: {
+    virtualVisit: {
+      page: {
+        title: "Ajouter une visite virtuelle",
+        description:
+          "Ajoutez des pièces avec un titre et une image panoramique pour chacune.",
+        actions: {
+          upload: "Téléverser la visite virtuelle",
+        },
+      },
+    },
     title: "Propriétés",
     found: "trouvée(s)",
     addProperty: "Ajouter une propriété",
@@ -311,6 +321,8 @@ export const fr: Translations = {
         dropSubtitle:
           "ou cliquez pour sélectionner (JPEG, PNG, WebP - max 50MB)",
         virtualTour: {
+          noImages:
+            "Veuillez ajouter au moins une pièce avec un titre et une image panoramique.",
           enableFromPhotos:
             "Générer une visite virtuelle à partir des photos téléversées",
           captureGuideTitle: "Guide photo pour le propriétaire",

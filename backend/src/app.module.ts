@@ -4,7 +4,6 @@
 
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
-import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
@@ -27,7 +26,6 @@ import {
   jwtConfig,
   mailConfig,
   recaptchaConfig,
-  redisConfig,
   throttlerConfig,
 } from './config';
 import { minioConfig } from './config/minio.config';
@@ -63,7 +61,6 @@ import { VerificationModule } from './modules/verification/verification.module';
         googleConfig,
         recaptchaConfig,
         jwtConfig,
-        redisConfig,
         mailConfig,
         awsConfig,
         minioConfig,
@@ -112,22 +109,6 @@ import { VerificationModule } from './modules/verification/verification.module';
     // Task Scheduling Module
     // =====================
     ScheduleModule.forRoot(),
-
-    // =====================
-    // Queue Module (Bull + Redis)
-    // =====================
-    BullModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        redis: {
-          host: configService.get<string>('redis.host'),
-          port: configService.get<number>('redis.port'),
-          password: configService.get<string>('redis.password'),
-        },
-        defaultJobOptions: configService.get('redis.bull.defaultJobOptions'),
-      }),
-    }),
 
     // =====================
     // Email Module

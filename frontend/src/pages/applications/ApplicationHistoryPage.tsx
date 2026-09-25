@@ -10,13 +10,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui";
-import { useTranslation } from "@/i18n";
 import applicationService from "@/services/application.service";
 import { ApplicationStatus, type Application } from "@/types/application";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 type HistoryView = "all" | "current" | "completed";
+type HistorySection = Exclude<HistoryView, "all">;
 
 const ACTIVE_APPLICATION_STATUSES = new Set<ApplicationStatus>([
   ApplicationStatus.SUBMITTED,
@@ -62,7 +62,15 @@ function formatDate(value?: string) {
   });
 }
 
-function ApplicationSummaryCard({ application }: { application: Application }) {
+function ApplicationSummaryCard({
+  application,
+  onCancel,
+  isCanceling = false,
+}: {
+  application: Application;
+  onCancel?: (application: Application) => void;
+  isCanceling?: boolean;
+}) {
   const label = statusLabel[application.status] || application.status;
   const timelineLabel =
     application.status === ApplicationStatus.APPROVED ||
@@ -142,7 +150,7 @@ function ApplicationSummaryCard({ application }: { application: Application }) {
           </div>
         )}
 
-      {isActiveApplication && (
+      {isActiveApplication && onCancel && (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <div>
             <p className="text-sm font-semibold text-slate-900">
@@ -155,21 +163,10 @@ function ApplicationSummaryCard({ application }: { application: Application }) {
           <button
             type="button"
             className="inline-flex items-center rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-700 transition-colors hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-            onClick={() => {
-              const shouldCancel = window.confirm(
-                "Cancel this application? The property manager will see it as withdrawn.",
-              );
-              if (!shouldCancel) {
-                return;
-              }
-
-              void applicationService.withdrawApplication(
-                application.id,
-                "Canceled by tenant",
-              );
-            }}
+            disabled={isCanceling}
+            onClick={() => onCancel(application)}
           >
-            Cancel application
+            {isCanceling ? "Canceling..." : "Cancel application"}
           </button>
         </div>
       )}
@@ -179,7 +176,6 @@ function ApplicationSummaryCard({ application }: { application: Application }) {
 
 export default function ApplicationHistoryPage() {
   const navigate = useNavigate();
-  const t = useTranslation();
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -238,16 +234,18 @@ export default function ApplicationHistoryPage() {
     };
   }, [applications]);
 
-  const visibleSections = useMemo(() => {
+  // Annotated explicitly: without it each branch infers its own readonly
+  // tuple, and .includes() on that union resolves its argument to `never`.
+  const visibleSections = useMemo<readonly HistorySection[]>(() => {
     if (view === "current") {
-      return ["current"] as const;
+      return ["current"];
     }
 
     if (view === "completed") {
-      return ["completed"] as const;
+      return ["completed"];
     }
 
-    return ["current", "completed"] as const;
+    return ["current", "completed"];
   }, [view]);
 
   const totalApplications = applications.length;
@@ -327,7 +325,11 @@ export default function ApplicationHistoryPage() {
         {applicationsList.length > 0 ? (
           applicationsList.map((application) => (
             <div key={application.id} className="relative">
-              <ApplicationSummaryCard application={application} />
+              <ApplicationSummaryCard
+                application={application}
+                onCancel={handleCancelApplication}
+                isCanceling={cancelingApplicationId === application.id}
+              />
               {cancelingApplicationId === application.id && (
                 <div className="absolute inset-0 flex items-center justify-center rounded-3xl bg-white/75 backdrop-blur-sm">
                   <div className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-lg">

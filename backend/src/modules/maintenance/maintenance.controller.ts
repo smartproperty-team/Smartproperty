@@ -27,12 +27,8 @@ import {
   UpdateMaintenanceStatusDto,
   UpdateProviderMaintenanceStatusDto,
 } from './dto/maintenance-request.dto';
+import { MAINTENANCE_INTAKE_ROLES } from '../users/role-groups';
 import { MaintenanceService } from './maintenance.service';
-
-const MAINTENANCE_INTAKE_ROLES: UserRole[] = [
-  UserRole.OWNER,
-  UserRole.BRANCH_MANAGER,
-];
 
 @ApiTags('Maintenance')
 @ApiBearerAuth()

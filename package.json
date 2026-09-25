@@ -24,8 +24,6 @@
     "concurrently": "^8.2.2"
   },
   "dependencies": {
-    "@jridgewell/resolve-uri": "^3.1.2",
-    "motion": "^12.38.0",
-    "promise": "^8.3.0"
+    "@jridgewell/resolve-uri": "^3.1.2"
   }
 }

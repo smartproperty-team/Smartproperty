@@ -17,13 +17,6 @@ export const appConfig = registerAs('app', () => ({
   // Logging
   logLevel: process.env.LOG_LEVEL || 'debug',
 
-  // GraphQL
-  graphql: {
-    playground: process.env.GRAPHQL_PLAYGROUND === 'true',
-    debug: process.env.GRAPHQL_DEBUG === 'true',
-    path: '/graphql',
-  },
-
   // AI Services
   aiService: {
     url: process.env.AI_SERVICE_URL || 'http://localhost:8000',

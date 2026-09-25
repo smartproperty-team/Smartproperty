@@ -151,7 +151,6 @@ All protected endpoints require a Bearer token in the Authorization header.
   logger.log(`🚀 SmartProperty API running on: http://localhost:${port}`);
   logger.log(`📚 API Documentation: http://localhost:${port}/api/docs`);
   logger.log(`🌍 Environment: ${nodeEnv}`);
-  logger.log(`📊 GraphQL Playground: http://localhost:${port}/graphql`);
 }
 
 void bootstrap();

@@ -21,10 +21,6 @@ export const validationSchema = Joi.object({
   MONGODB_PASSWORD: Joi.string().required(),
   MONGODB_URI: Joi.string().optional(),
 
-  // Redis
-  REDIS_HOST: Joi.string().default('localhost'),
-  REDIS_PORT: Joi.number().default(6379),
-  REDIS_PASSWORD: Joi.string().optional(),
 
   // JWT
   JWT_SECRET: Joi.string().min(32).required(),
@@ -73,8 +69,6 @@ export const validationSchema = Joi.object({
     .default('debug'),
 
   // GraphQL
-  GRAPHQL_PLAYGROUND: Joi.boolean().default(true),
-  GRAPHQL_DEBUG: Joi.boolean().default(true),
 
   // AI Services proxy
   AI_SERVICE_URL: Joi.string().uri().default('http://localhost:8000'),
