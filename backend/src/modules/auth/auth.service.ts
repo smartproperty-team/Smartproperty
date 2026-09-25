@@ -795,7 +795,7 @@ export class AuthService {
       subject?: string;
     },
   ): Promise<void> {
-    const frontendUrl = this.configService.get<string>('app.corsOrigin');
+    const frontendUrl = this.configService.get<string>('app.frontendUrl');
     const verificationUrl = `${frontendUrl}/verify-email?token=${token}`;
     const recipientEmail = options?.toEmail || user.email;
     const subject =
@@ -821,7 +821,7 @@ export class AuthService {
     user: User,
     token: string,
   ): Promise<void> {
-    const frontendUrl = this.configService.get<string>('app.corsOrigin');
+    const frontendUrl = this.configService.get<string>('app.frontendUrl');
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
     try {

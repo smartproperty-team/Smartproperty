@@ -30,6 +30,8 @@ export const validationSchema = Joi.object({
 
   // CORS
   CORS_ORIGIN: Joi.string().default('http://localhost:5173'),
+  // Optional: defaults to the first entry of CORS_ORIGIN.
+  FRONTEND_URL: Joi.string().uri().optional(),
 
   // AWS (optional)
   AWS_ACCESS_KEY_ID: Joi.string().optional(),
