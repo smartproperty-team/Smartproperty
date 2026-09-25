@@ -35,6 +35,15 @@ param location string = 'italynorth'
 param backendImage string
 
 @description('''
+Suffix for the API container app's name. Deleting a container app on an
+express environment leaves an internal artifact pending for a long while, and
+recreating under the same name fails with FailedIdentityOperation / "resource
+already exists". Bumping this sidesteps the stuck artifact. Changing it
+changes the API's FQDN.
+''')
+param apiNameSuffix string = ''
+
+@description('''
 GitHub username for pulling the image from ghcr.io. Required only when the
 package is private - which it is here, because the organization disables
 public packages.
@@ -72,7 +81,7 @@ param minReplicas int = 1
 
 var logAnalyticsName = 'log-${appName}'
 var environmentName = 'cae-${appName}'
-var backendAppName = 'ca-${appName}-api'
+var backendAppName = 'ca-${appName}-api${apiNameSuffix}'
 // primaryEndpoints.web carries a trailing slash; an Origin header never does,
 // so it is trimmed here or every request would fail the allow-list comparison.
 var frontendEndpoint = frontendStorage.properties.primaryEndpoints.web
