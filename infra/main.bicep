@@ -15,30 +15,24 @@ targetScope = 'resourceGroup'
 @description('Short name used as a prefix for every resource.')
 param appName string = 'smartproperty'
 
-@description('Region for the API and its logs. Keep this equal to the database region: the API talks to it on every request.')
-param location string = 'northeurope'
-
 @description('''
-Region for the Static Web App. Static Web Apps is offered in only five
-regions and West Europe is the sole European one, so it cannot sit next to
-the API. It is CDN-fronted, so its origin region has little practical effect.
+Deployment region. This subscription carries an "Allowed resource deployment
+regions" policy limiting it to: austriaeast, germanywestcentral, italynorth,
+polandcentral, spaincentral. Italy North is the closest of those to Tunisia.
+If a region reports capacity problems, polandcentral is the well-established
+fallback.
 ''')
-param staticWebAppLocation string = 'westeurope'
+@allowed([
+  'austriaeast'
+  'germanywestcentral'
+  'italynorth'
+  'polandcentral'
+  'spaincentral'
+])
+param location string = 'italynorth'
 
 @description('Container image for the API, e.g. ghcr.io/<owner>/smartproperty-backend:<sha>.')
 param backendImage string
-
-@description('Mongo connection string (Cosmos DB for MongoDB vCore).')
-@secure()
-param mongodbUri string
-
-@description('Mongo username. Required by the app config schema even when a URI is supplied.')
-@secure()
-param mongodbUsername string
-
-@description('Mongo password. Required by the app config schema even when a URI is supplied.')
-@secure()
-param mongodbPassword string
 
 @description('JWT signing secret. Minimum 32 characters or the API refuses to start.')
 @secure()
@@ -64,7 +58,9 @@ param minReplicas int = 1
 var logAnalyticsName = 'log-${appName}'
 var environmentName = 'cae-${appName}'
 var backendAppName = 'ca-${appName}-api'
-var staticWebAppName = 'swa-${appName}'
+var cosmosAccountName = 'cosmos-${appName}-${uniqueString(resourceGroup().id)}'
+// Storage account names: 3-24 chars, lowercase letters and digits only.
+var frontendStorageName = take('stweb${appName}${uniqueString(resourceGroup().id)}', 24)
 
 // ---------------------------------------------------------------
 // Log Analytics - Container Apps requires a workspace for logs
@@ -126,9 +122,17 @@ resource backend 'Microsoft.App/containerApps@2024-03-01' = {
         ]
       }
       secrets: [
-        { name: 'mongodb-uri', value: mongodbUri }
-        { name: 'mongodb-username', value: mongodbUsername }
-        { name: 'mongodb-password', value: mongodbPassword }
+        // Taken straight from the account this template creates, so no
+        // database credential is ever passed in by hand or stored in CI.
+        // For the Mongo API the username is the account name and the
+        // password is the account's primary key.
+        { name: 'mongodb-uri', value: cosmos.listConnectionStrings().connectionStrings[0].connectionString }
+        // The account name is not sensitive; it is only carried as a secret
+        // because the app's Joi schema requires MONGODB_USERNAME to be set
+        // even when MONGODB_URI already contains it.
+        #disable-next-line use-secure-value-for-secure-inputs
+        { name: 'mongodb-username', value: cosmos.name }
+        { name: 'mongodb-password', value: cosmos.listKeys().primaryMasterKey }
         { name: 'jwt-secret', value: jwtSecret }
         { name: 'jwt-refresh-secret', value: jwtRefreshSecret }
       ]
@@ -191,26 +195,77 @@ resource backend 'Microsoft.App/containerApps@2024-03-01' = {
 }
 
 // ---------------------------------------------------------------
-// Frontend - Static Web Apps Free tier
+// Database - Cosmos DB for MongoDB (RU-based, free tier)
 // ---------------------------------------------------------------
-resource staticWebApp 'Microsoft.Web/staticSites@2023-01-01' = {
-  name: staticWebAppName
-  location: staticWebAppLocation
-  sku: {
-    name: 'Free'
-    tier: 'Free'
-  }
+// The vCore free tier is not offered in any region this subscription
+// permits, so the RU-based account is used instead: 1000 RU/s and 25 GB
+// free, one per subscription. The codebase issues no aggregation
+// pipelines, which is where the RU API's compatibility gaps show up.
+resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = {
+  name: cosmosAccountName
+  location: location
+  kind: 'MongoDB'
   properties: {
-    // The build is driven by GitHub Actions, not by Azure's own builder,
-    // because VITE_* variables must be present at build time.
-    allowConfigFileUpdates: true
-    stagingEnvironmentPolicy: 'Enabled'
+    databaseAccountOfferType: 'Standard'
+    enableFreeTier: true
+    publicNetworkAccess: 'Enabled'
+    // Hard ceiling at the free allowance so nothing can quietly overrun it.
+    capacity: {
+      totalThroughputLimit: 1000
+    }
+    apiProperties: {
+      serverVersion: '7.0'
+    }
+    capabilities: [
+      {
+        name: 'EnableMongo'
+      }
+    ]
+    locations: [
+      {
+        locationName: location
+        failoverPriority: 0
+        isZoneRedundant: false
+      }
+    ]
+    backupPolicy: {
+      type: 'Periodic'
+      periodicModeProperties: {
+        backupIntervalInMinutes: 1440
+        backupRetentionIntervalInHours: 48
+        backupStorageRedundancy: 'Local'
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------
+// Frontend - static website on Blob Storage
+// ---------------------------------------------------------------
+// Static Web Apps is unavailable in every region this subscription allows,
+// so the built React bundle is served from a storage account's static
+// website endpoint instead. Static website hosting is a data-plane setting
+// and cannot be switched on from ARM; the deploy workflow enables it with
+// `az storage blob service-properties update --static-website`.
+resource frontendStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
+  name: frontendStorageName
+  location: location
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+  properties: {
+    accessTier: 'Hot'
+    supportsHttpsTrafficOnly: true
+    minimumTlsVersion: 'TLS1_2'
+    allowBlobPublicAccess: true
   }
 }
 
 output backendFqdn string = backend.properties.configuration.ingress.fqdn
 output backendUrl string = 'https://${backend.properties.configuration.ingress.fqdn}'
 output backendApiUrl string = 'https://${backend.properties.configuration.ingress.fqdn}/api'
-output staticWebAppHostname string = staticWebApp.properties.defaultHostname
-output staticWebAppUrl string = 'https://${staticWebApp.properties.defaultHostname}'
+output frontendStorageAccount string = frontendStorage.name
+output frontendUrl string = frontendStorage.properties.primaryEndpoints.web
+output cosmosAccountName string = cosmos.name
 output containerAppEnvName string = containerAppEnv.name
