@@ -103,6 +103,7 @@ jobs:
     needs: build-image
     runs-on: ubuntu-latest
     outputs:
+      app_name: ${{ steps.appname.outputs.name }}
       api_url: ${{ steps.urls.outputs.api_url }}
       site_url: ${{ steps.urls.outputs.site_url }}
       storage_account: ${{ steps.urls.outputs.storage_account }}
@@ -117,7 +118,6 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Deploy infrastructure
-        if: github.event_name == 'push' || inputs.deploy_infra
         uses: azure/arm-deploy@v2
         with:
           scope: resourcegroup
@@ -125,6 +125,7 @@ jobs:
           template: infra/main.bicep
           parameters: >-
             backendImage=${{ needs.build-image.outputs.image }}
+            apiNameSuffix=${{ vars.API_NAME_SUFFIX }}
             ghcrUsername=${{ github.actor }}
             ghcrToken=${{ secrets.GHCR_PULL_TOKEN }}
             jwtSecret=${{ secrets.JWT_SECRET }}
@@ -132,26 +133,28 @@ jobs:
             corsOrigin=${{ secrets.CORS_ORIGIN }}
           failOnStdErr: false
 
+      - name: Resolve names from the deployment output
+        id: appname
+        # apiNameSuffix changes the container app's name, so never hard-code
+        # it - read back what the template actually created.
+        run: |
+          name=$(az deployment group show             --resource-group "$AZURE_RESOURCE_GROUP" --name main             --query properties.outputs.backendAppName.value -o tsv)
+          echo "name=${name}" >> "$GITHUB_OUTPUT"
+          echo "Deployed container app: ${name}"
+
       - name: Roll the API to this image
         run: |
-          az containerapp update \
-            --name ca-smartproperty-api \
-            --resource-group "$AZURE_RESOURCE_GROUP" \
-            --image "${{ needs.build-image.outputs.image }}"
+          az containerapp update             --name "${{ steps.appname.outputs.name }}"             --resource-group "$AZURE_RESOURCE_GROUP"             --image "${{ needs.build-image.outputs.image }}"
 
       - name: Read deployed URLs
         id: urls
         run: |
-          api_fqdn=$(az containerapp show \
-            --name ca-smartproperty-api \
-            --resource-group "$AZURE_RESOURCE_GROUP" \
-            --query properties.configuration.ingress.fqdn -o tsv)
-          swa_host=$(az staticwebapp show \
-            --name swa-smartproperty \
-            --resource-group "$AZURE_RESOURCE_GROUP" \
-            --query defaultHostname -o tsv)
+          api_fqdn=$(az deployment group show             --resource-group "$AZURE_RESOURCE_GROUP" --name main             --query properties.outputs.backendFqdn.value -o tsv)
+          storage=$(az deployment group show             --resource-group "$AZURE_RESOURCE_GROUP" --name main             --query properties.outputs.frontendStorageAccount.value -o tsv)
+          site=$(az deployment group show             --resource-group "$AZURE_RESOURCE_GROUP" --name main             --query properties.outputs.frontendUrl.value -o tsv)
           echo "api_url=https://${api_fqdn}/api" >> "$GITHUB_OUTPUT"
-          echo "swa_url=https://${swa_host}" >> "$GITHUB_OUTPUT"
+          echo "storage_account=${storage}" >> "$GITHUB_OUTPUT"
+          echo "site_url=${site%/}" >> "$GITHUB_OUTPUT"
 
       - name: Smoke test the health endpoint
         run: |
@@ -166,12 +169,9 @@ jobs:
             sleep 10
           done
           echo "API never became healthy. Recent logs:"
-          az containerapp logs show \
-            --name ca-smartproperty-api \
-            --resource-group "$AZURE_RESOURCE_GROUP" --tail 60 || true
+          az containerapp logs show             --name "${{ steps.appname.outputs.name }}"             --resource-group "$AZURE_RESOURCE_GROUP" --tail 60 || true
           exit 1
 
-  # ---------------------------------------------------------------
   deploy-frontend:
     name: Deploy frontend
     needs: [build-image, deploy-backend]
@@ -202,9 +202,8 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Enable static website hosting
-        # Data-plane setting, so ARM cannot do it. index.html is also the
-        # error document, which gives a React SPA its client-side routing
-        # fallback for deep links.
+        # Data-plane setting, so ARM cannot do it. index.html doubles as the
+        # error document, giving the React SPA its deep-link fallback.
         run: |
           az storage blob service-properties update             --account-name "${{ needs.deploy-backend.outputs.storage_account }}"             --static-website --auth-mode login             --index-document index.html             --404-document index.html
 
@@ -221,5 +220,6 @@ jobs:
             echo "|---|---|"
             echo "| Frontend | ${{ needs.deploy-backend.outputs.site_url }} |"
             echo "| API | ${{ needs.deploy-backend.outputs.api_url }} |"
+            echo "| App | \`${{ needs.deploy-backend.outputs.app_name }}\` |"
             echo "| Image | \`${{ needs.build-image.outputs.image }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
