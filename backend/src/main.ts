@@ -2,6 +2,18 @@
 // SmartProperty - Application Entry Point
 // ===========================================
 
+import { config as loadEnvFile } from 'dotenv';
+
+// Nest picks its log levels at NestFactory.create() time, before AppModule -
+// and therefore ConfigModule - has loaded any .env file. Load them here first,
+// in the same order and precedence AppModule declares, so NODE_ENV supplied
+// through backend/.env is visible when those levels are chosen.
+// dotenv does not override already-set variables, so a real process
+// environment variable still wins, and the first file listed takes precedence.
+for (const envFile of ['.env', '.env.development', '.env.local']) {
+  loadEnvFile({ path: envFile });
+}
+
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
@@ -16,8 +28,7 @@ const compression = require('compression');
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
-  // The logger has to be chosen before the app exists, so it can only read
-  // the real process environment. ConfigModule has not loaded .env yet here.
+  // Accurate now that the .env files above have been loaded.
   const bootstrapIsProduction = process.env.NODE_ENV === 'production';
 
   const app = await NestFactory.create(AppModule, {
@@ -37,11 +48,12 @@ async function bootstrap() {
   // the process environment would otherwise silently disable these guards.
   const isProduction = nodeEnv === 'production';
 
-  if (isProduction && !bootstrapIsProduction) {
-    logger.warn(
-      'NODE_ENV=production came from a .env file, not the process environment. ' +
-        'Debug log levels were already applied at bootstrap. ' +
-        'Set NODE_ENV in the real environment for production deployments.',
+  if (isProduction !== bootstrapIsProduction) {
+    // Should not happen now that .env is preloaded, but if the two ever
+    // disagree the logger was already created with the wrong levels.
+    logger.error(
+      'NODE_ENV mismatch between bootstrap and ConfigService. ' +
+        'Log levels may be wrong for this environment.',
     );
   }
 

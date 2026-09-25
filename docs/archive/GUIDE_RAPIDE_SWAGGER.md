@@ -96,5 +96,5 @@ Attendez : `🚀 SmartProperty API running on: http://localhost:3000`
 
 ---
 
-**C'est tout ! Ça devrait marcher maintenant.** ��
+**C'est tout ! Ça devrait marcher maintenant.** 
 

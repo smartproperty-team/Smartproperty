@@ -124,8 +124,6 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
-      redis:
-        condition: service_healthy
     environment:
       NODE_ENV: development
       PORT: 3000
@@ -137,11 +135,6 @@ services:
       MONGODB_USERNAME: smartproperty_user
       MONGODB_PASSWORD: smartproperty_pass_2024
       MONGODB_URI: mongodb://smartproperty_user:smartproperty_pass_2024@mongodb:27017/smartproperty?authSource=admin
-      # Redis - uses Docker service name
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: redis_dev_password_2024
-      REDIS_URL: redis://:redis_dev_password_2024@redis:6379
       # JWT
       JWT_SECRET: smartproperty_jwt_secret_dev_2024_change_in_prod
       JWT_EXPIRATION: 1d
