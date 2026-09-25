@@ -176,6 +176,33 @@ output. `CORS_ORIGIN` is the one value set by hand once the site URL exists.
 - Seed demo data. `SEED_PASSWORD` is required outside development.
 - Set a budget alert at $50 and $80: Cost Management → Budgets.
 
+## Operational notes
+
+**Changing a secret does not restart the container.** On the express
+Container Apps environment this subscription gets, `az containerapp secret
+set` updates the stored value but the running process keeps the value it was
+started with. `az containerapp revision restart` fails with
+`InternalServerError`, `--revision-suffix` is rejected, and `update
+--set-env-vars` reports Succeeded without cycling the process. The only
+reliable way to pick up a new secret:
+
+```bash
+az containerapp update -n <app> -g rg-smartproperty --min-replicas 0
+# wait until: az containerapp replica list -n <app> -g rg-smartproperty
+#             --query 'length(@)' -o tsv   returns 0
+az containerapp update -n <app> -g rg-smartproperty --min-replicas 1
+```
+
+Check `properties.containers[].runningStateDetails` on the replica: if the
+container start time predates the secret change, it is still running the old
+value regardless of what `secret show` reports.
+
+**Atlas rejects unlisted IPs at the TLS layer**, not with an auth error. The
+symptom is `MongoServerSelectionError: ... tlsv1 alert internal error: SSL
+alert number 80`, which reads like a certificate problem. Check the Atlas IP
+Access List first. Container Apps on consumption has no stable egress IP, so
+the list needs `0.0.0.0/0`.
+
 ## Notes
 
 - `maxReplicas` is pinned to 1. The rate limiter uses in-memory storage, so
