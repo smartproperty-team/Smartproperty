@@ -19,10 +19,13 @@ export class JwtRefreshStrategy extends PassportStrategy(
     private readonly authService: AuthService,
   ) {
     const secret = configService.get<string>('jwt.refreshSecret');
+    if (!secret) {
+      throw new Error('jwt.refreshSecret is not configured; refusing to start.');
+    }
     super({
       jwtFromRequest: ExtractJwt.fromBodyField('refreshToken'),
       ignoreExpiration: false,
-      secretOrKey: secret || 'default_refresh_secret',
+      secretOrKey: secret,
       passReqToCallback: true,
     });
   }

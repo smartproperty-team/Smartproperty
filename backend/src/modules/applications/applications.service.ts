@@ -28,7 +28,11 @@ import { Application, ApplicationStatus } from './entities/application.entity';
 
 @Injectable()
 export class ApplicationsService {
-  private static readonly REVIEWER_ROLES = new Set<UserRole>([
+  // Agency-side reviewers only. Deliberately NARROWER than
+  // APPLICATION_REVIEW_ROLES used by the controller guard, which also admits
+  // platform super-admins. Used both to authorise review actions and to find
+  // which agency staff to notify, so the two must not be merged.
+  private static readonly AGENCY_REVIEWER_ROLES = new Set<UserRole>([
     UserRole.BRANCH_MANAGER,
     UserRole.REAL_ESTATE_AGENT,
     UserRole.RENTAL_MANAGER,
@@ -103,7 +107,7 @@ export class ApplicationsService {
       where: {
         agencyId: ownerAgencyId,
         role: {
-          $in: Array.from(ApplicationsService.REVIEWER_ROLES),
+          $in: Array.from(ApplicationsService.AGENCY_REVIEWER_ROLES),
         } as any,
         deletedAt: null as any,
       },
@@ -136,7 +140,7 @@ export class ApplicationsService {
       return true;
     }
 
-    if (!ApplicationsService.REVIEWER_ROLES.has(role)) {
+    if (!ApplicationsService.AGENCY_REVIEWER_ROLES.has(role)) {
       return false;
     }
 

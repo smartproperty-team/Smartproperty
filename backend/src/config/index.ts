@@ -11,5 +11,4 @@ export * from './google.config';
 export * from './jwt.config';
 export * from './mail.config';
 export * from './recaptcha.config';
-export * from './redis.config';
 export * from './throttler.config';

@@ -112,6 +112,16 @@ export const en = {
 
   // ---- Properties Page ----
   properties: {
+    virtualVisit: {
+      page: {
+        title: "Add Virtual Visit",
+        description:
+          "Add rooms with a title and one panoramic image for each room.",
+        actions: {
+          upload: "Upload virtual visit",
+        },
+      },
+    },
     title: "Properties",
     found: "found",
     addProperty: "Add Property",
@@ -303,6 +313,8 @@ export const en = {
         dropTitle: "Drag and drop your images here",
         dropSubtitle: "or click to select (JPEG, PNG, WebP - max 50MB)",
         virtualTour: {
+          noImages:
+            "Please add at least one room with a title and panoramic image.",
           enableFromPhotos: "Generate virtual tour from uploaded photos",
           captureGuideTitle: "Owner photo capture guide",
           captureGuideIntro:

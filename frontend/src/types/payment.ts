@@ -43,14 +43,22 @@ export interface PaymentListResponse {
   limit: number;
 }
 
+/**
+ * Mirrors PaymentSummaryDto in the backend
+ * (backend/src/modules/payments/dto/payment-response.dto.ts).
+ * The previous shape had drifted and described fields the API never sent.
+ */
 export interface PaymentSummary {
-  total: number;
-  completed: number;
-  pending: number;
-  failed: number;
-  refunded: number;
   totalAmount: number;
   completedAmount: number;
+  pendingAmount: number;
+  failedAmount: number;
+  refundedAmount: number;
+  paymentCount: number;
+  completedCount: number;
+  failedCount: number;
+  refundedCount: number;
+  averageAmount: number;
 }
 
 export interface InitiatePaymentResponse {

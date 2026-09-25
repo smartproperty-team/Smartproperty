@@ -5,7 +5,7 @@
 // using Three.js via @react-three/fiber and @react-three/drei.
 
 import { OrbitControls } from "@react-three/drei";
-import { Canvas, useLoader, useThree } from "@react-three/fiber";
+import { Canvas, useLoader } from "@react-three/fiber";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import type { VirtualTourHotspot } from "../../types/property";
@@ -39,7 +39,6 @@ function ClickableSphere({
   onSphereClick: (yaw: number, pitch: number) => void;
 }) {
   const downPos = useRef<{ x: number; y: number } | null>(null);
-  const { gl } = useThree();
 
   const handlePointerDown = useCallback(
     (e: THREE.Event & { clientX?: number; clientY?: number }) => {

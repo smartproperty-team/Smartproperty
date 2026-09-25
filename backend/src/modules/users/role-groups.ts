@@ -91,3 +91,8 @@ export function hasPlatformAdminRole(role?: UserRole | string): boolean {
 
   return PLATFORM_ADMIN_ROLES.includes(role as UserRole);
 }
+
+export const MAINTENANCE_INTAKE_ROLES: UserRole[] = [
+  UserRole.OWNER,
+  UserRole.BRANCH_MANAGER,
+];

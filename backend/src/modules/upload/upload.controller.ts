@@ -19,6 +19,13 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import {
+  assertValidUpload,
+  AVATAR_MIME_TYPES,
+  IMAGE_MIME_TYPES,
+  MAX_AVATAR_BYTES,
+  MAX_IMAGE_BYTES,
+} from './upload-validation';
+import {
   ApiBearerAuth,
   ApiBody,
   ApiConsumes,
@@ -116,18 +123,8 @@ export class UploadController {
       throw new BadRequestException('No files provided');
     }
 
-    // Validate file types
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     for (const file of files) {
-      if (!allowedTypes.includes(file.mimetype)) {
-        throw new BadRequestException(
-          `Invalid file type: ${file.mimetype}. Allowed: ${allowedTypes.join(', ')}`,
-        );
-      }
-      // Max 10MB per file
-      if (file.size > 10 * 1024 * 1024) {
-        throw new BadRequestException('File size exceeds 10MB limit');
-      }
+      assertValidUpload(file, IMAGE_MIME_TYPES, MAX_IMAGE_BYTES);
     }
 
     const uploadedFiles = await this.minioService.uploadFiles(files, {
@@ -179,18 +176,7 @@ export class UploadController {
       throw new BadRequestException('No file provided');
     }
 
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    if (!allowedTypes.includes(file.mimetype)) {
-      throw new BadRequestException(
-        `Invalid file type: ${file.mimetype}. Allowed: ${allowedTypes.join(', ')}`,
-      );
-    }
-
-    // Max 10MB
-    if (file.size > 10 * 1024 * 1024) {
-      throw new BadRequestException('File size exceeds 10MB limit');
-    }
+    assertValidUpload(file, IMAGE_MIME_TYPES, MAX_IMAGE_BYTES);
 
     return this.minioService.uploadFile(file, {
       folder: `properties/${propertyId}`,
@@ -233,18 +219,7 @@ export class UploadController {
       throw new BadRequestException('No file provided');
     }
 
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(file.mimetype)) {
-      throw new BadRequestException(
-        `Invalid file type: ${file.mimetype}. Allowed: ${allowedTypes.join(', ')}`,
-      );
-    }
-
-    // Max 5MB for avatars
-    if (file.size > 5 * 1024 * 1024) {
-      throw new BadRequestException('File size exceeds 5MB limit');
-    }
+    assertValidUpload(file, AVATAR_MIME_TYPES, MAX_AVATAR_BYTES);
 
     return this.minioService.uploadFile(file, {
       folder: `users/${userId}`,
