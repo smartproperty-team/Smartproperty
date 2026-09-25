@@ -2,6 +2,15 @@
 // SmartProperty - User Seed Script
 // ===========================================
 
+import { config as loadEnvFile } from 'dotenv';
+
+// The seed script runs standalone via ts-node, outside Nest, so nothing has
+// loaded .env for it. Load the same files the app does before reading any
+// environment variable below.
+for (const envFile of ['.env', '.env.development', '.env.local']) {
+  loadEnvFile({ path: envFile });
+}
+
 import * as bcrypt from 'bcrypt';
 import { ObjectId } from 'mongodb';
 import { DataSource } from 'typeorm';
@@ -42,16 +51,31 @@ async function seedUsers() {
       return;
     }
 
-    // Seed password. The default is a well-known value published in this
-    // repository's docs, so it must not be used anywhere reachable from the
-    // internet. Set SEED_PASSWORD to something private for any deployed
-    // environment, and refuse the default outright in production.
-    const seedPassword = process.env.SEED_PASSWORD || 'Password123!';
+    // This default is published in this repository's docs, so it is public.
+    // Allow it ONLY in an explicitly local environment - an allow-list, not a
+    // check for production, so staging, unset and every other value require a
+    // real password rather than silently getting the public one.
+    const PUBLIC_DEFAULT_PASSWORD = 'Password123!';
+    const LOCAL_ENVIRONMENTS = ['development', 'test'];
 
-    if (process.env.NODE_ENV === 'production' && !process.env.SEED_PASSWORD) {
+    const nodeEnv = process.env.NODE_ENV ?? '';
+    const isLocalEnvironment = LOCAL_ENVIRONMENTS.includes(nodeEnv);
+    const configuredPassword = process.env.SEED_PASSWORD;
+
+    if (!configuredPassword && !isLocalEnvironment) {
       throw new Error(
-        'Refusing to seed production with the default public password. ' +
-          'Set SEED_PASSWORD to a private value first.',
+        `SEED_PASSWORD is required when NODE_ENV is "${nodeEnv || '(unset)'}". ` +
+          'The built-in seed password is published in this repository and must ' +
+          'never be used anywhere reachable from the internet. Set SEED_PASSWORD ' +
+          'to a private value, or set NODE_ENV=development for a local run.',
+      );
+    }
+
+    const seedPassword = configuredPassword || PUBLIC_DEFAULT_PASSWORD;
+
+    if (!configuredPassword) {
+      console.warn(
+        '⚠️  Seeding with the public default password. Local use only.',
       );
     }
 
