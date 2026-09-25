@@ -34,6 +34,17 @@ param location string = 'italynorth'
 @description('Container image for the API, e.g. ghcr.io/<owner>/smartproperty-backend:<sha>.')
 param backendImage string
 
+@description('''
+GitHub username for pulling the image from ghcr.io. Required only when the
+package is private - which it is here, because the organization disables
+public packages.
+''')
+param ghcrUsername string = ''
+
+@description('GitHub PAT with read:packages, used to pull the private image.')
+@secure()
+param ghcrToken string = ''
+
 @description('JWT signing secret. Minimum 32 characters or the API refuses to start.')
 @secure()
 @minLength(32)
@@ -109,6 +120,14 @@ resource backend 'Microsoft.App/containerApps@2024-03-01' = {
     managedEnvironmentId: containerAppEnv.id
     configuration: {
       activeRevisionsMode: 'Single'
+      // Empty when the image is public; ghcr.io needs credentials otherwise.
+      registries: empty(ghcrToken) ? [] : [
+        {
+          server: 'ghcr.io'
+          username: ghcrUsername
+          passwordSecretRef: 'ghcr-token'
+        }
+      ]
       ingress: {
         external: true
         targetPort: 3000
@@ -121,7 +140,7 @@ resource backend 'Microsoft.App/containerApps@2024-03-01' = {
           }
         ]
       }
-      secrets: [
+      secrets: union([
         // Taken straight from the account this template creates, so no
         // database credential is ever passed in by hand or stored in CI.
         // For the Mongo API the username is the account name and the
@@ -135,7 +154,12 @@ resource backend 'Microsoft.App/containerApps@2024-03-01' = {
         { name: 'mongodb-password', value: cosmos.listKeys().primaryMasterKey }
         { name: 'jwt-secret', value: jwtSecret }
         { name: 'jwt-refresh-secret', value: jwtRefreshSecret }
-      ]
+      ], empty(ghcrToken) ? [] : [
+        {
+          name: 'ghcr-token'
+          value: ghcrToken
+        }
+      ])
     }
     template: {
       containers: [
