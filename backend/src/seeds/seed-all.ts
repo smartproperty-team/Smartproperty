@@ -2,6 +2,12 @@
 // SmartProperty - Full Seed Script (Reset + Seed)
 // ===========================================
 
+// Must be first: the MONGODB_* constants below are evaluated at import time,
+// and resetDatabaseData() deletes every document in whichever database they
+// point at. Loading .env afterwards would reset one database while the child
+// seed process writes to another.
+import './load-env';
+
 import { spawnSync } from 'child_process';
 import { MongoClient } from 'mongodb';
 import { resolve } from 'path';
