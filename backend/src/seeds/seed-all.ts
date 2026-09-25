@@ -38,7 +38,7 @@ function runSeedScript(scriptName: string) {
 }
 
 async function resetDatabaseData() {
-  const client = new MongoClient(MONGODB_URI);
+  const client = new MongoClient(MONGODB_URI, { retryWrites: process.env.MONGODB_RETRY_WRITES !== 'false' });
   await client.connect();
 
   try {
