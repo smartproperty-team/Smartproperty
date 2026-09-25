@@ -123,9 +123,11 @@ resource containerAppEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
 resource backend 'Microsoft.App/containerApps@2024-03-01' = {
   name: backendAppName
   location: location
-  identity: {
-    type: 'SystemAssigned'
-  }
+  // No managed identity: this subscription gets an "express" Container Apps
+  // environment, which rejects identity assignment outright, and nothing here
+  // authenticates that way - the registry uses a secret and the database
+  // credentials come from listKeys(). Declaring it caused both an update
+  // failure and a FailedIdentityOperation on redeploy.
   properties: {
     managedEnvironmentId: containerAppEnv.id
     configuration: {
