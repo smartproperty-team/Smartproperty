@@ -433,8 +433,11 @@ export class VerificationService {
         return;
       }
 
+      // app.frontendUrl already resolves FRONTEND_URL, falling back to the
+      // first CORS_ORIGIN entry. Reading the raw key instead meant these
+      // emails pointed at localhost whenever FRONTEND_URL was unset.
       const frontendUrl =
-        this.configService.get<string>('FRONTEND_URL') ||
+        this.configService.get<string>('app.frontendUrl') ||
         'http://localhost:5173';
       const dashboardUrl = `${frontendUrl}/dashboard`;
       const name = user.firstName || user.email;

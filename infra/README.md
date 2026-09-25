@@ -105,7 +105,17 @@ Settings → Secrets and variables → Actions. Six values:
 | `AZURE_SUBSCRIPTION_ID` | from step 2 |
 | `JWT_SECRET` | `openssl rand -base64 48` |
 | `JWT_REFRESH_SECRET` | `openssl rand -base64 48` — a different value |
-| `CORS_ORIGIN` | the static website URL; set after the first deploy |
+| `GHCR_PULL_TOKEN` | GitHub PAT with `read:packages`, for pulling the image |
+| `CORS_ORIGIN` | extra origins only; the site's own URL is added automatically |
+
+Optional repository **variable** (not a secret): `API_NAME_SUFFIX`. Set it to
+`2`, `3`, … only to recover from a stuck express-environment artifact, as
+described under Notes. It changes the container app's name and FQDN.
+
+`GHCR_PULL_TOKEN` is required because this organization disables public and
+internal package visibility, so the image cannot be pulled anonymously. If it
+is absent the template renders `registries: []` and the container app fails to
+pull with an error that does not mention authentication.
 
 Both JWT secrets must be at least 32 characters. Shorter and the API
 deliberately refuses to boot.

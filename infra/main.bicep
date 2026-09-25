@@ -310,6 +310,7 @@ resource frontendStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
 }
 
+output backendAppName string = backend.name
 output backendFqdn string = backend.properties.configuration.ingress.fqdn
 output backendUrl string = 'https://${backend.properties.configuration.ingress.fqdn}'
 output backendApiUrl string = 'https://${backend.properties.configuration.ingress.fqdn}/api'
