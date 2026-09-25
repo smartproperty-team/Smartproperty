@@ -26,19 +26,32 @@ const parseDurationToSeconds = (duration: string): number => {
   }
 };
 
+// Never fall back to a hard-coded signing key in production: a known default
+// secret lets anyone mint valid tokens. Fail to boot instead.
+const requireSecret = (name: 'JWT_SECRET' | 'JWT_REFRESH_SECRET'): string => {
+  const value = process.env[name];
+  if (value && value.length >= 32) {
+    return value;
+  }
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      `${name} is missing or shorter than 32 characters. Refusing to start.`,
+    );
+  }
+  return `insecure_dev_only_${name.toLowerCase()}_do_not_use_in_production`;
+};
+
 export const jwtConfig = registerAs('jwt', () => {
   const expiresIn = process.env.JWT_EXPIRATION || '1h';
 
   return {
     // Access token settings
-    secret: process.env.JWT_SECRET || 'default_jwt_secret_change_in_production',
+    secret: requireSecret('JWT_SECRET'),
     expiresIn,
     expiresInSeconds: parseDurationToSeconds(expiresIn),
 
     // Refresh token settings
-    refreshSecret:
-      process.env.JWT_REFRESH_SECRET ||
-      'default_refresh_secret_change_in_production',
+    refreshSecret: requireSecret('JWT_REFRESH_SECRET'),
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRATION || '7d',
 
     // Token settings

@@ -22,7 +22,9 @@ class Settings(BaseSettings):
     # Application
     app_name: str = "SmartProperty AI Services"
     app_env: str = "development"
-    debug: bool = True
+    # Secure default: debug must be switched on explicitly via DEBUG=true.
+    # It drives uvicorn --reload and verbose error output.
+    debug: bool = False
     api_prefix: str = "/api/v1"
     host: str = "0.0.0.0"
     port: int = 8000
@@ -83,7 +85,7 @@ class Settings(BaseSettings):
     staging_cfg_scale: float = 7.0
 
     # Logging
-    log_level: str = "DEBUG"
+    log_level: str = "INFO"
     log_format: str = "json"
 
     # Rate Limiting
