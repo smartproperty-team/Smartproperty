@@ -5,7 +5,11 @@
 
 FROM node:20-alpine AS base
 WORKDIR /app
+# scripts/ must be present before install: package.json's postinstall runs
+# scripts/create-resolve-uri-shim.js, and npm fails the whole install if node
+# cannot find that file.
 COPY package.json package-lock.json* ./
+COPY scripts ./scripts
 RUN npm install --no-audit --no-fund
 
 # ---- Development: hot-reload ----
@@ -29,6 +33,7 @@ RUN npm run build
 FROM node:20-alpine AS prod-deps
 WORKDIR /app
 COPY package.json ./
+COPY scripts ./scripts
 RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
 
 # ---- Production ----
