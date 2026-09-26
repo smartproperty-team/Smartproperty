@@ -175,6 +175,15 @@ const WIZARD_STEP_IDS = [
 const PRICING_STEP_INDEX = WIZARD_STEP_IDS.indexOf("pricing");
 
 /**
+ * Bedroom and bathroom counts are small discrete numbers, so a select is
+ * quicker than typing and cannot produce a nonsense value. "0" bedrooms is
+ * shown as "Studio", which is how the listing reads to a tenant. The stored
+ * value stays a string, matching the rest of formData.
+ */
+const ROOM_COUNT_OPTIONS = ["0", "1", "2", "3", "4", "5", "6", "7", "8"];
+const BATHROOM_COUNT_OPTIONS = ["1", "2", "3", "4", "5", "6"];
+
+/**
  * Every field the form validates. Address fields live inside AddressInput but
  * are validated here, so they are part of the same key space; each key also
  * matches the corresponding input's DOM id, which is what lets focus
@@ -771,32 +780,42 @@ export default function PropertyFormPage() {
                 <label htmlFor="bedrooms">
                   {t.properties.form.labels.bedrooms}
                 </label>
-                <input
+                <select
                   id="bedrooms"
                   name="bedrooms"
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
                   value={formData.bedrooms}
                   onChange={handleChange}
-                  placeholder={t.properties.form.placeholders.bedrooms}
-                />
+                >
+                  <option value="">
+                    {t.properties.form.placeholders.bedrooms}
+                  </option>
+                  {ROOM_COUNT_OPTIONS.map((count) => (
+                    <option key={count} value={count}>
+                      {count === "0" ? t.properties.typeStudio : count}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="form-group">
                 <label htmlFor="bathrooms">
                   {t.properties.form.labels.bathrooms}
                 </label>
-                <input
+                <select
                   id="bathrooms"
                   name="bathrooms"
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
                   value={formData.bathrooms}
                   onChange={handleChange}
-                  placeholder={t.properties.form.placeholders.bathrooms}
-                />
+                >
+                  <option value="">
+                    {t.properties.form.placeholders.bathrooms}
+                  </option>
+                  {BATHROOM_COUNT_OPTIONS.map((count) => (
+                    <option key={count} value={count}>
+                      {count}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="form-group">
