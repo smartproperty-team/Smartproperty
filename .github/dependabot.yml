@@ -1,0 +1,75 @@
+# ===========================================
+# SmartProperty - Automated dependency updates
+# ===========================================
+# The repository carries a backlog of advisories (27 frontend, 86 backend at
+# the time of writing). Dependabot turns that into a steady stream of small
+# reviewable pull requests instead of one large risky upgrade later.
+#
+# Updates are grouped so a week produces a handful of PRs rather than dozens,
+# and major versions are separated because those are the ones that need
+# testing rather than a glance.
+
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    open-pull-requests-limit: 5
+    labels: [dependencies]
+    groups:
+      # Patches and minors together: low risk, review as a batch.
+      safe-updates:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    ignore:
+      # Majors arrive as individual PRs via the separate entry below.
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    labels: [dependencies, major-update]
+    # Only majors here, one per PR, because these are the ones that break.
+    allow:
+      - dependency-type: direct
+
+  - package-ecosystem: pip
+    directory: "/ai-services"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    labels: [dependencies, python]
+
+  - package-ecosystem: docker
+    directory: "/backend"
+    schedule:
+      interval: weekly
+    labels: [dependencies, docker]
+
+  - package-ecosystem: docker
+    directory: "/frontend"
+    schedule:
+      interval: weekly
+    labels: [dependencies, docker]
+
+  - package-ecosystem: docker
+    directory: "/ai-services"
+    schedule:
+      interval: weekly
+    labels: [dependencies, docker]
+
+  # Keep the actions themselves patched - a compromised action runs with the
+  # workflow's permissions.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    labels: [dependencies, ci]

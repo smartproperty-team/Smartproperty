@@ -1,0 +1,104 @@
+# DevOps pipeline
+
+Three workflows, separated so each gives feedback at the speed it can.
+
+| Workflow | Triggers | Purpose |
+|---|---|---|
+| `ci.yml` | push, PR | Typecheck, test with coverage, build, SonarCloud |
+| `security.yml` | push, PR, weekly | Secrets, SAST, dependencies, Dockerfiles, image, SBOM |
+| `deploy.yml` | push to `main` | Build and publish image, deploy to Azure — **currently gated off** |
+
+They are separate on purpose. A container build and scan takes minutes; a
+developer waiting on a typecheck should not wait for it. The weekly schedule
+on `security.yml` matters more than it looks: most vulnerabilities appear in
+code nobody has touched, so a scanner that only runs on push will not find
+them.
+
+## Why these tools
+
+| Tool | Catches | Why this one |
+|---|---|---|
+| **gitleaks** | Credentials in code and history | This repository has leaked four credentials before. It is the single most relevant scanner here. Run as the released binary rather than `gitleaks-action`, which requires a paid licence for organisation-owned repositories. |
+| **CodeQL** | Injection, unsafe flows, logic bugs | GitHub-native SAST, free on public repositories, no server to run. Understands data flow rather than matching patterns. |
+| **Trivy** | Vulnerable dependencies and OS packages | One tool for filesystem, image and SBOM, so results are consistent. Free and fast. |
+| **hadolint** | Dockerfile mistakes | Cheap. Would have caught the missing `scripts/` copy that broke the first image build. |
+| **SonarCloud** | Code smells, duplication, coverage, hotspots | Already configured for this project via Jenkins; free for public repositories. Covers quality, which the others do not. |
+| **Dependabot** | Outdated dependencies | Turns a backlog of 113 advisories into small reviewable pull requests instead of one large upgrade later. |
+
+Everything writes **SARIF** and uploads to GitHub code scanning, so findings
+appear in **Security → Code scanning** and as inline annotations on pull
+requests. Scanners that only print to a job log get ignored.
+
+## Failure policy
+
+`SECURITY_FAIL_ON` is `CRITICAL`. Scanners report everything but only critical
+findings fail the build.
+
+This is deliberate. The repository carries a backlog of HIGH advisories in
+transitive dependencies. Failing on HIGH from day one would make every push
+red, and a pipeline that is always red gets ignored or disabled — worse than a
+lower gate honestly set. Tighten to `CRITICAL,HIGH` in `security.yml` once
+Dependabot has worked the backlog down.
+
+The secrets job is stricter: history findings are reported, but a secret
+**introduced by the current push** fails the build outright. That asymmetry is
+intentional — history needs a coordinated rewrite, a new leak needs stopping
+now.
+
+## Setup
+
+### SonarCloud (one-time, ~10 minutes)
+
+1. Sign in at **https://sonarcloud.io** with GitHub
+2. **+ → Analyze new project** → pick `smartproperty-team/Smartproperty`
+3. Choose **With GitHub Actions** — it shows a `SONAR_TOKEN`
+4. Repository **Settings → Secrets and variables → Actions → New repository
+   secret**, name `SONAR_TOKEN`
+5. In SonarCloud, **Administration → Analysis Method**, turn *Automatic
+   Analysis* **off** — it conflicts with the CI-based scan and the two will
+   fight
+6. Confirm the organisation and project key in `sonar-project.properties`
+   match what SonarCloud created
+
+Until `SONAR_TOKEN` exists the Sonar job skips itself and reports why, rather
+than failing. Nothing else needs configuring.
+
+### Everything else
+
+No setup. CodeQL, Trivy, gitleaks, hadolint and Dependabot need no accounts or
+tokens on a public repository.
+
+To enable Dependabot alerts as well as its pull requests: **Settings → Code
+security → Dependabot alerts**.
+
+## What is not automated, and why
+
+**Deployment.** `deploy.yml` is gated behind an `AZURE_DEPLOY_ENABLED`
+repository variable and does not run. Azure login needs an Entra app
+registration, and this tenant does not permit student accounts to create one —
+`az ad app create` returns *Insufficient privileges*. Every credential-based
+method (OIDC, service principal, `AZURE_CREDENTIALS`) needs that same
+registration, so this is a tenant policy rather than a configuration gap.
+
+Deployment is therefore manual; see `infra/README.md`. To enable CD, ask for
+the **Application Developer** role in Entra ID, then follow the OIDC setup in
+that document and set `AZURE_DEPLOY_ENABLED` to `true`.
+
+The image build and scan still run in CI, so the pipeline proves the artefact
+is sound even though it cannot ship it.
+
+## Worth adding next
+
+Ordered by value for this project:
+
+1. **Branch protection on `main`** — require CI and Security to pass before
+   merge. Without it the pipeline is advisory. Settings → Branches → Add rule.
+2. **`cosign` image signing** — sign the image in CI and verify before
+   deployment, so the thing that runs is provably the thing that was built.
+   Meaningful supply-chain step once CD works.
+3. **OWASP ZAP baseline scan** — DAST against the running site, complementing
+   CodeQL's static view. Scheduled rather than per-push.
+4. **Playwright smoke tests** — one end-to-end journey (log in, open a
+   listing) gives more deployment confidence than any unit test here.
+5. **Terraform or Bicep what-if in CI** — comment the infrastructure plan on
+   pull requests so changes are reviewable before they are applied.
