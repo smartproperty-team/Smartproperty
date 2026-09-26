@@ -176,6 +176,43 @@ output. `CORS_ORIGIN` is the one value set by hand once the site URL exists.
 - Seed demo data. `SEED_PASSWORD` is required outside development.
 - Set a budget alert at $50 and $80: Cost Management → Budgets.
 
+## Custom domain
+
+`https://smartproperties.tech` serves the frontend. Getting there needed a
+route around two Azure limits:
+
+- **Container Apps custom domains are unavailable.** The express environment
+  this subscription provisions rejects them with
+  `ExpressEnvironmentFeatureNotSupported`, alongside managed identity,
+  revision suffixes and revision restarts. So the API stays on its
+  `azurecontainerapps.io` hostname; it is not user-visible.
+- **Blob Storage static websites cannot serve a certificate for a custom
+  domain**, and they route by `Host` header, so pointing a CNAME at the web
+  endpoint returns `400 InvalidUri`.
+
+The domain is on Cloudflare (free), which terminates TLS with a Let's Encrypt
+certificate and rewrites the `Host` header toward the storage endpoint.
+
+The rewrite is done with **Cloud Connector** (Rules -> Cloud Connector),
+*not* Origin Rules: Origin Rules' Host Header override is Enterprise-only,
+while Cloud Connector is free and purpose-built for cloud object storage.
+
+DNS records:
+
+| Type | Name | Content | Proxy |
+|---|---|---|---|
+| CNAME | `@` | the storage web endpoint | Proxied |
+| CNAME | `api` | the container app FQDN | DNS only |
+| TXT | `asuid.api` | the app's customDomainVerificationId | - |
+
+The `api` records are left over from an attempt to bind a custom domain to
+the container app and are currently unused. `CORS_ORIGIN` on the container
+app must include `https://smartproperties.tech`.
+
+Deep links return HTTP 404 while serving `index.html`, so React Router
+renders the route correctly but crawlers see the wrong status. Fixing that
+properly needs a CDN rewrite rule rather than an error-document fallback.
+
 ## Operational notes
 
 **Changing a secret does not restart the container.** On the express
