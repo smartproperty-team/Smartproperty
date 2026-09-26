@@ -252,6 +252,7 @@ export const fr: Translations = {
         bathrooms: "Salles de bain",
         area: "Surface (m2)",
         parkingSpaces: "Places de parking",
+        noParking: "Aucune",
         furnished: "Meublé",
         petFriendly: "Animaux acceptés",
         amenities: "Équipements",

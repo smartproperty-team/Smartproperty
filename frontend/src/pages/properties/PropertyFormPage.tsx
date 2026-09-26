@@ -182,6 +182,7 @@ const PRICING_STEP_INDEX = WIZARD_STEP_IDS.indexOf("pricing");
  */
 const ROOM_COUNT_OPTIONS = ["0", "1", "2", "3", "4", "5", "6", "7", "8"];
 const BATHROOM_COUNT_OPTIONS = ["1", "2", "3", "4", "5", "6"];
+const PARKING_COUNT_OPTIONS = ["0", "1", "2", "3", "4", "5"];
 
 /**
  * Every field the form validates. Address fields live inside AddressInput but
@@ -836,16 +837,21 @@ export default function PropertyFormPage() {
                 <label htmlFor="parkingSpaces">
                   {t.properties.form.labels.parkingSpaces}
                 </label>
-                <input
+                <select
                   id="parkingSpaces"
                   name="parkingSpaces"
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
                   value={formData.parkingSpaces}
                   onChange={handleChange}
-                  placeholder={t.properties.form.placeholders.parkingSpaces}
-                />
+                >
+                  <option value="">
+                    {t.properties.form.placeholders.parkingSpaces}
+                  </option>
+                  {PARKING_COUNT_OPTIONS.map((count) => (
+                    <option key={count} value={count}>
+                      {count === "0" ? t.properties.form.labels.noParking : count}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="form-group">

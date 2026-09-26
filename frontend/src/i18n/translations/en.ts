@@ -245,6 +245,7 @@ export const en = {
         bathrooms: "Bathrooms",
         area: "Area (m2)",
         parkingSpaces: "Parking spaces",
+        noParking: "None",
         furnished: "Furnished",
         petFriendly: "Pet friendly",
         amenities: "Amenities",
