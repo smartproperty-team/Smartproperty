@@ -129,7 +129,14 @@ interface FormData {
 
 interface PendingImage {
   file: File;
+  /**
+   * Created once when the file is added. Building it in render allocated a new
+   * blob URL on every keystroke and never revoked them.
+   */
+  previewUrl: string;
 }
+
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
 // Virtual tour constraints
 const VIRTUAL_TOUR_MIN_IMAGES = 8;
@@ -170,6 +177,7 @@ const WIZARD_STEP_IDS = [
   "amenities",
   "pricing",
   "photos",
+  "review",
 ] as const;
 
 const PRICING_STEP_INDEX = WIZARD_STEP_IDS.indexOf("pricing");
@@ -210,6 +218,7 @@ export default function PropertyFormPage() {
 
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [images, setImages] = useState<PendingImage[]>([]);
+  const [imageNotice, setImageNotice] = useState<string | null>(null);
   const [existingImages, setExistingImages] = useState<
     { url: string; key: string }[]
   >([]);
@@ -248,6 +257,53 @@ export default function PropertyFormPage() {
       currency: formData.currency || undefined,
     };
   }, [formData]);
+
+  // Persist a draft so a refresh, a crash or an accidental navigation does not
+  // discard several minutes of typing. Photos are File objects and cannot be
+  // serialised, so they are not part of the draft - the notice says so.
+  const draftKey = isEditing ? null : "smartproperty:new-property-draft";
+  const [draftRestored, setDraftRestored] = useState(false);
+
+  useEffect(() => {
+    if (!draftKey) return;
+    try {
+      const raw = window.localStorage.getItem(draftKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Partial<FormData>;
+      setFormData((prev) => ({ ...prev, ...parsed }));
+      setDraftRestored(true);
+    } catch {
+      // A corrupt draft should never stop the form loading.
+      window.localStorage.removeItem(draftKey);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!draftKey) return;
+    const handle = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(draftKey, JSON.stringify(formData));
+      } catch {
+        // Storage can be full or blocked; losing the draft is not fatal.
+      }
+    }, 600);
+    return () => window.clearTimeout(handle);
+  }, [formData, draftKey]);
+
+  const discardDraft = () => {
+    if (draftKey) window.localStorage.removeItem(draftKey);
+    setFormData(initialFormData);
+    setDraftRestored(false);
+  };
+
+  // Release blob URLs when the page goes away.
+  useEffect(() => {
+    return () => {
+      images.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // A part-completed property is several minutes of work. Warn before a
   // refresh or tab close discards it.
@@ -328,6 +384,7 @@ export default function PropertyFormPage() {
     { id: "amenities", label: t.properties.form.steps.amenities },
     { id: "pricing", label: t.properties.form.steps.pricing },
     { id: "photos", label: t.properties.form.steps.photos },
+    { id: "review", label: "Review" },
   ];
 
   // Load existing property for editing
@@ -407,19 +464,56 @@ export default function PropertyFormPage() {
   };
 
   // Handle image selection
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    const validFiles = files.filter((file) => {
-      const isValid = file.type.startsWith("image/");
-      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB
-      return isValid && isValidSize;
+  /**
+   * Shared by the file picker and drag-and-drop, which previously applied
+   * different rules: the picker enforced the size limit and the drop handler
+   * did not, so a dropped 50MB file was accepted and failed later on upload.
+   */
+  const addFiles = (files: File[]) => {
+    const rejected: string[] = [];
+    const accepted: PendingImage[] = [];
+
+    files.forEach((file) => {
+      if (!file.type.startsWith("image/")) {
+        rejected.push(`${file.name} is not an image`);
+        return;
+      }
+      if (file.size > MAX_IMAGE_BYTES) {
+        rejected.push(`${file.name} is larger than 10MB`);
+        return;
+      }
+      accepted.push({ file, previewUrl: URL.createObjectURL(file) });
     });
-    setImages((prev) => [...prev, ...validFiles.map((f) => ({ file: f }))]);
+
+    if (accepted.length) {
+      setImages((prev) => [...prev, ...accepted]);
+    }
+    // Silently dropping files left the owner wondering what happened.
+    setImageNotice(rejected.length ? rejected.join(" · ") : null);
   };
 
-  // Handle image removal
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    addFiles(Array.from(e.target.files || []));
+    // Allow re-selecting the same file after removing it.
+    e.target.value = "";
+  };
+
   const handleRemoveImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
+    setImages((prev) => {
+      const target = prev[index];
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  /** Promote an image to first position, which is the listing's primary. */
+  const handleMakePrimary = (index: number) => {
+    setImages((prev) => {
+      if (index <= 0 || index >= prev.length) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(index, 1);
+      return [moved, ...next];
+    });
   };
 
   // Handle existing image removal
@@ -450,10 +544,7 @@ export default function PropertyFormPage() {
     e.preventDefault();
     e.currentTarget.classList.remove("dragover");
 
-    const files = Array.from(e.dataTransfer.files).filter((file) =>
-      file.type.startsWith("image/"),
-    );
-    setImages((prev) => [...prev, ...files.map((f) => ({ file: f }))]);
+    addFiles(Array.from(e.dataTransfer.files));
   };
 
   // Validate form
@@ -518,6 +609,12 @@ export default function PropertyFormPage() {
   const validateCurrentStep = (): boolean =>
     validateFields(STEP_FIELD_KEYS[currentStep] ?? []);
 
+  // How many required fields on this step are still empty, so the Next button
+  // can say what is missing rather than only refusing to advance.
+  const remainingOnStep = (STEP_FIELD_KEYS[currentStep] ?? []).filter(
+    (key) => computeErrors()[key],
+  ).length;
+
   const describedBy = (key: ErrorKey) =>
     errors[key] ? `${key}-error` : undefined;
 
@@ -548,11 +645,15 @@ export default function PropertyFormPage() {
     }
   };
 
-  const isPhotosStep = WIZARD_STEP_IDS[currentStep] === "photos";
+  const isReviewStep = WIZARD_STEP_IDS[currentStep] === "review";
 
   // Save is triggered only from the explicit final-step button.
+  const clearDraft = () => {
+    if (draftKey) window.localStorage.removeItem(draftKey);
+  };
+
   const handleSaveProperty = async () => {
-    if (!isPhotosStep) {
+    if (!isReviewStep) {
       setCurrentStep(wizardSteps.length - 1);
       return;
     }
@@ -625,6 +726,7 @@ export default function PropertyFormPage() {
         );
       }
 
+      clearDraft();
       navigate(`/properties/${propertyId}`);
     } catch (err) {
       console.error("Failed to save property:", err);
@@ -1163,6 +1265,87 @@ export default function PropertyFormPage() {
           </div>
         );
 
+      case "review": {
+        const rows: { label: string; value: string; step: number }[] = [
+          { label: t.properties.form.labels.title, value: formData.title, step: 0 },
+          {
+            label: t.properties.form.labels.type,
+            value: formData.type,
+            step: 0,
+          },
+          {
+            label: t.properties.form.sections.address,
+            value: [
+              formData.address.street,
+              formData.address.city,
+              formData.address.country,
+            ]
+              .filter(Boolean)
+              .join(", "),
+            step: 1,
+          },
+          {
+            label: t.properties.form.labels.bedrooms,
+            value: formData.bedrooms || "-",
+            step: 2,
+          },
+          {
+            label: t.properties.form.labels.bathrooms,
+            value: formData.bathrooms || "-",
+            step: 2,
+          },
+          {
+            label: t.properties.form.labels.amenities,
+            value: formData.amenities || "-",
+            step: 2,
+          },
+          {
+            label: t.properties.form.labels.price,
+            value: formData.price
+              ? `${formData.price} ${formData.currency}`
+              : "-",
+            step: 3,
+          },
+          {
+            label: t.properties.form.sections.photos,
+            value: `${images.length + existingImages.length} photo(s)`,
+            step: 4,
+          },
+        ];
+
+        return (
+          <div className="form-section">
+            <h3 className="form-section-title">
+              <InfoIcon />
+              Review
+            </h3>
+            <p className="review-intro">
+              Check everything below before publishing. Use Edit to go back to
+              any step.
+            </p>
+            <dl className="review-list">
+              {rows.map((row) => (
+                <div className="review-row" key={row.label}>
+                  <dt>{row.label}</dt>
+                  <dd>
+                    <span className={row.value && row.value !== "-" ? "" : "review-empty"}>
+                      {row.value || "Not set"}
+                    </span>
+                    <button
+                      type="button"
+                      className="review-edit"
+                      onClick={() => setCurrentStep(row.step)}
+                    >
+                      Edit
+                    </button>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        );
+      }
+
       case "photos":
         return (
           <div className="form-section">
@@ -1263,17 +1446,34 @@ export default function PropertyFormPage() {
               </div>
             </div>
 
+            {imageNotice && (
+              <p className="image-notice" role="alert">
+                {imageNotice}
+              </p>
+            )}
+
+            {images.length > 0 && (
+              <p className="image-summary" aria-live="polite">
+                {images.length} photo{images.length === 1 ? "" : "s"} ready
+                {" · "}
+                {(
+                  images.reduce((sum, i) => sum + i.file.size, 0) /
+                  (1024 * 1024)
+                ).toFixed(1)}{" "}
+                MB
+                {existingImages.length === 0 &&
+                  " · the first photo is the cover image"}
+              </p>
+            )}
+
             {images.length > 0 && (
               <div className="image-preview-grid">
                 {images.map((img, index) => (
                   <div
-                    key={`${img.file.name}-${index}`}
+                    key={img.previewUrl}
                     className="image-preview-item"
                   >
-                    <img
-                      src={URL.createObjectURL(img.file)}
-                      alt={`Preview ${index + 1}`}
-                    />
+                    <img src={img.previewUrl} alt={`Preview ${index + 1}`} />
                     <button
                       type="button"
                       className="image-preview-remove"
@@ -1282,6 +1482,20 @@ export default function PropertyFormPage() {
                     >
                       <CloseIcon />
                     </button>
+                    {existingImages.length === 0 &&
+                      (index === 0 ? (
+                        <span className="image-preview-primary">
+                          {t.properties.form.image.primary}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="image-preview-primary-action"
+                          onClick={() => handleMakePrimary(index)}
+                        >
+                          Set as cover
+                        </button>
+                      ))}
                   </div>
                 ))}
               </div>
@@ -1355,6 +1569,17 @@ export default function PropertyFormPage() {
       <Navbar />
       <main className="property-form-container">
         <div className="wizard">
+          {draftRestored && (
+            <div className="draft-restored" role="status">
+              <span>
+                We restored your unsaved draft. Photos are not included.
+              </span>
+              <button type="button" onClick={discardDraft}>
+                Start over
+              </button>
+            </div>
+          )}
+
           <Stepper
             steps={wizardSteps}
             currentStep={currentStep}
@@ -1379,13 +1604,15 @@ export default function PropertyFormPage() {
                   {t.properties.previous}
                 </button>
 
-                {!isPhotosStep ? (
+                {!isReviewStep ? (
                   <button
                     type="button"
                     className="btn-submit"
                     onClick={handleNextStep}
                   >
-                    {t.properties.next}
+                    {remainingOnStep > 0
+                      ? `${t.properties.next} (${remainingOnStep} required)`
+                      : t.properties.next}
                   </button>
                 ) : (
                   <button
