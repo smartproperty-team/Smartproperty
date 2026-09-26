@@ -33,6 +33,7 @@ export class MinioService implements OnModuleInit {
   private minioClient: Client;
   private bucketName: string;
   private publicUrl: string;
+  private readonly publicUrlIncludesBucket: boolean;
 
   constructor(private readonly configService: ConfigService) {
     const endpoint =
@@ -46,9 +47,13 @@ export class MinioService implements OnModuleInit {
 
     this.bucketName =
       this.configService.get<string>('minio.bucketName') || 'smartproperty';
+    this.publicUrlIncludesBucket =
+      this.configService.get<boolean>('minio.publicUrlIncludesBucket') ?? true;
     this.publicUrl =
       this.configService.get<string>('minio.publicUrl') ||
       `http://${endpoint}:${port}`;
+
+    const region = this.configService.get<string>('minio.region');
 
     this.minioClient = new Client({
       endPoint: endpoint,
@@ -56,9 +61,14 @@ export class MinioService implements OnModuleInit {
       useSSL: useSSL,
       accessKey: accessKey,
       secretKey: secretKey,
+      // Only pass region when configured; MinIO itself does not require one.
+      ...(region ? { region } : {}),
     });
 
-    this.logger.log(`MinIO client configured for ${endpoint}:${port}`);
+    this.logger.log(
+      `MinIO client configured for ${endpoint}:${port}` +
+        (region ? ` (region ${region})` : ''),
+    );
   }
 
   async onModuleInit(): Promise<void> {
@@ -207,7 +217,9 @@ export class MinioService implements OnModuleInit {
   }
 
   getPublicUrl(key: string): string {
-    return `${this.publicUrl}/${this.bucketName}/${key}`;
+    return this.publicUrlIncludesBucket
+      ? `${this.publicUrl}/${this.bucketName}/${key}`
+      : `${this.publicUrl}/${key}`;
   }
 
   private getFileExtension(filename: string): string {

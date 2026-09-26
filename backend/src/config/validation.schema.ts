@@ -62,6 +62,17 @@ export const validationSchema = Joi.object({
   RECAPTCHA_VERIFY_URL: Joi.string().allow('').optional(),
 
   // Throttling
+  // Object storage (MinIO / any S3-compatible service such as Cloudflare R2)
+  MINIO_ENDPOINT: Joi.string().optional(),
+  MINIO_PORT: Joi.number().optional(),
+  MINIO_USE_SSL: Joi.string().optional(),
+  MINIO_REGION: Joi.string().optional(),
+  MINIO_ACCESS_KEY: Joi.string().optional(),
+  MINIO_SECRET_KEY: Joi.string().optional(),
+  MINIO_BUCKET_NAME: Joi.string().optional(),
+  MINIO_PUBLIC_URL: Joi.string().uri().optional(),
+  MINIO_PUBLIC_INCLUDE_BUCKET: Joi.string().optional(),
+
   THROTTLE_TTL: Joi.number().default(60),
   THROTTLE_LIMIT: Joi.number().default(100),
 
