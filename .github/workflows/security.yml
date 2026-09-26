@@ -1,0 +1,247 @@
+# ===========================================
+# SmartProperty - Security pipeline
+# ===========================================
+# Runs on every push and pull request, plus a weekly schedule so newly
+# disclosed vulnerabilities in unchanged code are still found.
+#
+# Every scanner writes SARIF and uploads it to GitHub code scanning, so results
+# appear in the Security tab with line annotations on pull requests rather than
+# being buried in job logs.
+#
+# Failure policy: scanners report everything but only CRITICAL findings fail
+# the build. The repository currently carries a backlog of HIGH advisories in
+# transitive dependencies; failing on HIGH from day one would make every push
+# red and the pipeline would be ignored, which is worse than a lower gate.
+# Tighten SECURITY_FAIL_ON to "CRITICAL,HIGH" once that backlog is cleared.
+
+name: Security
+
+on:
+  push:
+    branches: [main, "chore/**", "feat/**", "fix/**"]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Mondays 03:00 UTC - catches CVEs disclosed against code nobody touched.
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write   # required to upload SARIF
+  actions: read
+
+env:
+  SECURITY_FAIL_ON: CRITICAL
+
+jobs:
+  # ---------------------------------------------------------------
+  secrets:
+    name: Secret scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: a secret removed from the tip is still a secret that
+          # leaked. This repository has had credentials committed before.
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        # Using the released binary rather than gitleaks-action, which requires
+        # a paid licence for repositories owned by an organisation.
+        run: |
+          VERSION=8.21.2
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
+            | tar -xz gitleaks
+          sudo mv gitleaks /usr/local/bin/
+
+      - name: Scan history for secrets
+        run: |
+          gitleaks detect \
+            --source . \
+            --report-format sarif \
+            --report-path gitleaks.sarif \
+            --redact \
+            --exit-code 0
+          echo "findings: $(jq '.runs[0].results | length' gitleaks.sarif)"
+
+      - name: Upload results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: gitleaks.sarif
+          category: gitleaks
+
+      - name: Fail on secrets introduced by this push
+        # History findings are pre-existing and tracked separately; a new one
+        # must stop the build.
+        run: |
+          gitleaks protect --staged --redact --exit-code 1 || true
+          gitleaks detect --source . --log-opts="${{ github.event.before }}..${{ github.sha }}" \
+            --redact --exit-code 1 || exit 1
+        continue-on-error: ${{ github.event_name != 'push' }}
+
+  # ---------------------------------------------------------------
+  codeql:
+    name: CodeQL (SAST)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, python]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-and-quality
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  # ---------------------------------------------------------------
+  dependencies:
+    name: Dependency scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-fs.sarif
+          severity: CRITICAL,HIGH,MEDIUM
+          ignore-unfixed: true      # noise with no action available
+          skip-dirs: node_modules,.venv311,dist
+
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+
+      - name: Gate on critical dependency findings
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: table
+          severity: ${{ env.SECURITY_FAIL_ON }}
+          ignore-unfixed: true
+          exit-code: "1"
+          skip-dirs: node_modules,.venv311,dist
+
+  # ---------------------------------------------------------------
+  dockerfile:
+    name: Dockerfile lint
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dockerfile: [backend/Dockerfile, frontend/Dockerfile, ai-services/Dockerfile]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: ${{ matrix.dockerfile }}
+          format: sarif
+          output-file: hadolint.sarif
+          no-fail: true
+
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: hadolint.sarif
+          category: hadolint-${{ matrix.dockerfile }}
+
+  # ---------------------------------------------------------------
+  image:
+    name: Container image scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the production image
+        # Loaded into the local daemon, not pushed: this job scans, it does not
+        # publish. Publishing happens in deploy.yml only after this passes.
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          target: prod
+          push: false
+          load: true
+          tags: smartproperty-backend:scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: smartproperty-backend:scan
+          format: sarif
+          output: trivy-image.sarif
+          severity: CRITICAL,HIGH,MEDIUM
+          ignore-unfixed: true
+
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image
+
+      - name: Generate SBOM
+        # A software bill of materials: what is actually inside the image.
+        # Kept as an artifact so a future CVE can be answered with evidence
+        # rather than a rebuild.
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: smartproperty-backend:scan
+          format: cyclonedx
+          output: sbom.cyclonedx.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.cyclonedx.json
+          retention-days: 90
+
+      - name: Gate on critical image findings
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: smartproperty-backend:scan
+          format: table
+          severity: ${{ env.SECURITY_FAIL_ON }}
+          ignore-unfixed: true
+          exit-code: "1"
+
+  # ---------------------------------------------------------------
+  summary:
+    name: Security summary
+    runs-on: ubuntu-latest
+    needs: [secrets, codeql, dependencies, dockerfile, image]
+    if: always()
+    steps:
+      - name: Report
+        run: |
+          {
+            echo "### Security pipeline"
+            echo ""
+            echo "| Check | Result |"
+            echo "|---|---|"
+            echo "| Secret scanning (gitleaks) | ${{ needs.secrets.result }} |"
+            echo "| SAST (CodeQL) | ${{ needs.codeql.result }} |"
+            echo "| Dependencies (Trivy) | ${{ needs.dependencies.result }} |"
+            echo "| Dockerfile (hadolint) | ${{ needs.dockerfile.result }} |"
+            echo "| Image + SBOM (Trivy) | ${{ needs.image.result }} |"
+            echo ""
+            echo "Findings are in the **Security → Code scanning** tab."
+            echo "Build fails on \`${{ env.SECURITY_FAIL_ON }}\` only."
+          } >> "$GITHUB_STEP_SUMMARY"
