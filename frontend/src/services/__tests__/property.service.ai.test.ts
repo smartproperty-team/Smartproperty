@@ -47,6 +47,8 @@ describe("propertyService.generateAiDescription", () => {
       targetLanguages: ["en"],
     });
 
+    // The service also forwards propertySnapshot and passes a request timeout
+    // as a third argument; assert on the body and allow the options object.
     expect(postSpy).toHaveBeenCalledWith(
       "/properties/ai/descriptions/generate",
       expect.objectContaining({
@@ -54,7 +56,9 @@ describe("propertyService.generateAiDescription", () => {
         lengths: ["short"],
         sourceLanguage: "en",
         targetLanguages: ["en"],
+        propertySnapshot: { title: "Cozy", city: "Paris" },
       }),
+      expect.objectContaining({ timeout: expect.any(Number) }),
     );
     expect(result.variants).toHaveLength(1);
     expect(result.variants[0].language).toBe("en");

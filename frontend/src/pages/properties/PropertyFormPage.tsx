@@ -10,6 +10,7 @@ import AddressInput, {
 } from "../../components/properties/AddressInputOSM";
 import AiDescriptionPanel from "../../components/properties/AiDescriptionPanel";
 import { Stepper, type StepperStep } from "../../components/ui";
+import { useFieldErrors } from "../../hooks/useFieldErrors";
 import { useTranslation } from "../../i18n";
 import {
   propertyService,
@@ -172,6 +173,20 @@ const WIZARD_STEP_IDS = [
 
 const PRICING_STEP_INDEX = WIZARD_STEP_IDS.indexOf("pricing");
 
+/**
+ * Every field the form validates. Address fields live inside AddressInput but
+ * are validated here, so they are part of the same key space; each key also
+ * matches the corresponding input's DOM id, which is what lets focus
+ * management find the field that failed.
+ */
+type ErrorKey =
+  | "title"
+  | "price"
+  | "availableTo"
+  | "street"
+  | "city"
+  | "country";
+
 // ===========================================
 // Main Property Form Page
 // ===========================================
@@ -190,13 +205,6 @@ export default function PropertyFormPage() {
   const [loading, setLoading] = useState(false);
   const [loadingProperty, setLoadingProperty] = useState(isEditing);
   const [currentStep, setCurrentStep] = useState(0);
-  const [errors, setErrors] = useState<
-    Partial<Record<keyof FormData, string>> & {
-      street?: string;
-      city?: string;
-      country?: string;
-    }
-  >({});
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [priceSuggestion, setPriceSuggestion] =
     useState<PriceSuggestionResponse | null>(null);
@@ -204,6 +212,7 @@ export default function PropertyFormPage() {
   const [priceSuggestError, setPriceSuggestError] = useState<string | null>(
     null,
   );
+
   const buildAiSnapshot = useCallback((): AiPropertySnapshot => {
     const amenitiesList = formData.amenities
       .split(",")
@@ -228,6 +237,22 @@ export default function PropertyFormPage() {
       currency: formData.currency || undefined,
     };
   }, [formData]);
+
+  // A part-completed property is several minutes of work. Warn before a
+  // refresh or tab close discards it.
+  const isDirty =
+    JSON.stringify(formData) !== JSON.stringify(initialFormData) ||
+    images.length > 0;
+
+  useEffect(() => {
+    if (!isDirty || loading) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [isDirty, loading]);
 
   const handleSuggestPrice = async () => {
     if (!formData.address.city) {
@@ -365,10 +390,9 @@ export default function PropertyFormPage() {
       [name]: type === "checkbox" ? checked : value,
     }));
 
-    // Clear error when user types
-    if (errors[name as keyof FormData]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }));
-    }
+    // Clear the error as soon as the user edits the field, so the message
+    // disappears on the keystroke that fixes it rather than on the next submit.
+    clearError(name as ErrorKey);
   };
 
   // Handle image selection
@@ -422,82 +446,69 @@ export default function PropertyFormPage() {
   };
 
   // Validate form
-  const validate = (): boolean => {
-    const newErrors: Partial<Record<keyof FormData, string>> & {
-      street?: string;
-      city?: string;
-      country?: string;
-    } = {};
+  // Field keys validated on each wizard step. Used by blur, Next and Submit
+  // so all three agree on what a step requires.
+  const STEP_FIELD_KEYS: Record<number, ErrorKey[]> = {
+    0: ["title"],
+    1: ["street", "city", "country"],
+    3: ["price", "availableTo"],
+  };
+
+  const ALL_VALIDATED_KEYS: ErrorKey[] = [
+    "title",
+    "street",
+    "city",
+    "country",
+    "price",
+    "availableTo",
+  ];
+
+  // Single source of truth for the rules. Previously the same checks were
+  // written twice - once for the step and once for submit - which let them
+  // drift apart.
+  const computeErrors = (): Partial<Record<ErrorKey, string>> => {
+    const e: Partial<Record<ErrorKey, string>> = {};
 
     if (!formData.title.trim()) {
-      newErrors.title = t.properties.form.validation.titleRequired;
+      e.title = t.properties.form.validation.titleRequired;
     }
     if (!formData.price || parseFloat(formData.price) <= 0) {
-      newErrors.price = t.properties.form.validation.pricePositive;
+      e.price = t.properties.form.validation.pricePositive;
     }
     if (!formData.address.street.trim()) {
-      newErrors.street = t.properties.form.validation.streetRequired;
+      e.street = t.properties.form.validation.streetRequired;
     }
     if (!formData.address.city.trim()) {
-      newErrors.city = t.properties.form.validation.cityRequired;
+      e.city = t.properties.form.validation.cityRequired;
     }
     if (!formData.address.country.trim()) {
-      newErrors.country = t.properties.form.validation.countryRequired;
+      e.country = t.properties.form.validation.countryRequired;
     }
     if (
       formData.availableFrom &&
       formData.availableTo &&
       formData.availableTo < formData.availableFrom
     ) {
-      newErrors.availableTo = t.properties.form.validation.availableToAfterFrom;
+      e.availableTo = t.properties.form.validation.availableToAfterFrom;
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return e;
   };
 
-  const validateCurrentStep = (): boolean => {
-    const nextErrors: Partial<Record<keyof FormData, string>> & {
-      street?: string;
-      city?: string;
-      country?: string;
-    } = {};
+  const {
+    errors,
+    validateFields,
+    handleBlur: handleFieldBlur,
+    clearError,
+  } = useFieldErrors<ErrorKey>(computeErrors);
 
-    if (currentStep === 0) {
-      if (!formData.title.trim()) {
-        nextErrors.title = t.properties.form.validation.titleRequired;
-      }
-    }
+  const validate = (): boolean => validateFields(ALL_VALIDATED_KEYS);
 
-    if (currentStep === 1) {
-      if (!formData.address.street.trim()) {
-        nextErrors.street = t.properties.form.validation.streetRequired;
-      }
-      if (!formData.address.city.trim()) {
-        nextErrors.city = t.properties.form.validation.cityRequired;
-      }
-      if (!formData.address.country.trim()) {
-        nextErrors.country = t.properties.form.validation.countryRequired;
-      }
-    }
+  const validateCurrentStep = (): boolean =>
+    validateFields(STEP_FIELD_KEYS[currentStep] ?? []);
 
-    if (currentStep === 3) {
-      if (!formData.price || parseFloat(formData.price) <= 0) {
-        nextErrors.price = t.properties.form.validation.pricePositive;
-      }
-      if (
-        formData.availableFrom &&
-        formData.availableTo &&
-        formData.availableTo < formData.availableFrom
-      ) {
-        nextErrors.availableTo =
-          t.properties.form.validation.availableToAfterFrom;
-      }
-    }
-
-    setErrors((prev) => ({ ...prev, ...nextErrors }));
-    return Object.keys(nextErrors).length === 0;
-  };
+  const describedBy = (key: ErrorKey) =>
+    errors[key] ? `${key}-error` : undefined;
 
   const handlePreviousStep = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 0));
@@ -509,11 +520,19 @@ export default function PropertyFormPage() {
 
   const handleNextStep = () => {
     if (!validateCurrentStep()) return;
-    setCurrentStep((prev) => Math.min(prev + 1, wizardSteps.length - 1));
+    setCurrentStep((prev) => {
+      const next = Math.min(prev + 1, wizardSteps.length - 1);
+      setFurthestStep((f) => Math.max(f, next));
+      return next;
+    });
   };
 
+  const [furthestStep, setFurthestStep] = useState(0);
+
+  // Allow jumping back, and forward again to any step already reached, so the
+  // stepper works as navigation rather than a one-way ratchet.
   const handleStepChange = (stepIndex: number) => {
-    if (stepIndex < currentStep) {
+    if (stepIndex <= furthestStep) {
       setCurrentStep(stepIndex);
     }
   };
@@ -640,11 +659,23 @@ export default function PropertyFormPage() {
                   type="text"
                   value={formData.title}
                   onChange={handleChange}
+                  onBlur={() => handleFieldBlur("title")}
                   placeholder={t.properties.form.placeholders.title}
                   className={errors.title ? "error" : ""}
+                  required
+                  aria-required="true"
+                  aria-invalid={errors.title ? true : undefined}
+                  aria-describedby={describedBy("title")}
+                  maxLength={120}
                 />
                 {errors.title && (
-                  <span className="error-message">{errors.title}</span>
+                  <span
+                    id="title-error"
+                    className="error-message"
+                    role="alert"
+                  >
+                    {errors.title}
+                  </span>
                 )}
               </div>
 
@@ -743,6 +774,7 @@ export default function PropertyFormPage() {
                   id="bedrooms"
                   name="bedrooms"
                   type="number"
+                  inputMode="numeric"
                   min="0"
                   value={formData.bedrooms}
                   onChange={handleChange}
@@ -758,6 +790,7 @@ export default function PropertyFormPage() {
                   id="bathrooms"
                   name="bathrooms"
                   type="number"
+                  inputMode="numeric"
                   min="0"
                   value={formData.bathrooms}
                   onChange={handleChange}
@@ -771,6 +804,7 @@ export default function PropertyFormPage() {
                   id="area"
                   name="area"
                   type="number"
+                  inputMode="numeric"
                   min="0"
                   value={formData.area}
                   onChange={handleChange}
@@ -786,6 +820,7 @@ export default function PropertyFormPage() {
                   id="parkingSpaces"
                   name="parkingSpaces"
                   type="number"
+                  inputMode="numeric"
                   min="0"
                   value={formData.parkingSpaces}
                   onChange={handleChange}
@@ -859,13 +894,25 @@ export default function PropertyFormPage() {
                   type="number"
                   min="0"
                   step="0.01"
+                  inputMode="decimal"
                   value={formData.price}
                   onChange={handleChange}
+                  onBlur={() => handleFieldBlur("price")}
                   placeholder={t.properties.form.placeholders.price}
                   className={errors.price ? "error" : ""}
+                  required
+                  aria-required="true"
+                  aria-invalid={errors.price ? true : undefined}
+                  aria-describedby={describedBy("price")}
                 />
                 {errors.price && (
-                  <span className="error-message">{errors.price}</span>
+                  <span
+                    id="price-error"
+                    className="error-message"
+                    role="alert"
+                  >
+                    {errors.price}
+                  </span>
                 )}
               </div>
 
@@ -1073,10 +1120,19 @@ export default function PropertyFormPage() {
                   type="date"
                   value={formData.availableTo}
                   onChange={handleChange}
+                  onBlur={() => handleFieldBlur("availableTo")}
                   className={errors.availableTo ? "error" : ""}
+                  aria-invalid={errors.availableTo ? true : undefined}
+                  aria-describedby={describedBy("availableTo")}
                 />
                 {errors.availableTo && (
-                  <span className="error-message">{errors.availableTo}</span>
+                  <span
+                    id="availableTo-error"
+                    className="error-message"
+                    role="alert"
+                  >
+                    {errors.availableTo}
+                  </span>
                 )}
               </div>
             </div>

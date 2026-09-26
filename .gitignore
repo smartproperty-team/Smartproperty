@@ -120,3 +120,7 @@ smartproperty-frontend.tar
 # npm workspaces: the root package-lock.json is authoritative
 frontend/package-lock.json
 backend/package-lock.json
+
+# TypeScript build outputs from `tsc -b` on config files
+# (src/vite-env.d.ts is hand-written and stays tracked)
+frontend/*.config.d.ts
