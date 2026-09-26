@@ -10,6 +10,7 @@ import AddressInput, {
 } from "../../components/properties/AddressInputOSM";
 import AiDescriptionPanel from "../../components/properties/AiDescriptionPanel";
 import { Stepper, type StepperStep } from "../../components/ui";
+import { useFieldErrors } from "../../hooks/useFieldErrors";
 import { useTranslation } from "../../i18n";
 import {
   propertyService,
@@ -204,7 +205,6 @@ export default function PropertyFormPage() {
   const [loading, setLoading] = useState(false);
   const [loadingProperty, setLoadingProperty] = useState(isEditing);
   const [currentStep, setCurrentStep] = useState(0);
-  const [errors, setErrors] = useState<Partial<Record<ErrorKey, string>>>({});
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [priceSuggestion, setPriceSuggestion] =
     useState<PriceSuggestionResponse | null>(null);
@@ -392,14 +392,7 @@ export default function PropertyFormPage() {
 
     // Clear the error as soon as the user edits the field, so the message
     // disappears on the keystroke that fixes it rather than on the next submit.
-    const key = name as ErrorKey;
-    if (errors[key]) {
-      setErrors((prev) => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-    }
+    clearError(name as ErrorKey);
   };
 
   // Handle image selection
@@ -502,56 +495,17 @@ export default function PropertyFormPage() {
     return e;
   };
 
-  // Move focus to the first field that failed. Without this, pressing Next on
-  // a long step appears to do nothing whenever the offending field has
-  // scrolled out of view.
-  const focusFirstInvalid = (keys: ErrorKey[]) => {
-    window.requestAnimationFrame(() => {
-      for (const key of keys) {
-        const el = document.getElementById(key);
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
-          (el as HTMLElement).focus({ preventScroll: true });
-          return;
-        }
-      }
-    });
-  };
-
-  /**
-   * Validate a specific set of fields, replacing any previous errors for those
-   * same fields rather than merging - stale errors used to persist and block
-   * navigation with no visible cause.
-   */
-  const validateFields = (keys: ErrorKey[], focus = true): boolean => {
-    const all = computeErrors();
-    const failed = keys.filter((k) => all[k]);
-
-    setErrors((prev) => {
-      const next = { ...prev };
-      keys.forEach((k) => delete next[k]);
-      failed.forEach((k) => {
-        next[k] = all[k];
-      });
-      return next;
-    });
-
-    if (failed.length && focus) {
-      focusFirstInvalid(failed);
-    }
-    return failed.length === 0;
-  };
+  const {
+    errors,
+    validateFields,
+    handleBlur: handleFieldBlur,
+    clearError,
+  } = useFieldErrors<ErrorKey>(computeErrors);
 
   const validate = (): boolean => validateFields(ALL_VALIDATED_KEYS);
 
   const validateCurrentStep = (): boolean =>
     validateFields(STEP_FIELD_KEYS[currentStep] ?? []);
-
-  // Validate one field once the user leaves it, so problems surface where the
-  // user already is instead of only when they press Next.
-  const handleFieldBlur = (key: ErrorKey) => {
-    validateFields([key], false);
-  };
 
   const describedBy = (key: ErrorKey) =>
     errors[key] ? `${key}-error` : undefined;
