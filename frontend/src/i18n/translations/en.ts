@@ -247,7 +247,7 @@ export const en = {
         parkingSpaces: "Parking spaces",
         furnished: "Furnished",
         petFriendly: "Pet friendly",
-        amenities: "Amenities (comma separated)",
+        amenities: "Amenities",
         virtualTour: "Virtual tour URL",
         price: "Price",
         currency: "Currency",

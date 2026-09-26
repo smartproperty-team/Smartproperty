@@ -254,7 +254,7 @@ export const fr: Translations = {
         parkingSpaces: "Places de parking",
         furnished: "Meublé",
         petFriendly: "Animaux acceptés",
-        amenities: "Équipements (séparés par des virgules)",
+        amenities: "Équipements",
         virtualTour: "URL de visite virtuelle",
         price: "Prix",
         currency: "Devise",

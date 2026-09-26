@@ -9,6 +9,7 @@ import AddressInput, {
   type AddressData,
 } from "../../components/properties/AddressInputOSM";
 import AiDescriptionPanel from "../../components/properties/AiDescriptionPanel";
+import AmenitySelector from "../../components/properties/AmenitySelector";
 import { Stepper, type StepperStep } from "../../components/ui";
 import { useFieldErrors } from "../../hooks/useFieldErrors";
 import { useTranslation } from "../../i18n";
@@ -859,16 +860,14 @@ export default function PropertyFormPage() {
               </div>
 
               <div className="form-group full-width">
-                <label htmlFor="amenities">
-                  {t.properties.form.labels.amenities}
-                </label>
-                <input
-                  id="amenities"
-                  name="amenities"
-                  type="text"
+                <AmenitySelector
+                  label={t.properties.form.labels.amenities}
+                  hint="Optional - pick the ones that apply"
                   value={formData.amenities}
-                  onChange={handleChange}
-                  placeholder={t.properties.form.placeholders.amenities}
+                  onChange={(amenities) =>
+                    setFormData((prev) => ({ ...prev, amenities }))
+                  }
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -1297,7 +1296,16 @@ export default function PropertyFormPage() {
                 onChange={handleChange}
                 placeholder={t.properties.form.placeholders.description}
                 rows={6}
+                maxLength={2000}
+                aria-describedby="description-count"
               />
+              <span
+                id="description-count"
+                className="field-counter"
+                aria-live="polite"
+              >
+                {formData.description.length} / 2000
+              </span>
             </div>
 
             <AiDescriptionPanel
