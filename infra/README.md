@@ -213,6 +213,38 @@ Deep links return HTTP 404 while serving `index.html`, so React Router
 renders the route correctly but crawlers see the wrong status. Fixing that
 properly needs a CDN rewrite rule rather than an error-document fallback.
 
+## Object storage
+
+Uploads go to **Cloudflare R2**, which speaks the S3 API, so the existing
+MinIO client is reused rather than replaced. Two settings make it work:
+
+| Variable | Value | Why |
+|---|---|---|
+| `MINIO_ENDPOINT` | `<account>.r2.cloudflarestorage.com` | R2's S3 endpoint |
+| `MINIO_PORT` / `MINIO_USE_SSL` | `443` / `true` | |
+| `MINIO_REGION` | `auto` | R2 requires it; without a region the SDK attempts GetBucketLocation, which R2 answers differently from S3 |
+| `MINIO_BUCKET_NAME` | `smartproperty` | |
+| `MINIO_PUBLIC_URL` | `https://pub-<id>.r2.dev` | the bucket's public r2.dev domain |
+| `MINIO_PUBLIC_INCLUDE_BUCKET` | `false` | r2.dev is already bound to one bucket and serves `{publicUrl}/{key}`; including the bucket 404s |
+
+The R2 API token is scoped to **Object Read & Write** on this bucket only. It
+cannot perform bucket-level operations, so `ensureBucketExists()` logs
+`Failed to ensure bucket exists` on every start. That is expected and
+harmless - the error is caught and the bucket already exists.
+
+## Deploying a new image
+
+Container Apps caches `:latest`, and cycling replicas does not re-pull it.
+Deploy by digest so the rollout is unambiguous:
+
+```bash
+docker build --target prod -t ghcr.io/<owner>/smartproperty-backend:latest ./backend
+docker push ghcr.io/<owner>/smartproperty-backend:latest   # note the digest
+az containerapp update -n ca-smartproperty-api2 -g rg-smartproperty   --image ghcr.io/<owner>/smartproperty-backend@sha256:<digest>
+```
+
+Changing the image this way does restart the container, unlike a secret change.
+
 ## Operational notes
 
 **Changing a secret does not restart the container.** On the express

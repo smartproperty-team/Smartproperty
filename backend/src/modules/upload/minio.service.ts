@@ -132,7 +132,10 @@ export class MinioService implements OnModuleInit {
       metadata,
     );
 
-    const url = `${this.publicUrl}/${this.bucketName}/${key}`;
+    // Build through getPublicUrl so the bucket-in-path rule lives in exactly
+    // one place. This line used to duplicate it and silently ignored the
+    // MINIO_PUBLIC_INCLUDE_BUCKET setting.
+    const url = this.getPublicUrl(key);
 
     this.logger.log(`File uploaded: ${key}`);
 
