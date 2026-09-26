@@ -176,6 +176,102 @@ output. `CORS_ORIGIN` is the one value set by hand once the site URL exists.
 - Seed demo data. `SEED_PASSWORD` is required outside development.
 - Set a budget alert at $50 and $80: Cost Management → Budgets.
 
+## Custom domain
+
+`https://smartproperties.tech` serves the frontend. Getting there needed a
+route around two Azure limits:
+
+- **Container Apps custom domains are unavailable.** The express environment
+  this subscription provisions rejects them with
+  `ExpressEnvironmentFeatureNotSupported`, alongside managed identity,
+  revision suffixes and revision restarts. So the API stays on its
+  `azurecontainerapps.io` hostname; it is not user-visible.
+- **Blob Storage static websites cannot serve a certificate for a custom
+  domain**, and they route by `Host` header, so pointing a CNAME at the web
+  endpoint returns `400 InvalidUri`.
+
+The domain is on Cloudflare (free), which terminates TLS with a Let's Encrypt
+certificate and rewrites the `Host` header toward the storage endpoint.
+
+The rewrite is done with **Cloud Connector** (Rules -> Cloud Connector),
+*not* Origin Rules: Origin Rules' Host Header override is Enterprise-only,
+while Cloud Connector is free and purpose-built for cloud object storage.
+
+DNS records:
+
+| Type | Name | Content | Proxy |
+|---|---|---|---|
+| CNAME | `@` | the storage web endpoint | Proxied |
+| CNAME | `api` | the container app FQDN | DNS only |
+| TXT | `asuid.api` | the app's customDomainVerificationId | - |
+
+The `api` records are left over from an attempt to bind a custom domain to
+the container app and are currently unused. `CORS_ORIGIN` on the container
+app must include `https://smartproperties.tech`.
+
+Deep links return HTTP 404 while serving `index.html`, so React Router
+renders the route correctly but crawlers see the wrong status. Fixing that
+properly needs a CDN rewrite rule rather than an error-document fallback.
+
+## Object storage
+
+Uploads go to **Cloudflare R2**, which speaks the S3 API, so the existing
+MinIO client is reused rather than replaced. Two settings make it work:
+
+| Variable | Value | Why |
+|---|---|---|
+| `MINIO_ENDPOINT` | `<account>.r2.cloudflarestorage.com` | R2's S3 endpoint |
+| `MINIO_PORT` / `MINIO_USE_SSL` | `443` / `true` | |
+| `MINIO_REGION` | `auto` | R2 requires it; without a region the SDK attempts GetBucketLocation, which R2 answers differently from S3 |
+| `MINIO_BUCKET_NAME` | `smartproperty` | |
+| `MINIO_PUBLIC_URL` | `https://pub-<id>.r2.dev` | the bucket's public r2.dev domain |
+| `MINIO_PUBLIC_INCLUDE_BUCKET` | `false` | r2.dev is already bound to one bucket and serves `{publicUrl}/{key}`; including the bucket 404s |
+
+The R2 API token is scoped to **Object Read & Write** on this bucket only. It
+cannot perform bucket-level operations, so `ensureBucketExists()` logs
+`Failed to ensure bucket exists` on every start. That is expected and
+harmless - the error is caught and the bucket already exists.
+
+## Deploying a new image
+
+Container Apps caches `:latest`, and cycling replicas does not re-pull it.
+Deploy by digest so the rollout is unambiguous:
+
+```bash
+docker build --target prod -t ghcr.io/<owner>/smartproperty-backend:latest ./backend
+docker push ghcr.io/<owner>/smartproperty-backend:latest   # note the digest
+az containerapp update -n ca-smartproperty-api2 -g rg-smartproperty   --image ghcr.io/<owner>/smartproperty-backend@sha256:<digest>
+```
+
+Changing the image this way does restart the container, unlike a secret change.
+
+## Operational notes
+
+**Changing a secret does not restart the container.** On the express
+Container Apps environment this subscription gets, `az containerapp secret
+set` updates the stored value but the running process keeps the value it was
+started with. `az containerapp revision restart` fails with
+`InternalServerError`, `--revision-suffix` is rejected, and `update
+--set-env-vars` reports Succeeded without cycling the process. The only
+reliable way to pick up a new secret:
+
+```bash
+az containerapp update -n <app> -g rg-smartproperty --min-replicas 0
+# wait until: az containerapp replica list -n <app> -g rg-smartproperty
+#             --query 'length(@)' -o tsv   returns 0
+az containerapp update -n <app> -g rg-smartproperty --min-replicas 1
+```
+
+Check `properties.containers[].runningStateDetails` on the replica: if the
+container start time predates the secret change, it is still running the old
+value regardless of what `secret show` reports.
+
+**Atlas rejects unlisted IPs at the TLS layer**, not with an auth error. The
+symptom is `MongoServerSelectionError: ... tlsv1 alert internal error: SSL
+alert number 80`, which reads like a certificate problem. Check the Atlas IP
+Access List first. Container Apps on consumption has no stable egress IP, so
+the list needs `0.0.0.0/0`.
+
 ## Notes
 
 - `maxReplicas` is pinned to 1. The rate limiter uses in-memory storage, so

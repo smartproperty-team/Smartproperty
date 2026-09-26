@@ -173,8 +173,14 @@ async function seedProperties() {
     const ownerId = normalizeUserId(ownersForAssignment[0]);
     const managerId = normalizeUserId(responsibleManagers[0]);
 
+    // Seed images ship in frontend/public and are served from the deployed
+    // site, so the base URL must be the real frontend origin. Falling back to
+    // localhost wrote unreachable URLs into the production database, which
+    // only showed up as silently broken images on the live listings.
     const frontendAssetBaseUrl =
-      process.env.FRONTEND_ASSET_BASE_URL || 'http://localhost:5173';
+      process.env.FRONTEND_ASSET_BASE_URL ||
+      process.env.FRONTEND_URL ||
+      'http://localhost:5173';
     const now = new Date();
 
     const toPublicImageUrl = (fileName: string) =>
