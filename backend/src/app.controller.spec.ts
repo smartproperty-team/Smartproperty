@@ -36,4 +36,25 @@ describe('AppController', () => {
       expect(result).toHaveProperty('description');
     });
   });
+
+  describe('health', () => {
+    const saved = process.env.GIT_COMMIT;
+    afterEach(() => {
+      if (saved === undefined) delete process.env.GIT_COMMIT;
+      else process.env.GIT_COMMIT = saved;
+    });
+
+    it('reports the commit the image was built from', () => {
+      process.env.GIT_COMMIT = 'abc1234';
+      expect(appController.getHealth()).toMatchObject({
+        status: 'ok',
+        commit: 'abc1234',
+      });
+    });
+
+    it('says unknown when the build did not record one', () => {
+      delete process.env.GIT_COMMIT;
+      expect(appController.getHealth().commit).toBe('unknown');
+    });
+  });
 });
