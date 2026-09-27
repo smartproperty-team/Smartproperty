@@ -12,7 +12,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ObjectId } from 'mongodb';
 import * as QRCode from 'qrcode';
 import { MongoRepository, Repository } from 'typeorm';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { Agency } from '../agencies/entities/agency.entity';
 import { User, UserRole } from '../users/entities/user.entity';
 import { hasPlatformAdminRole } from '../users/role-groups';
@@ -685,38 +685,82 @@ export class PropertiesService {
     return { headers, rows: dataRows };
   }
 
-  private parseXlsxRows(fileBuffer: Buffer): {
+  /**
+   * Parse the first worksheet of an uploaded .xlsx file into lowercase headers
+   * and string rows.
+   *
+   * Uses exceljs rather than the npm "xlsx" package: that package is frozen at
+   * 0.18.5 on npm, carries unfixable prototype-pollution and ReDoS advisories,
+   * and this function feeds it attacker-controlled uploads. The contract is
+   * unchanged from the previous implementation: first sheet only, cells as
+   * their displayed text, missing cells as '', fully blank rows skipped.
+   */
+  private async parseXlsxRows(fileBuffer: Buffer): Promise<{
     headers: string[];
     rows: string[][];
-  } {
-    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-    const firstSheetName = workbook.SheetNames[0];
-    if (!firstSheetName) {
+  }> {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(fileBuffer as unknown as ArrayBuffer);
+
+    const sheet = workbook.worksheets[0];
+    if (!sheet) {
       return { headers: [], rows: [] };
     }
 
-    const sheet = workbook.Sheets[firstSheetName];
-    const matrix = XLSX.utils.sheet_to_json<
-      (string | number | boolean | null)[]
-    >(sheet, {
-      header: 1,
-      defval: '',
-      blankrows: false,
-      raw: false,
+    const width = sheet.columnCount;
+    const matrix: string[][] = [];
+    sheet.eachRow({ includeEmpty: false }, (row) => {
+      const values: string[] = [];
+      for (let col = 1; col <= width; col += 1) {
+        // .text is the formatted display value - the equivalent of the old
+        // raw: false - and '' for an empty cell, matching defval: ''.
+        values.push(String(row.getCell(col).text ?? '').trim());
+      }
+      // A row with formatting but no values still counts as "present" to
+      // exceljs; skip it to match the old blankrows: false.
+      if (values.some((value) => value !== '')) {
+        matrix.push(values);
+      }
     });
 
     if (!matrix.length) {
       return { headers: [], rows: [] };
     }
 
-    const [headerRow, ...dataRows] = matrix;
-    const headers = headerRow.map((value) =>
-      String(value).toLowerCase().trim(),
-    );
-    const rows = dataRows.map((row) =>
-      row.map((value) => String(value).trim()),
-    );
+    const [headerRow, ...rows] = matrix;
+    const headers = headerRow.map((value) => value.toLowerCase().trim());
     return { headers, rows };
+  }
+
+  /**
+   * Build a single-sheet .xlsx from an array of row objects and return it as
+   * base64. Header order is the order keys are first seen across the rows,
+   * matching the previous json_to_sheet behaviour. Shared by the portfolio
+   * export and the import template, which previously repeated the same steps.
+   */
+  private async buildXlsxBase64(
+    rows: Array<Record<string, unknown>>,
+    sheetName: string,
+  ): Promise<string> {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet(sheetName);
+
+    const headers: string[] = [];
+    for (const row of rows) {
+      for (const key of Object.keys(row)) {
+        if (!headers.includes(key)) headers.push(key);
+      }
+    }
+
+    if (headers.length) {
+      sheet.addRow(headers);
+      for (const row of rows) {
+        sheet.addRow(headers.map((key) => row[key] ?? null));
+      }
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer).toString('base64');
   }
 
   private getPortfolioExportRows(
@@ -1608,11 +1652,7 @@ export class PropertiesService {
     });
 
     const rows = this.getPortfolioExportRows(properties);
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'PortfolioExport');
-
-    const base64 = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
+    const base64 = await this.buildXlsxBase64(rows, 'PortfolioExport');
     const today = new Date().toISOString().slice(0, 10);
 
     return {
@@ -1623,13 +1663,11 @@ export class PropertiesService {
     };
   }
 
-  getPortfolioImportTemplateExcel(): PortfolioBinaryFileResult {
-    const worksheet = XLSX.utils.json_to_sheet(
+  async getPortfolioImportTemplateExcel(): Promise<PortfolioBinaryFileResult> {
+    const base64 = await this.buildXlsxBase64(
       this.buildPortfolioTemplateRows(),
+      'Template',
     );
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Template');
-    const base64 = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
 
     return {
       fileName: 'portfolio-import-template.xlsx',
@@ -1665,7 +1703,7 @@ export class PropertiesService {
 
     const csvContent = fileBuffer.toString('utf-8');
     const { headers, rows } = isXlsxFile
-      ? this.parseXlsxRows(fileBuffer)
+      ? await this.parseXlsxRows(fileBuffer)
       : this.parseCsvRows(csvContent);
     if (!headers.length) {
       return {

@@ -34,7 +34,14 @@ FROM node:20-alpine AS prod-deps
 WORKDIR /app
 COPY package.json ./
 COPY scripts ./scripts
-RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
+# Strip devDependencies before installing, not just --omit=dev. TypeORM lists
+# ts-node as an optional peer; because package.json also names ts-node as a
+# devDependency, npm treats it as satisfying that peer and installs it - and
+# typescript with it - into the production tree. --omit=dev and --omit=peer
+# both leave it in place. Removing the devDependencies block first means the
+# peer is simply unsatisfied, which is fine: only TypeORM's CLI uses it, and
+# the compiled app never loads it. Saves ~71MB, typescript alone being 65MB.
+RUN npm pkg delete devDependencies  && npm install --omit=dev --no-audit --no-fund  && npm cache clean --force
 
 # ---- Production ----
 FROM node:20-alpine AS prod
