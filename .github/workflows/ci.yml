@@ -97,27 +97,51 @@ jobs:
     name: SonarQube Cloud
     runs-on: ubuntu-latest
     needs: [backend, frontend]
-    # Skipped automatically until SONAR_TOKEN exists, so the pipeline is green
-    # before SonarQube Cloud is set up rather than permanently red.
     if: ${{ !cancelled() }}
     steps:
+      - name: Decide whether to scan
+        id: cfg
+        # Two reasons to skip, both reported in the run summary:
+        # - no SONAR_TOKEN yet, so the pipeline is green before SonarQube
+        #   Cloud is set up rather than permanently red;
+        # - any branch other than main outside a pull request. The Free plan
+        #   analyses main and pull requests into main only. Other branches are
+        #   accepted but their results cannot be read, so the gate check fails.
+        run: |
+          reason=""
+          if [ -z "${{ secrets.SONAR_TOKEN }}" ]; then
+            reason="SONAR_TOKEN is not set - skipping. See docs/DEVOPS.md."
+          elif [ "${{ github.event_name }}" != "pull_request" ] && [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            reason="Not scanned: the SonarQube Cloud Free plan analyses main and pull requests into main only. Open a pull request to get a report."
+          fi
+          if [ -n "$reason" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "$reason" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.cfg.outputs.enabled == 'true'
         with:
           fetch-depth: 0   # Sonar needs history for new-code detection
 
       - uses: actions/download-artifact@v4
+        if: steps.cfg.outputs.enabled == 'true'
         with:
           name: backend-coverage
           path: backend/coverage
         continue-on-error: true
 
       - uses: actions/download-artifact@v4
+        if: steps.cfg.outputs.enabled == 'true'
         with:
           name: frontend-coverage
           path: frontend/coverage
         continue-on-error: true
 
       - name: Make coverage paths repository-relative
+        if: steps.cfg.outputs.enabled == 'true'
         # Jest and Vitest write lcov paths relative to their own package
         # (src/...). This scan runs from the repository root, where those
         # paths match nothing, so coverage would silently read 0%. Rewritten
@@ -131,40 +155,40 @@ jobs:
             echo "$f: $(grep -c "^SF:$pkg/src/" "$f") files"
           done
 
-      - name: Check for token
-        id: cfg
-        run: |
-          if [ -n "${{ secrets.SONAR_TOKEN }}" ]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "SONAR_TOKEN is not set - skipping. See docs/DEVOPS.md." >> "$GITHUB_STEP_SUMMARY"
-          fi
-
       - name: SonarQube Cloud scan
-        id: scan
         if: steps.cfg.outputs.enabled == 'true'
         # v6+ only: v4 and v5 carry two HIGH advisories (GHSA-f79p-9c5r-xg88
         # command injection, GHSA-5xq9-5g24-4g6f argument injection).
+        # Always blocking: a scan that fails to run is a broken pipeline, not
+        # a quality finding.
         uses: SonarSource/sonarqube-scan-action@v8
-        # Waits for the quality gate and fails the step if it fails. Advisory
-        # until the SONAR_GATE_BLOCKING repository variable is 'true': the
-        # default gate wants 80% coverage on new code, and the project is far
-        # from that, so blocking now would turn every push red.
-        continue-on-error: ${{ vars.SONAR_GATE_BLOCKING != 'true' }}
-        with:
-          args: -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=300
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
 
-      - name: Report quality gate
+      - name: Quality gate
+        id: gate
         if: steps.cfg.outputs.enabled == 'true'
+        # A separate step so that only the gate result can be advisory.
+        # Advisory until the SONAR_GATE_BLOCKING repository variable is
+        # 'true': the default gate wants 80% coverage on new code, and the
+        # project is far from that, so blocking now would turn every run red.
+        uses: SonarSource/sonarqube-quality-gate-action@v1.2.1
+        continue-on-error: ${{ vars.SONAR_GATE_BLOCKING != 'true' }}
+        timeout-minutes: 6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Report quality gate
+        if: steps.cfg.outputs.enabled == 'true' && !cancelled()
         run: |
-          if [ "${{ steps.scan.outcome }}" = "success" ]; then
+          status="${{ steps.gate.outputs.quality-gate-status }}"
+          if [ "$status" = "PASSED" ]; then
             result="passed"
+          elif [ "${{ vars.SONAR_GATE_BLOCKING }}" = "true" ]; then
+            result="**${status:-unknown}** (blocking)"
           else
-            result="**failed** (advisory - set SONAR_GATE_BLOCKING=true to enforce)"
+            result="**${status:-unknown}** (advisory - set SONAR_GATE_BLOCKING=true to enforce)"
           fi
           {
             echo "### SonarQube Cloud"
