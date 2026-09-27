@@ -81,7 +81,8 @@ export const legalContent: Record<Language, LegalCopy> = {
         {
           heading: "How uploaded files are stored",
           paragraphs: [
-            "Uploaded files, including verification documents, are stored under a long random name that is never published. The site shows a document only to its owner and to the administrators who review it, but anyone who obtained the exact link to a file could open it.",
+            "Verification documents are kept in private storage that cannot be reached from the internet. The site shows a document only to its owner and to the administrators who review it, through a link that stops working after 10 minutes.",
+            "Photos you add to a listing, and your profile photo, are public: anyone with their link can see them.",
             "Because this is a demonstration, please upload sample documents rather than your real identity or income documents.",
           ],
         },
@@ -225,7 +226,8 @@ export const legalContent: Record<Language, LegalCopy> = {
         {
           heading: "Comment les fichiers déposés sont stockés",
           paragraphs: [
-            "Les fichiers déposés, y compris les documents de vérification, sont stockés sous un nom long et aléatoire qui n'est jamais publié. Le site n'affiche un document qu'à son propriétaire et aux administrateurs qui l'examinent, mais toute personne qui obtiendrait le lien exact d'un fichier pourrait l'ouvrir.",
+            "Les documents de vérification sont conservés dans un espace de stockage privé, inaccessible depuis Internet. Le site n'affiche un document qu'à son propriétaire et aux administrateurs qui l'examinent, au moyen d'un lien qui cesse de fonctionner au bout de 10 minutes.",
+            "Les photos que vous ajoutez à une annonce, ainsi que votre photo de profil, sont publiques : toute personne disposant de leur lien peut les voir.",
             "Comme il s'agit d'une démonstration, merci de déposer des documents d'exemple plutôt que vos véritables pièces d'identité ou justificatifs de revenus.",
           ],
         },
