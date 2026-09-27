@@ -33,3 +33,18 @@ export const arrowKeyStep = (key: string, step: number): number => {
 /** Clamp to the 0-100 range a percentage slider uses. */
 export const clampPercent = (value: number): number =>
   Math.min(100, Math.max(0, value));
+
+/**
+ * onKeyDown for a 0-100 role="slider": the arrow keys move it by `step`,
+ * any other key is left alone.
+ */
+export const stepPercentSlider = (
+  event: KeyboardEvent,
+  setValue: (update: (value: number) => number) => void,
+  step: number,
+): void => {
+  const delta = arrowKeyStep(event.key, step);
+  if (delta === 0) return;
+  event.preventDefault();
+  setValue((value) => clampPercent(value + delta));
+};

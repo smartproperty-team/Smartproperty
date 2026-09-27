@@ -21,6 +21,7 @@ import reviewsFavoritesService from "@/services/reviews-favorites.service";
 import { useAuthStore } from "@/store";
 import { ApplicationStatus } from "@/types/application";
 import type { Property, PropertyImage } from "@/types/property";
+import { geocodeAddress } from "@/utils/geocode";
 import type {
   PropertyReview,
   PropertyReviewSummary,
@@ -75,57 +76,6 @@ const createPinIcon = () =>
     iconAnchor: [16, 42],
     popupAnchor: [0, -44],
   });
-
-// ===========================================
-// Nominatim geocoding helpers
-// ===========================================
-
-interface NominatimResult {
-  lat: string;
-  lon: string;
-  display_name: string;
-}
-
-async function nominatimSearch(query: string): Promise<NominatimResult | null> {
-  try {
-    const url =
-      `https://nominatim.openstreetmap.org/search` +
-      `?format=json&limit=1&addressdetails=1` +
-      `&q=${encodeURIComponent(query)}`;
-    const res = await fetch(url, {
-      headers: { "User-Agent": "SmartProperty-App", "Accept-Language": "en" },
-    });
-    const data: NominatimResult[] = await res.json();
-    return data.length > 0 ? data[0] : null;
-  } catch {
-    return null;
-  }
-}
-
-async function geocodeAddress(
-  address: Property["address"],
-): Promise<{ lat: number; lng: number; zoom: number } | null> {
-  const { street, city, state, zipCode, country } = address;
-
-  // Strategy 1 — full precision: street + city + state + zip + country
-  const full = [street, city, state, zipCode, country]
-    .filter(Boolean)
-    .join(", ");
-  const r1 = await nominatimSearch(full);
-  if (r1) return { lat: Number.parseFloat(r1.lat), lng: Number.parseFloat(r1.lon), zoom: 17 };
-
-  // Strategy 2 — street + city + country
-  const mid = [street, city, country].filter(Boolean).join(", ");
-  const r2 = await nominatimSearch(mid);
-  if (r2) return { lat: Number.parseFloat(r2.lat), lng: Number.parseFloat(r2.lon), zoom: 16 };
-
-  // Strategy 3 — city + state + country (neighbourhood level)
-  const broad = [city, state, country].filter(Boolean).join(", ");
-  const r3 = await nominatimSearch(broad);
-  if (r3) return { lat: Number.parseFloat(r3.lat), lng: Number.parseFloat(r3.lon), zoom: 13 };
-
-  return null;
-}
 
 // ===========================================
 // Property Map Component (Leaflet)

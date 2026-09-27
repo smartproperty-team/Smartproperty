@@ -5,7 +5,7 @@
 // Select an image, pick a style, adjust strength, generate.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { arrowKeyStep, clampPercent } from "../../utils/a11y";
+import { stepPercentSlider } from "../../utils/a11y";
 import { propertyService } from "../../services/property.service";
 import type { PropertyImage, StagingJob, StagingStyle } from "../../types/property";
 
@@ -176,12 +176,10 @@ export default function VirtualStagingPanel({
     [handleSliderMove],
   );
 
-  const handleSliderKey = useCallback((e: React.KeyboardEvent) => {
-    const step = arrowKeyStep(e.key, 5);
-    if (step === 0) return;
-    e.preventDefault();
-    setSliderPos((pos) => clampPercent(pos + step));
-  }, []);
+  const handleSliderKey = useCallback(
+    (e: React.KeyboardEvent) => stepPercentSlider(e, setSliderPos, 5),
+    [],
+  );
 
   const activeStyle = styles.find((s) => s.id === selectedStyle);
 

@@ -146,3 +146,69 @@ describe('VerificationService (AI switch)', () => {
     });
   });
 });
+
+describe('VerificationService.submitForReview - admin notification', () => {
+  const notificationsService = {
+    create: jest.fn(),
+    sendPushNotification: jest.fn(),
+  };
+  const usersService = { findById: jest.fn(), findByRole: jest.fn() };
+
+  const build = () =>
+    new VerificationService(
+      {
+        find: jest.fn(async () => [
+          { type: DocumentType.IDENTITY, status: 'verified' },
+          { type: DocumentType.PROOF_OF_INCOME, status: 'verified' },
+        ]),
+        save: jest.fn(),
+      } as any,
+      {
+        findOne: jest.fn(async () => ({ userId: 'u1' })),
+        save: jest.fn(),
+      } as any,
+      {} as any,
+      {} as any,
+      { get: jest.fn() } as any,
+      usersService as any,
+      notificationsService as any,
+      {} as any,
+    );
+
+  const notifiedMessage = () =>
+    notificationsService.create.mock.calls[0][0].message as string;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    usersService.findByRole.mockResolvedValue([{ id: 'admin-1' }]);
+  });
+
+  it('names the tenant by first and last name', async () => {
+    usersService.findById.mockResolvedValue({
+      firstName: 'Ada',
+      lastName: 'Lovelace',
+      email: 'ada@example.com',
+    });
+
+    await build().submitForReview('u1');
+
+    expect(notifiedMessage()).toBe(
+      'Ada Lovelace submitted a verification request.',
+    );
+    expect(notificationsService.sendPushNotification).toHaveBeenCalledWith(
+      'admin-1',
+      'New Verification Request',
+      'Ada Lovelace submitted a verification request.',
+    );
+  });
+
+  it('falls back to the email when the tenant has no name', async () => {
+    usersService.findById.mockResolvedValue({ email: 'ada@example.com' });
+
+    await build().submitForReview('u1');
+
+    expect(notifiedMessage()).toBe(
+      'ada@example.com submitted a verification request.',
+    );
+  });
+});

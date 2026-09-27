@@ -26,6 +26,7 @@ import {
   FraudStatusPill,
 } from '../../components/verification/FraudAnalysisDisplay';
 import { verificationService } from '../../services/verification.service';
+import { formatBytes } from '../../utils/format';
 import {
   AdminVerificationItem,
   FraudAnalysisStatus,
@@ -72,14 +73,6 @@ function statusConfig(status: VerificationStatus) {
     },
   };
   return map[status];
-}
-
-function formatBytes(bytes: number) {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${Number.parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
 function timeAgo(dateStr: string) {
