@@ -63,14 +63,21 @@ now.
    secret**, name `SONAR_TOKEN`
 7. Confirm the organisation and project key in `sonar-project.properties`
    match what SonarQube Cloud created (`smartproperty-team_Smartproperty`)
-8. Push, or re-run the CI workflow. The dashboard fills in after the first
-   run.
+8. Open a pull request into `main`, or push to `main`. The dashboard fills
+   in after the first run.
+
+**Free plan scope.** SonarQube Cloud's Free plan analyses `main` and pull
+requests into `main` only. A push to any other branch is accepted, but its
+results cannot be read back, so the CI job skips those pushes and says so in
+the run summary. Work on a branch, open a pull request, and the report
+appears on the pull request.
 
 Until `SONAR_TOKEN` exists the Sonar job skips itself and reports why, rather
 than failing.
 
-**Quality gate.** The scan waits for the gate result and reports it in the
-run summary, but a failing gate does not fail the build yet. The default gate
+**Quality gate.** A separate step reads the gate result and reports it in
+the run summary. A failing gate does not fail the build yet, but a scan that
+fails to run always does. The default gate
 wants 80% coverage on new code, and the project is far from that. Blocking
 now would turn every push red. Once coverage has caught up, set the
 repository **variable** (not secret) `SONAR_GATE_BLOCKING` to `true` to
