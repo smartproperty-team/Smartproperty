@@ -281,16 +281,19 @@ services:
       start_period: 10s
 
   # =====================
-  # MinIO (S3-Compatible Object Storage)
+  # S3-Compatible Object Storage (RustFS)
   # =====================
+  # MinIO no longer publishes images to Docker Hub or Quay, so this runs
+  # RustFS, which serves the same S3 API on the same ports. The service keeps
+  # the name "minio" because the backend's MINIO_* settings point at it.
   minio:
-    image: minio/minio:latest
+    image: rustfs/rustfs:1.0.0
     container_name: smartproperty-minio
     restart: unless-stopped
-    command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: smartproperty_minio
-      MINIO_ROOT_PASSWORD: smartproperty_minio_secret_2024
+      RUSTFS_ACCESS_KEY: smartproperty_minio
+      RUSTFS_SECRET_KEY: smartproperty_minio_secret_2024
+      RUSTFS_CONSOLE_ENABLE: "true"
     ports:
       - "9000:9000" # API endpoint
       - "9001:9001" # Web Console
@@ -299,7 +302,7 @@ services:
     networks:
       - smartproperty-network
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/health"]
       interval: 30s
       timeout: 20s
       retries: 3
