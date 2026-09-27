@@ -226,11 +226,21 @@ MinIO client is reused rather than replaced. Two settings make it work:
 | `MINIO_BUCKET_NAME` | `smartproperty` | |
 | `MINIO_PUBLIC_URL` | `https://pub-<id>.r2.dev` | the bucket's public r2.dev domain |
 | `MINIO_PUBLIC_INCLUDE_BUCKET` | `false` | r2.dev is already bound to one bucket and serves `{publicUrl}/{key}`; including the bucket 404s |
+| `MINIO_PRIVATE_BUCKET_NAME` | `smartproperty-private` | optional, this is the default; see below |
 
-The R2 API token is scoped to **Object Read & Write** on this bucket only. It
-cannot perform bucket-level operations, so `ensureBucketExists()` logs
-`Failed to ensure bucket exists` on every start. That is expected and
-harmless - the error is caught and the bucket already exists.
+Listing and profile photos go to `smartproperty`, which is public through its
+r2.dev domain. Verification documents (ID, proof of income) go to
+`smartproperty-private`, which must **never** get an r2.dev or custom domain:
+R2 makes a whole bucket public or none of it, so the two cannot share one. The
+backend reads private files only through signed links that expire after 10
+minutes.
+
+The R2 API token is scoped to **Object Read & Write** on these two buckets
+only. It cannot perform bucket-level operations, so `ensureBucketExists()`
+logs `Failed to ensure bucket '...' exists` for each bucket on every start.
+That is expected and harmless - the error is caught and the buckets already
+exist. Create a new bucket in the Cloudflare dashboard, then add it to the
+token.
 
 ## Deploying a new image
 

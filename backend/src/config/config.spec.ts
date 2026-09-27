@@ -104,4 +104,17 @@ describe('config factories', () => {
       expect(minioConfig().port).toBe(9000);
     });
   });
+
+  describe('private bucket', () => {
+    it('defaults to the public bucket name with a -private suffix', () => {
+      process.env.MINIO_BUCKET_NAME = 'photos';
+      delete process.env.MINIO_PRIVATE_BUCKET_NAME;
+      expect(minioConfig().privateBucketName).toBe('photos-private');
+    });
+
+    it('can be named explicitly', () => {
+      process.env.MINIO_PRIVATE_BUCKET_NAME = 'documents';
+      expect(minioConfig().privateBucketName).toBe('documents');
+    });
+  });
 });

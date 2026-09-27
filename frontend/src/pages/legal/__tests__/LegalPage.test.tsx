@@ -60,8 +60,10 @@ describe("LegalPage", () => {
     ).toBe("/privacy");
   });
 
-  it("asks for sample documents on this demo", () => {
+  it("says documents are private and asks for samples on this demo", () => {
     renderPage("privacy");
+    expect(screen.getByText(/private storage/)).toBeTruthy();
+    expect(screen.getByText(/stops working after 10 minutes/)).toBeTruthy();
     expect(screen.getByText(/please upload sample documents/)).toBeTruthy();
   });
 

@@ -23,6 +23,17 @@ export const minioConfig = registerAs('minio', () => ({
   // Bucket settings
   bucketName: process.env.MINIO_BUCKET_NAME || 'smartproperty',
 
+  // Bucket for files only their owner and reviewers may see, such as
+  // verification documents. It must never be given public access: on R2,
+  // public access is all-or-nothing per bucket, so these files cannot share
+  // the listing photos' bucket. They are read through short-lived signed links.
+  privateBucketName:
+    process.env.MINIO_PRIVATE_BUCKET_NAME ||
+    `${process.env.MINIO_BUCKET_NAME || 'smartproperty'}-private`,
+
+  // How long a signed link to a private file works, in seconds.
+  privateUrlExpiry: 10 * 60,
+
   // Public URL for accessing files (for generating URLs)
   publicUrl: process.env.MINIO_PUBLIC_URL || 'http://localhost:9000',
 
