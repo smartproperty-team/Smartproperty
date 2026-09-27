@@ -7,6 +7,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 
 import { Reflector } from '@nestjs/core';
 import { AiDescriptionService } from './ai-description.service';
+import { AiPricingService } from './ai-pricing.service';
 import { AiRecommendationService } from './ai-recommendation.service';
 import { GenerateDescriptionDto } from './dto/ai-description.dto';
 import { PropertiesController } from './properties.controller';
@@ -28,6 +29,7 @@ describe('PropertiesController (AI description)', () => {
         { provide: PropertiesService, useValue: {} },
         { provide: ConfigService, useValue: { get: () => '' } },
         { provide: AiDescriptionService, useValue: aiService },
+        { provide: AiPricingService, useValue: { suggestPrice: jest.fn() } },
         {
           provide: AiRecommendationService,
           useValue: { getUserRecommendations: jest.fn() },
