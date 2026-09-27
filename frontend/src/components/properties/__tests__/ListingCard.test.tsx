@@ -140,13 +140,13 @@ describe("ListingCard", () => {
           property={property({
             address: undefined as never,
             features: undefined,
-            type: "office",
+            type: "villa",
           })}
         />
       </MemoryRouter>,
     );
     const card = screen.getByRole("article");
-    expect(within(card).getByText("Office")).toBeTruthy();
+    expect(within(card).getByText("Villa")).toBeTruthy();
     expect(card.querySelector(".listing-place")).toBeNull();
   });
   it("falls back to a placeholder when there is no photo", () => {

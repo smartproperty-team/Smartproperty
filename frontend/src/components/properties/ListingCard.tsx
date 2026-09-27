@@ -98,7 +98,6 @@ export function ListingCard({
     studio: t.properties.typeStudio,
     condo: t.properties.typeCondo,
     land: t.properties.typeLand,
-    office: t.home.office,
   };
 
   const place = property.address

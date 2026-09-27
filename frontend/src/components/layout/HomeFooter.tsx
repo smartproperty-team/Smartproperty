@@ -68,7 +68,7 @@ export default function HomeFooter() {
               <Link to="/properties?type=villa">{t.home.villa}</Link>
             </li>
             <li>
-              <Link to="/properties?type=office">{t.home.office}</Link>
+              <Link to="/properties?type=studio">{t.home.studio}</Link>
             </li>
           </ul>
         </nav>

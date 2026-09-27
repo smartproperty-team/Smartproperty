@@ -376,7 +376,7 @@ export default function HomePage() {
                   <option value="apartment">{t.home.apartment}</option>
                   <option value="house">{t.home.house}</option>
                   <option value="villa">{t.home.villa}</option>
-                  <option value="office">{t.home.office}</option>
+                  <option value="studio">{t.home.studio}</option>
                 </select>
               </div>
 

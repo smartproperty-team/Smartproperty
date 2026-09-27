@@ -65,7 +65,7 @@ export const en = {
     apartment: "Apartment",
     house: "House",
     villa: "Villa",
-    office: "Office",
+    studio: "Studio",
     fieldRooms: "Bedrooms",
     anyRooms: "Any",
     fieldBudget: "Budget",

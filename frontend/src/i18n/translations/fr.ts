@@ -67,7 +67,7 @@ export const fr: Translations = {
     apartment: "Appartement",
     house: "Maison",
     villa: "Villa",
-    office: "Bureau",
+    studio: "Studio",
     fieldRooms: "Chambres",
     anyRooms: "Indifférent",
     fieldBudget: "Budget",
