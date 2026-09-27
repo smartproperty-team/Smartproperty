@@ -1,0 +1,117 @@
+/* ===========================================
+   SmartProperty - Site footer
+   =========================================== */
+
+.site-footer {
+  --footer-bg: #102245;
+  --footer-text: rgba(255, 255, 255, 0.78);
+  --footer-muted: rgba(255, 255, 255, 0.62);
+  --footer-line: rgba(255, 255, 255, 0.12);
+  --footer-gold: #ffc570;
+
+  padding: clamp(3rem, 6vw, 4.5rem) clamp(1rem, 4vw, 2rem) 2rem;
+  background: var(--footer-bg);
+  color: var(--footer-text);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.site-footer-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr));
+  gap: 2.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.site-footer-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+
+.site-footer-logo svg {
+  color: var(--footer-gold);
+}
+
+.site-footer-tagline {
+  max-width: 32ch;
+  margin: 1rem 0 0;
+  color: var(--footer-muted);
+}
+
+.site-footer-col h2 {
+  margin: 0 0 1rem;
+  color: #ffffff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.site-footer-col ul {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-footer a {
+  border-radius: 4px;
+  color: var(--footer-text);
+  text-decoration: none;
+  transition: color 200ms ease;
+}
+
+.site-footer a:hover {
+  color: #ffffff;
+}
+
+.site-footer a:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--footer-bg),
+    0 0 0 4px var(--footer-gold);
+}
+
+.site-footer-bottom {
+  max-width: 1200px;
+  margin: 3rem auto 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--footer-line);
+  color: var(--footer-muted);
+  font-size: 0.8125rem;
+}
+
+.site-footer-bottom p {
+  margin: 0;
+}
+
+@media (max-width: 899px) {
+  .site-footer-inner {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .site-footer-brand {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 519px) {
+  .site-footer-inner {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-footer a {
+    transition: none;
+  }
+}
