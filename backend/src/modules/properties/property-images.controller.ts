@@ -34,6 +34,7 @@ import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { AiEnabledGuard } from './ai-enabled.guard';
 import { UserRole } from '../users/entities/user.entity';
 import {
   PROPERTY_MANAGEMENT_ROLES,
@@ -319,6 +320,7 @@ export class PropertyImagesController {
   // ===========================================
 
   @Get('virtual-tour/panorama')
+  @UseGuards(AiEnabledGuard)
   @Public()
   @ApiOperation({ summary: 'Get virtual tour panorama image (public)' })
   @ApiParam({ name: 'propertyId', description: 'Property ID' })
@@ -340,6 +342,7 @@ export class PropertyImagesController {
   }
 
   @Post('virtual-tour/generate')
+  @UseGuards(AiEnabledGuard)
   @Roles(...PROPERTY_MANAGEMENT_ROLES)
   @ApiOperation({ summary: 'Trigger virtual tour generation for a property' })
   @ApiParam({ name: 'propertyId', description: 'Property ID' })
@@ -367,6 +370,7 @@ export class PropertyImagesController {
   // ===========================================
 
   @Get('virtual-tour/status')
+  @UseGuards(AiEnabledGuard)
   @Public()
   @ApiOperation({ summary: 'Get virtual tour job status for a property' })
   @ApiParam({ name: 'propertyId', description: 'Property ID' })
@@ -407,6 +411,7 @@ export class PropertyImagesController {
   // ===========================================
 
   @Get('staging/styles')
+  @UseGuards(AiEnabledGuard)
   @Public()
   @ApiOperation({ summary: 'Get available virtual staging styles' })
   @ApiResponse({ status: 200, description: 'List of staging styles' })
@@ -415,6 +420,7 @@ export class PropertyImagesController {
   }
 
   @Post('staging/generate')
+  @UseGuards(AiEnabledGuard)
   @Roles(...PROPERTY_MANAGEMENT_ROLES)
   @ApiOperation({ summary: 'Request AI virtual staging for a room image' })
   @ApiParam({ name: 'propertyId', description: 'Property ID' })
@@ -455,6 +461,7 @@ export class PropertyImagesController {
   }
 
   @Get('staging/jobs/:jobId')
+  @UseGuards(AiEnabledGuard)
   @Roles(...PROPERTY_MANAGEMENT_ROLES)
   @ApiOperation({ summary: 'Get staging job status' })
   @ApiParam({ name: 'propertyId', description: 'Property ID' })
@@ -466,6 +473,7 @@ export class PropertyImagesController {
   }
 
   @Get('staging/result/:jobId')
+  @UseGuards(AiEnabledGuard)
   @Public()
   @ApiOperation({ summary: 'Get staged image result' })
   @ApiParam({ name: 'propertyId', description: 'Property ID' })

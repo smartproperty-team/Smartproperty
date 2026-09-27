@@ -30,6 +30,7 @@ export const appConfig = registerAs('app', () => ({
 
   // AI Services
   aiService: {
+    enabled: process.env.AI_SERVICE_ENABLED === 'true',
     url: process.env.AI_SERVICE_URL || 'http://localhost:8000',
     timeoutMs: parseInt(process.env.AI_SERVICE_TIMEOUT_MS || '60000', 10),
     retries: parseInt(process.env.AI_SERVICE_RETRIES || '1', 10),

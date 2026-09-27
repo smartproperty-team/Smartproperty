@@ -84,6 +84,8 @@ export const validationSchema = Joi.object({
   // GraphQL
 
   // AI Services proxy
+  // Off by default: ai-services is not deployed. See AiEnabledGuard.
+  AI_SERVICE_ENABLED: Joi.boolean().default(false),
   AI_SERVICE_URL: Joi.string().uri().default('http://localhost:8000'),
   AI_SERVICE_TIMEOUT_MS: Joi.number().default(60000),
   AI_SERVICE_RETRIES: Joi.number().default(1),
