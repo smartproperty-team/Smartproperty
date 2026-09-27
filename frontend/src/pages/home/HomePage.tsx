@@ -17,7 +17,7 @@ import { UserRole } from "@/types/auth";
 import type { Property } from "@/types/property";
 
 import "../../styles/motion.css";
-import { ListingCard } from "./ListingCard";
+import { ListingCard } from "@/components/properties/ListingCard";
 import {
   PRICE_BANDS,
   buildHomeSearchParams,

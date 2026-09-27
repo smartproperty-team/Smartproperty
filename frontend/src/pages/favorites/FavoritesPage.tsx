@@ -1,4 +1,5 @@
 import { HomeFooter, Navbar } from "@/components/layout";
+import { ListingCard } from "@/components/properties/ListingCard";
 import reviewsFavoritesService from "@/services/reviews-favorites.service";
 import type { FavoriteItem } from "@/types/reviews-favorites";
 import { useEffect, useState } from "react";
@@ -90,64 +91,22 @@ export default function FavoritesPage() {
         ) : (
           <div className="properties-grid">
             {favorites.map((favorite) => {
-              const property = favorite.property;
-              const image =
-                property.images?.[0]?.url || "/placeholder-property.svg";
-
+              const busy = busyPropertyId === favorite.propertyId;
               return (
-                <article
+                <ListingCard
                   key={favorite.id}
-                  className="property-card"
-                  aria-label={property.title}
-                >
-                  <div className="property-card-image">
-                    <img
-                      src={image}
-                      alt={property.title}
-                      loading="lazy"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                          "/placeholder-property.svg";
-                      }}
-                    />
-                    <span className={`property-badge ${property.status}`}>
-                      {property.status}
-                    </span>
-                  </div>
-
-                  <div className="property-card-content">
-                    <h3 className="property-title">{property.title}</h3>
-                    <p className="property-address">
-                      {property.address.city}, {property.address.country}
-                    </p>
-
-                    <div className="property-price">
-                      <span className="price">
-                        {property.price.toLocaleString()}
-                      </span>
-                      <span className="currency">{property.currency}</span>
-                    </div>
-
-                    <div className="property-card-actions">
-                      <Link
-                        to={`/properties/${property.id || property._id}`}
-                        className="btn-view"
-                      >
-                        View
-                      </Link>
-                      <button
-                        type="button"
-                        className="btn-delete"
-                        onClick={() => void handleRemove(favorite.propertyId)}
-                        disabled={busyPropertyId === favorite.propertyId}
-                      >
-                        {busyPropertyId === favorite.propertyId
-                          ? "Removing..."
-                          : "Remove"}
-                      </button>
-                    </div>
-                  </div>
-                </article>
+                  property={favorite.property}
+                  actions={
+                    <button
+                      type="button"
+                      className="listing-action listing-action--danger"
+                      onClick={() => void handleRemove(favorite.propertyId)}
+                      disabled={busy}
+                    >
+                      {busy ? "Removing..." : "Remove"}
+                    </button>
+                  }
+                />
               );
             })}
           </div>

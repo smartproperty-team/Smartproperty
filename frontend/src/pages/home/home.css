@@ -552,160 +552,6 @@
   display: flex;
 }
 
-.listing-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  overflow: hidden;
-  border: 1px solid var(--home-line);
-  border-radius: var(--radius-card);
-  background: var(--home-surface);
-  box-shadow: var(--shadow-card);
-  transition:
-    transform 350ms var(--ease-out-soft),
-    box-shadow 350ms var(--ease-out-soft);
-}
-
-.listing-card:hover {
-  transform: translateY(var(--hover-lift));
-  box-shadow: var(--shadow-card-hover);
-}
-
-.listing-card:has(.listing-link:focus-visible) {
-  box-shadow: var(--focus-ring), var(--shadow-card-hover);
-}
-
-.listing-card-media {
-  position: relative;
-  aspect-ratio: 4 / 3;
-  overflow: hidden;
-  background: var(--home-sand-deep);
-}
-
-.listing-card-media img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 600ms var(--ease-out-soft);
-}
-
-.listing-card:hover .listing-card-media img {
-  transform: scale(1.04);
-}
-
-.listing-badge {
-  position: absolute;
-  top: 0.75rem;
-  left: 0.75rem;
-  padding: 0.3rem 0.7rem;
-  border-radius: var(--radius-pill);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  line-height: 1.2;
-}
-
-.listing-badge--sale {
-  background: var(--home-navy);
-  color: #ffffff;
-}
-
-.listing-badge--rent {
-  background: var(--home-gold);
-  color: var(--home-navy-deep);
-}
-
-.listing-badge--managed {
-  border: 1px solid var(--home-line);
-  background: var(--home-surface);
-  color: var(--home-navy);
-}
-
-.listing-card-body {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 0.35rem;
-  padding: 1.1rem 1.25rem 1.2rem;
-}
-
-.listing-price {
-  margin: 0;
-  color: var(--home-navy);
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.listing-price-unit {
-  margin-left: 0.15rem;
-  color: var(--home-muted);
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.listing-title {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  color: var(--home-ink);
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.4;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.listing-link {
-  color: inherit;
-  text-decoration: none;
-}
-
-/* Stretch the title link over the whole card: one link, one tab stop. */
-.listing-link::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-}
-
-.listing-link:focus-visible {
-  box-shadow: none;
-}
-
-.listing-place {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin: 0;
-  overflow: hidden;
-  color: var(--home-muted);
-  font-size: 0.875rem;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.listing-place svg {
-  flex-shrink: 0;
-}
-
-.listing-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 1rem;
-  margin: auto 0 0;
-  padding-top: 0.85rem;
-  border-top: 1px solid var(--home-line);
-  color: var(--home-muted);
-  font-size: 0.8125rem;
-}
-
-.listing-meta dd {
-  margin: 0;
-}
-
 /* Skeletons reserve the same space as cards, so nothing shifts on load. */
 .listing-skeleton {
   overflow: hidden;
@@ -1088,8 +934,6 @@
 /* ---------- Reduced motion ---------- */
 
 @media (prefers-reduced-motion: reduce) {
-  .listing-card,
-  .listing-card-media img,
   .city-card,
   .home-page
     :is(.button-primary, .button-secondary, .text-link, .city-card-meta)
@@ -1097,8 +941,6 @@
     transition: none;
   }
 
-  .listing-card:hover,
-  .listing-card:hover .listing-card-media img,
   .city-card:hover,
   .home-page :is(.button-primary, .button-secondary, .text-link):hover svg,
   .city-card:hover .city-card-meta svg {
