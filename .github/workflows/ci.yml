@@ -2,7 +2,7 @@
 # SmartProperty - Build and quality pipeline
 # ===========================================
 # Fast feedback on every push: typecheck, test with coverage, build both
-# applications, then send coverage and code quality to SonarCloud.
+# applications, then send coverage and code quality to SonarQube Cloud.
 #
 # Kept separate from security.yml so a slow image scan never delays the signal
 # a developer actually waits for, and separate from deploy.yml because
@@ -94,11 +94,11 @@ jobs:
           retention-days: 7
 
   sonar:
-    name: SonarCloud
+    name: SonarQube Cloud
     runs-on: ubuntu-latest
     needs: [backend, frontend]
     # Skipped automatically until SONAR_TOKEN exists, so the pipeline is green
-    # before SonarCloud is set up rather than permanently red.
+    # before SonarQube Cloud is set up rather than permanently red.
     if: ${{ !cancelled() }}
     steps:
       - uses: actions/checkout@v4
@@ -111,6 +111,26 @@ jobs:
           path: backend/coverage
         continue-on-error: true
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+        continue-on-error: true
+
+      - name: Make coverage paths repository-relative
+        # Jest and Vitest write lcov paths relative to their own package
+        # (src/...). This scan runs from the repository root, where those
+        # paths match nothing, so coverage would silently read 0%. Rewritten
+        # here rather than in the test configs because the Jenkins pipelines
+        # scan from inside each package and need the paths as they are.
+        run: |
+          for pkg in backend frontend; do
+            f="$pkg/coverage/lcov.info"
+            [ -f "$f" ] || { echo "::warning::$f missing - $pkg coverage will read 0%"; continue; }
+            sed -i "s#^SF:src/#SF:$pkg/src/#" "$f"
+            echo "$f: $(grep -c "^SF:$pkg/src/" "$f") files"
+          done
+
       - name: Check for token
         id: cfg
         run: |
@@ -121,12 +141,38 @@ jobs:
             echo "SONAR_TOKEN is not set - skipping. See docs/DEVOPS.md." >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: SonarCloud scan
+      - name: SonarQube Cloud scan
+        id: scan
         if: steps.cfg.outputs.enabled == 'true'
-        uses: SonarSource/sonarqube-scan-action@v4
+        # v6+ only: v4 and v5 carry two HIGH advisories (GHSA-f79p-9c5r-xg88
+        # command injection, GHSA-5xq9-5g24-4g6f argument injection).
+        uses: SonarSource/sonarqube-scan-action@v8
+        # Waits for the quality gate and fails the step if it fails. Advisory
+        # until the SONAR_GATE_BLOCKING repository variable is 'true': the
+        # default gate wants 80% coverage on new code, and the project is far
+        # from that, so blocking now would turn every push red.
+        continue-on-error: ${{ vars.SONAR_GATE_BLOCKING != 'true' }}
+        with:
+          args: -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=300
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
+
+      - name: Report quality gate
+        if: steps.cfg.outputs.enabled == 'true'
+        run: |
+          if [ "${{ steps.scan.outcome }}" = "success" ]; then
+            result="passed"
+          else
+            result="**failed** (advisory - set SONAR_GATE_BLOCKING=true to enforce)"
+          fi
+          {
+            echo "### SonarQube Cloud"
+            echo ""
+            echo "Quality gate: $result"
+            echo ""
+            echo "https://sonarcloud.io/project/overview?id=smartproperty-team_Smartproperty"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   summary:
     name: CI summary
@@ -142,7 +188,7 @@ jobs:
             echo "|---|---|"
             echo "| Backend | ${{ needs.backend.result }} |"
             echo "| Frontend | ${{ needs.frontend.result }} |"
-            echo "| SonarCloud | ${{ needs.sonar.result }} |"
+            echo "| SonarQube Cloud | ${{ needs.sonar.result }} |"
             echo ""
             echo "Backend tests are non-blocking: three specs fail on a"
             echo "pre-existing AiPricingService dependency-injection problem,"
