@@ -1,0 +1,136 @@
+/* ===========================================
+   SmartProperty - Motion tokens and reveal system
+   ===========================================
+   Only opacity and transform are animated, so nothing reflows.
+
+   Content is hidden only under `.motion-ready`, a class the app adds to
+   <html> at start-up: if scripts fail, everything simply shows.
+   Reduced-motion users see content immediately, with no movement. */
+
+:root {
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-duration: 700ms;
+  --motion-distance: 20px;
+  --motion-stagger: 110ms;
+}
+
+/* ---------- Scroll reveal ---------- */
+
+.motion-ready [data-reveal]:not([data-reveal-stagger]),
+.motion-ready [data-reveal-stagger] > * {
+  opacity: 0;
+  transition:
+    opacity var(--motion-duration) var(--ease-out-soft),
+    transform var(--motion-duration) var(--ease-out-soft);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.motion-ready [data-reveal="up"]:not([data-reveal-stagger]),
+.motion-ready [data-reveal="up"][data-reveal-stagger] > * {
+  transform: translate3d(0, var(--motion-distance), 0);
+}
+
+.motion-ready [data-reveal="scale"]:not([data-reveal-stagger]),
+.motion-ready [data-reveal="scale"][data-reveal-stagger] > * {
+  transform: scale(0.97);
+}
+
+.motion-ready [data-reveal][data-revealed]:not([data-reveal-stagger]),
+.motion-ready [data-reveal-stagger][data-revealed] > * {
+  opacity: 1;
+  transform: none;
+}
+
+/* Stagger groups: each child starts one step after the previous one. */
+.motion-ready [data-reveal-stagger] > :nth-child(2) {
+  transition-delay: calc(var(--reveal-delay, 0ms) + var(--motion-stagger));
+}
+.motion-ready [data-reveal-stagger] > :nth-child(3) {
+  transition-delay: calc(var(--reveal-delay, 0ms) + 2 * var(--motion-stagger));
+}
+.motion-ready [data-reveal-stagger] > :nth-child(4) {
+  transition-delay: calc(var(--reveal-delay, 0ms) + 3 * var(--motion-stagger));
+}
+.motion-ready [data-reveal-stagger] > :nth-child(n + 5) {
+  transition-delay: calc(var(--reveal-delay, 0ms) + 4 * var(--motion-stagger));
+}
+
+/* ---------- Page-load entrance (above the fold, no JS needed) ---------- */
+
+@keyframes motion-rise-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes motion-line-up {
+  from {
+    transform: translate3d(0, 105%, 0);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* Transform only: large media stays painted from the first frame, so the
+   page's largest paint is not held back by the animation. */
+@keyframes motion-settle {
+  from {
+    transform: scale(1.05);
+  }
+  to {
+    transform: none;
+  }
+}
+
+.motion-ready .enter-rise {
+  animation: motion-rise-in var(--motion-duration) var(--ease-out-soft) both;
+  animation-delay: var(--enter-delay, 0ms);
+}
+
+.motion-ready .enter-settle {
+  animation: motion-settle 1100ms var(--ease-out-soft) both;
+}
+
+/* Masked line reveal: each line slides up inside its own clipping box.
+   The text stays a single, real heading for screen readers. */
+.enter-line {
+  display: block;
+  overflow: hidden;
+  /* Room for descenders so the mask does not clip g, p and y. */
+  padding-bottom: 0.1em;
+  margin-bottom: -0.1em;
+}
+
+.enter-line > span {
+  display: block;
+}
+
+.motion-ready .enter-line > span {
+  animation: motion-line-up 850ms var(--ease-out-soft) both;
+  animation-delay: var(--enter-delay, 0ms);
+}
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  /* The html prefix out-ranks the variant rules above, which would
+     otherwise keep their starting offset. */
+  html.motion-ready [data-reveal]:not([data-reveal-stagger]),
+  html.motion-ready [data-reveal][data-reveal-stagger] > * {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .motion-ready .enter-rise,
+  .motion-ready .enter-settle,
+  .motion-ready .enter-line > span {
+    animation: none;
+  }
+}
