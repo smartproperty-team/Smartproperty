@@ -90,6 +90,10 @@ export default function HomeFooter() {
         <p>
           &copy; {year} SmartProperty. {t.siteFooter.rights}
         </p>
+        <nav className="site-footer-legal" aria-label={t.legal.navLabel}>
+          <Link to="/privacy">{t.legal.privacy}</Link>
+          <Link to="/terms">{t.legal.terms}</Link>
+        </nav>
       </div>
     </footer>
   );

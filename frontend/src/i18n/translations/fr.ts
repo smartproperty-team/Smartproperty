@@ -35,6 +35,13 @@ export const fr: Translations = {
   },
 
   // ---- Home Page ----
+  legal: {
+    navLabel: "Informations légales",
+    privacy: "Politique de confidentialité",
+    terms: "Conditions d'utilisation",
+    agreePrefix: "En créant un compte, vous acceptez les",
+    agreeMiddle: "et prenez connaissance de la",
+  },
   siteFooter: {
     tagline:
       "Des biens à vendre et à louer partout en Tunisie, avec candidatures, baux et maintenance dans un seul compte.",

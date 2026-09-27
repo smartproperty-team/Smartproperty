@@ -33,6 +33,13 @@ export const en = {
   },
 
   // ---- Home Page ----
+  legal: {
+    navLabel: "Legal",
+    privacy: "Privacy Policy",
+    terms: "Terms of Use",
+    agreePrefix: "By creating an account, you agree to the",
+    agreeMiddle: "and acknowledge the",
+  },
   siteFooter: {
     tagline:
       "Homes for sale and rent across Tunisia, with applications, leases and maintenance in one account.",

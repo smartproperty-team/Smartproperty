@@ -1,0 +1,129 @@
+/* ===========================================
+   SmartProperty - Legal pages
+   =========================================== */
+
+.legal-page {
+  --legal-navy: #1a3263;
+  --legal-slate: #3f6077;
+  --legal-text: #2b3a52;
+  --legal-muted: #4f6478;
+  --legal-line: #e2e6ec;
+  --legal-sand: #f5efe7;
+
+  min-height: 100vh;
+  background: #ffffff;
+  color: var(--legal-text);
+  font-family:
+    ui-sans-serif,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  line-height: 1.7;
+}
+
+.legal-main {
+  padding: calc(72px + clamp(2rem, 6vw, 4rem)) clamp(1rem, 4vw, 2rem)
+    clamp(3rem, 8vw, 5rem);
+}
+
+.legal-article {
+  max-width: 46rem;
+  margin: 0 auto;
+}
+
+.legal-header h1 {
+  margin: 0;
+  color: var(--legal-navy);
+  font-size: clamp(2rem, 1.5rem + 2vw, 2.75rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.legal-updated {
+  margin: 0.75rem 0 0;
+  color: var(--legal-muted);
+  font-size: 0.875rem;
+}
+
+.legal-intro {
+  margin: 1.5rem 0 0;
+  font-size: 1.125rem;
+}
+
+.legal-toc {
+  margin: 2.5rem 0;
+  padding: 1.25rem 1.5rem;
+  border-radius: 16px;
+  background: var(--legal-sand);
+}
+
+.legal-toc h2 {
+  margin: 0 0 0.5rem;
+  color: var(--legal-slate);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.legal-toc ol {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.legal-section {
+  margin-top: 2.5rem;
+  scroll-margin-top: 88px;
+}
+
+.legal-section h2 {
+  margin: 0 0 0.75rem;
+  color: var(--legal-navy);
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.legal-section p {
+  margin: 0.75rem 0 0;
+}
+
+.legal-section ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.legal-section li + li {
+  margin-top: 0.5rem;
+}
+
+.legal-page a {
+  border-radius: 3px;
+  color: var(--legal-navy);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: rgba(26, 50, 99, 0.35);
+  text-underline-offset: 0.2em;
+}
+
+.legal-page a:hover {
+  text-decoration-color: currentColor;
+}
+
+.legal-page a:focus-visible {
+  outline: 2px solid var(--legal-navy);
+  outline-offset: 2px;
+}
+
+/* The navbar and footer keep their own link styles. */
+.legal-page nav[aria-label="Main navigation"] a,
+.legal-page .site-footer a {
+  font-weight: inherit;
+  text-decoration: none;
+}
