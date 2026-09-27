@@ -27,11 +27,15 @@ export interface UploadOptions {
   metadata?: Record<string, string>;
 }
 
+/** A stored private file. It has no URL: links are signed per request. */
+export type UploadedPrivateFile = Omit<UploadedFile, 'url'>;
+
 @Injectable()
 export class MinioService implements OnModuleInit {
   private readonly logger = new Logger(MinioService.name);
   private minioClient: Client;
   private bucketName: string;
+  private readonly privateBucketName: string;
   private publicUrl: string;
   private readonly publicUrlIncludesBucket: boolean;
 
@@ -47,6 +51,9 @@ export class MinioService implements OnModuleInit {
 
     this.bucketName =
       this.configService.get<string>('minio.bucketName') || 'smartproperty';
+    this.privateBucketName =
+      this.configService.get<string>('minio.privateBucketName') ||
+      `${this.bucketName}-private`;
     this.publicUrlIncludesBucket =
       this.configService.get<boolean>('minio.publicUrlIncludesBucket') ?? true;
     this.publicUrl =
@@ -72,17 +79,22 @@ export class MinioService implements OnModuleInit {
   }
 
   async onModuleInit(): Promise<void> {
-    await this.ensureBucketExists();
+    await this.ensureBucketExists(this.bucketName, true);
+    await this.ensureBucketExists(this.privateBucketName, false);
   }
 
-  private async ensureBucketExists(): Promise<void> {
+  private async ensureBucketExists(
+    bucket: string,
+    publicRead: boolean,
+  ): Promise<void> {
     try {
-      const exists = await this.minioClient.bucketExists(this.bucketName);
+      const exists = await this.minioClient.bucketExists(bucket);
       if (!exists) {
-        await this.minioClient.makeBucket(this.bucketName);
-        this.logger.log(`Bucket '${this.bucketName}' created`);
+        await this.minioClient.makeBucket(bucket);
+        this.logger.log(`Bucket '${bucket}' created`);
 
-        // Set public read policy
+        // New buckets are private; only the public one gets a read policy.
+        if (!publicRead) return;
         const policy = {
           Version: '2012-10-17',
           Statement: [
@@ -90,22 +102,17 @@ export class MinioService implements OnModuleInit {
               Effect: 'Allow',
               Principal: { AWS: ['*'] },
               Action: ['s3:GetObject'],
-              Resource: [`arn:aws:s3:::${this.bucketName}/*`],
+              Resource: [`arn:aws:s3:::${bucket}/*`],
             },
           ],
         };
-        await this.minioClient.setBucketPolicy(
-          this.bucketName,
-          JSON.stringify(policy),
-        );
-        this.logger.log(
-          `Public read policy set for bucket '${this.bucketName}'`,
-        );
+        await this.minioClient.setBucketPolicy(bucket, JSON.stringify(policy));
+        this.logger.log(`Public read policy set for bucket '${bucket}'`);
       } else {
-        this.logger.log(`Bucket '${this.bucketName}' already exists`);
+        this.logger.log(`Bucket '${bucket}' already exists`);
       }
     } catch (error) {
-      this.logger.error(`Failed to ensure bucket exists: ${error}`);
+      this.logger.error(`Failed to ensure bucket '${bucket}' exists: ${error}`);
     }
   }
 
@@ -113,6 +120,27 @@ export class MinioService implements OnModuleInit {
     file: Express.Multer.File,
     options: UploadOptions = {},
   ): Promise<UploadedFile> {
+    const stored = await this.putFile(this.bucketName, file, options);
+
+    // Build through getPublicUrl so the bucket-in-path rule lives in exactly
+    // one place. This line used to duplicate it and silently ignored the
+    // MINIO_PUBLIC_INCLUDE_BUCKET setting.
+    return { ...stored, url: this.getPublicUrl(stored.key) };
+  }
+
+  /** Stores a file in the private bucket. Read it with getPrivateFileUrl. */
+  async uploadPrivateFile(
+    file: Express.Multer.File,
+    options: UploadOptions = {},
+  ): Promise<UploadedPrivateFile> {
+    return this.putFile(this.privateBucketName, file, options);
+  }
+
+  private async putFile(
+    bucket: string,
+    file: Express.Multer.File,
+    options: UploadOptions,
+  ): Promise<UploadedPrivateFile> {
     const folder = options.folder || 'uploads';
     const extension = this.getFileExtension(file.originalname);
     const fileName = options.fileName || `${randomUUID()}${extension}`;
@@ -125,17 +153,12 @@ export class MinioService implements OnModuleInit {
     };
 
     await this.minioClient.putObject(
-      this.bucketName,
+      bucket,
       key,
       file.buffer,
       file.size,
       metadata,
     );
-
-    // Build through getPublicUrl so the bucket-in-path rule lives in exactly
-    // one place. This line used to duplicate it and silently ignored the
-    // MINIO_PUBLIC_INCLUDE_BUCKET setting.
-    const url = this.getPublicUrl(key);
 
     this.logger.log(`File uploaded: ${key}`);
 
@@ -144,9 +167,29 @@ export class MinioService implements OnModuleInit {
       fileName,
       mimeType: file.mimetype,
       size: file.size,
-      url,
       key,
     };
+  }
+
+  /** A link to a private file that stops working after a few minutes. */
+  async getPrivateFileUrl(
+    key: string,
+    expirySeconds?: number,
+  ): Promise<string> {
+    const expiry =
+      expirySeconds ||
+      this.configService.get<number>('minio.privateUrlExpiry') ||
+      600;
+    return await this.minioClient.presignedGetObject(
+      this.privateBucketName,
+      key,
+      expiry,
+    );
+  }
+
+  async deletePrivateFile(key: string): Promise<void> {
+    await this.minioClient.removeObject(this.privateBucketName, key);
+    this.logger.log(`Private file deleted: ${key}`);
   }
 
   async uploadFiles(

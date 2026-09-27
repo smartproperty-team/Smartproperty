@@ -68,10 +68,7 @@ export class VerificationDocument {
   mimeType: string;
 
   @Column()
-  key: string; // S3/MinIO storage key
-
-  @Column()
-  url: string;
+  key: string; // Storage key in the private bucket; read via signed links
 
   @Column({
     type: 'enum',

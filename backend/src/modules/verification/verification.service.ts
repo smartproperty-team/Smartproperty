@@ -75,8 +75,8 @@ export class VerificationService {
     return {
       id: verification._id?.toHexString() || verification.id,
       userId: verification.userId,
-      identityDocuments: identityDocuments.map((d) => this.mapDocument(d)),
-      incomeDocuments: incomeDocuments.map((d) => this.mapDocument(d)),
+      identityDocuments: await this.mapDocuments(identityDocuments),
+      incomeDocuments: await this.mapDocuments(incomeDocuments),
       overallStatus: verification.overallStatus,
       riskScore: verification.riskScore,
       riskLevel: verification.riskLevel,
@@ -92,9 +92,12 @@ export class VerificationService {
     file: Express.Multer.File,
     type: DocumentType,
   ) {
-    // Upload to MinIO/S3
+    // Identity and income documents go to the private bucket and are only
+    // ever read through short-lived signed links (see mapDocument).
     const folder = `verification/${userId}/${type}`;
-    const uploaded = await this.minioService.uploadFile(file, { folder });
+    const uploaded = await this.minioService.uploadPrivateFile(file, {
+      folder,
+    });
 
     // Save document record
     const doc = this.docRepo.create({
@@ -104,7 +107,6 @@ export class VerificationService {
       fileSize: file.size,
       mimeType: file.mimetype,
       key: uploaded.key,
-      url: uploaded.url,
       status: VerificationStatus.PENDING,
       // NOT_RUN while AI is switched off, so reviewers see a check that was
       // skipped rather than one that failed.
@@ -137,7 +139,7 @@ export class VerificationService {
     );
 
     return {
-      document: this.mapDocument(saved),
+      document: await this.mapDocument(saved),
       message: 'Document uploaded successfully',
     };
   }
@@ -158,7 +160,7 @@ export class VerificationService {
 
     // Delete from storage
     try {
-      await this.minioService.deleteFile(doc.key);
+      await this.minioService.deletePrivateFile(doc.key);
     } catch (err) {
       this.logger.warn(`Failed to delete file from storage: ${doc.key}`, err);
     }
@@ -170,7 +172,7 @@ export class VerificationService {
   // ─── Get all documents for a user ──────────────────────
   async getDocuments(userId: string) {
     const documents = await this.docRepo.find({ where: { userId } });
-    return documents.map((d) => this.mapDocument(d));
+    return this.mapDocuments(documents);
   }
 
   // ─── Submit for review ─────────────────────────────────
@@ -259,14 +261,17 @@ export class VerificationService {
   }
 
   // ─── Helper: map document entity to DTO ────────────────
-  private mapDocument(doc: VerificationDocument) {
+  // The url is a fresh signed link that expires after a few minutes, so a
+  // copied or leaked link stops working. Callers are already limited to the
+  // document's owner and reviewers.
+  private async mapDocument(doc: VerificationDocument) {
     return {
       id: doc._id?.toHexString() || (doc as any).id,
       type: doc.type,
       fileName: doc.fileName,
       fileSize: doc.fileSize,
       mimeType: doc.mimeType,
-      url: doc.url,
+      url: await this.minioService.getPrivateFileUrl(doc.key),
       status: doc.status,
       uploadedAt: doc.uploadedAt?.toISOString?.() || doc.uploadedAt,
       reviewedAt: doc.reviewedAt?.toISOString?.() || doc.reviewedAt,
@@ -282,6 +287,10 @@ export class VerificationService {
           }
         : null,
     };
+  }
+
+  private mapDocuments(docs: VerificationDocument[]) {
+    return Promise.all(docs.map((d) => this.mapDocument(d)));
   }
 
   // ─── ADMIN: Get all pending verifications ──────────────
@@ -322,7 +331,7 @@ export class VerificationService {
         verifiedAt: v.verifiedAt?.toISOString(),
         createdAt: v.createdAt?.toISOString(),
         updatedAt: v.updatedAt?.toISOString(),
-        documents: documents.map((d) => this.mapDocument(d)),
+        documents: await this.mapDocuments(documents),
       });
     }
 
@@ -533,7 +542,7 @@ export class VerificationService {
       }
 
       const result = await this.fraudDetectionService.analyzeDocument({
-        fileUrl: doc.url,
+        fileUrl: await this.minioService.getPrivateFileUrl(doc.key),
         documentType: doc.type,
         userProfile,
       });
