@@ -5,7 +5,10 @@ import { useAuthStore } from "@/store";
 import type { Lease } from "@/types/lease";
 import { PaymentType } from "@/types/payment";
 import { Elements } from "@stripe/react-stripe-js";
-import { loadStripe, Stripe } from "@stripe/stripe-js";
+// The /pure entry loads Stripe.js only when loadStripe() is called; the
+// default entry starts loading it as soon as the module is imported.
+import type { Stripe } from "@stripe/stripe-js";
+import { loadStripe } from "@stripe/stripe-js/pure";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { StripePaymentForm } from "./StripePaymentForm";
