@@ -9,6 +9,7 @@ import AddressInput, {
   type AddressData,
 } from "../../components/properties/AddressInputOSM";
 import AiDescriptionPanel from "../../components/properties/AiDescriptionPanel";
+import { AI_FEATURES_ENABLED } from "../../config/features";
 import AmenitySelector from "../../components/properties/AmenitySelector";
 import { Stepper, type StepperStep } from "../../components/ui";
 import { useFieldErrors } from "../../hooks/useFieldErrors";
@@ -1059,6 +1060,7 @@ export default function PropertyFormPage() {
               </div>
 
               {/* AI Price Suggestion */}
+              {AI_FEATURES_ENABLED && (
               <div className="form-group" style={{ gridColumn: "1 / -1" }}>
                 <button
                   type="button"
@@ -1222,6 +1224,7 @@ export default function PropertyFormPage() {
                   </div>
                 )}
               </div>
+              )}
 
               <div className="form-group">
                 <label htmlFor="availableFrom">
@@ -1519,14 +1522,16 @@ export default function PropertyFormPage() {
                 <label htmlFor="description">
                   {t.properties.form.labels.description}
                 </label>
-                <button
-                  type="button"
-                  className="btn-ai-trigger"
-                  onClick={() => setAiPanelOpen(true)}
-                  data-testid="ai-description-cta"
-                >
-                  {t.properties.form.aiDescription.cta}
-                </button>
+                {AI_FEATURES_ENABLED && (
+                  <button
+                    type="button"
+                    className="btn-ai-trigger"
+                    onClick={() => setAiPanelOpen(true)}
+                    data-testid="ai-description-cta"
+                  >
+                    {t.properties.form.aiDescription.cta}
+                  </button>
+                )}
               </div>
               <textarea
                 id="description"
@@ -1547,16 +1552,18 @@ export default function PropertyFormPage() {
               </span>
             </div>
 
-            <AiDescriptionPanel
-              open={aiPanelOpen}
-              onClose={() => setAiPanelOpen(false)}
-              snapshot={buildAiSnapshot()}
-              propertyId={id}
-              onApply={(text) => {
-                setFormData((prev) => ({ ...prev, description: text }));
-                setAiPanelOpen(false);
-              }}
-            />
+            {AI_FEATURES_ENABLED && (
+              <AiDescriptionPanel
+                open={aiPanelOpen}
+                onClose={() => setAiPanelOpen(false)}
+                snapshot={buildAiSnapshot()}
+                propertyId={id}
+                onApply={(text) => {
+                  setFormData((prev) => ({ ...prev, description: text }));
+                  setAiPanelOpen(false);
+                }}
+              />
+            )}
           </div>
         );
       default:
@@ -1586,7 +1593,7 @@ export default function PropertyFormPage() {
             onStepChange={handleStepChange}
             actions={
               <div className="wizard-nav-primary">
-                {currentStep !== PRICING_STEP_INDEX && (
+                {AI_FEATURES_ENABLED && currentStep !== PRICING_STEP_INDEX && (
                   <button
                     type="button"
                     className="btn-ai-trigger"

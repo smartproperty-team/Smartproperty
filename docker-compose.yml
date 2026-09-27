@@ -232,7 +232,11 @@ services:
   # =====================
   # AI Services (FastAPI)
   # =====================
+  # Switched off: `docker compose up` does not start it. To run it, use
+  # `docker compose --profile ai up` and set AI_SERVICE_ENABLED=true for the
+  # backend and VITE_ENABLE_AI_FEATURES=true for the frontend.
   ai-services:
+    profiles: ["ai"]
     build:
       context: ./ai-services
       dockerfile: Dockerfile

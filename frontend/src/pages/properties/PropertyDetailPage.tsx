@@ -8,6 +8,7 @@ import HotspotEditor from "@/components/properties/HotspotEditor";
 import VirtualStagingPanel from "@/components/properties/VirtualStagingPanel";
 import Sphere360Viewer from "@/components/properties/Sphere360Viewer";
 import VirtualTourViewer from "@/components/properties/VirtualTourViewer";
+import { AI_FEATURES_ENABLED } from "@/config/features";
 import PropertyReviewsSection from "@/components/reviews/PropertyReviewsSection";
 import { useTranslation } from "@/i18n";
 import applicationService from "@/services/application.service";
@@ -1774,7 +1775,7 @@ export default function PropertyDetailPage() {
                   }}
                 >
                   <h3>{t.propertyDetail.description}</h3>
-                  {canManage && (
+                  {canManage && AI_FEATURES_ENABLED && (
                     <button
                       type="button"
                       className="btn-ai-trigger"
@@ -1982,30 +1983,34 @@ export default function PropertyDetailPage() {
                     <DeleteIcon />
                     {t.propertyDetail.deleteProperty}
                   </button>
-                  <button
-                    type="button"
-                    className="btn-ai-trigger"
-                    onClick={() => setAiPanelOpen(true)}
-                    style={{ width: "100%" }}
-                    data-testid="ai-description-cta-sidebar"
-                  >
-                    {t.propertyDetail.aiDescription.cta}
-                  </button>
-                  {property.images && property.images.length > 0 && (
+                  {AI_FEATURES_ENABLED && (
                     <button
                       type="button"
                       className="btn-ai-trigger"
-                      onClick={() => setStagingOpen(true)}
+                      onClick={() => setAiPanelOpen(true)}
                       style={{ width: "100%" }}
+                      data-testid="ai-description-cta-sidebar"
                     >
-                      AI Virtual Staging
+                      {t.propertyDetail.aiDescription.cta}
                     </button>
                   )}
+                  {AI_FEATURES_ENABLED &&
+                    property.images &&
+                    property.images.length > 0 && (
+                      <button
+                        type="button"
+                        className="btn-ai-trigger"
+                        onClick={() => setStagingOpen(true)}
+                        style={{ width: "100%" }}
+                      >
+                        AI Virtual Staging
+                      </button>
+                    )}
                 </div>
               </div>
             )}
 
-            {canManage && (
+            {canManage && AI_FEATURES_ENABLED && (
               <AiDescriptionPanel
                 open={aiPanelOpen}
                 onClose={() => setAiPanelOpen(false)}
@@ -2015,7 +2020,7 @@ export default function PropertyDetailPage() {
               />
             )}
 
-            {canManage && stagingOpen && (
+            {canManage && AI_FEATURES_ENABLED && stagingOpen && (
               <VirtualStagingPanel
                 images={property.images || []}
                 propertyId={property.id || property._id || ""}

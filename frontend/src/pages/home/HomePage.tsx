@@ -5,6 +5,7 @@
 // ===========================================
 
 import { HomeFooter, Navbar } from "@/components/layout";
+import { AI_FEATURES_ENABLED } from "@/config/features";
 import { useTranslation } from "@/i18n";
 import { propertyService } from "@/services/property.service";
 import { useAuthStore, usePreferencesStore } from "@/store";
@@ -449,7 +450,9 @@ export default function HomePage() {
           isAuthenticated &&
           user?.role === UserRole.TENANT &&
           !!user?.id &&
-          preferencesCompleted;
+          preferencesCompleted &&
+          // Best-match comes from ai-services; without it the regular feed shows.
+          AI_FEATURES_ENABLED;
 
         // Keep the section in "Best Match" mode for eligible tenants, even when
         // we need to fallback to regular rental results.

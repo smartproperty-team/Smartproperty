@@ -35,6 +35,7 @@ import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { AiEnabledGuard } from './ai-enabled.guard';
 import { UserRole } from '../users/entities/user.entity';
 import {
   PROPERTY_CREATOR_ROLES,
@@ -233,6 +234,7 @@ export class PropertiesController {
   // ===========================================
 
   @Post('ai/descriptions/generate')
+  @UseGuards(AiEnabledGuard)
   @Roles(...PROPERTY_MANAGEMENT_ROLES, ...PROPERTY_CREATOR_ROLES)
   @ApiOperation({
     summary: 'Generate AI marketing descriptions for a property',
@@ -253,6 +255,7 @@ export class PropertiesController {
   }
 
   @Post('ai/pricing/suggest')
+  @UseGuards(AiEnabledGuard)
   @Roles(...PROPERTY_MANAGEMENT_ROLES, ...PROPERTY_CREATOR_ROLES)
   @ApiOperation({
     summary: 'Get AI price suggestion for a Tunisian property',
@@ -269,6 +272,7 @@ export class PropertiesController {
   }
 
   @Get('ai/model/status')
+  @UseGuards(AiEnabledGuard)
   @Roles(...PROPERTY_MANAGEMENT_ROLES, ...PROPERTY_CREATOR_ROLES)
   @ApiOperation({ summary: 'Get AI marketing model status' })
   @ApiResponse({ status: 200, description: 'Model status payload' })
@@ -277,6 +281,7 @@ export class PropertiesController {
   }
 
   @Get('ai/recommendations/best-match')
+  @UseGuards(AiEnabledGuard)
   @Roles(...TENANT_ONLY_ROLES)
   @ApiOperation({
     summary: 'Get best property matches for the current tenant',

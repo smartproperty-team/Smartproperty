@@ -11,6 +11,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -105,13 +106,19 @@ export class VerificationService {
       key: uploaded.key,
       url: uploaded.url,
       status: VerificationStatus.PENDING,
-      fraudAnalysisStatus: FraudAnalysisStatus.PENDING,
+      // NOT_RUN while AI is switched off, so reviewers see a check that was
+      // skipped rather than one that failed.
+      fraudAnalysisStatus: this.isAiEnabled()
+        ? FraudAnalysisStatus.PENDING
+        : FraudAnalysisStatus.NOT_RUN,
     });
 
     const saved = await this.docRepo.save(doc);
 
     // Fire-and-forget fraud analysis (do not block upload response).
-    void this.runFraudAnalysisInBackground(saved._id.toHexString(), userId);
+    if (this.isAiEnabled()) {
+      void this.runFraudAnalysisInBackground(saved._id.toHexString(), userId);
+    }
 
     // Ensure a tenant verification record exists
     const existing = await this.verificationRepo.findOne({
@@ -478,7 +485,14 @@ export class VerificationService {
 
   // ─── Fraud Analysis ────────────────────────────────────
 
+  private isAiEnabled(): boolean {
+    return this.configService.get<boolean>('app.aiService.enabled') === true;
+  }
+
   async rerunFraudAnalysis(documentId: string) {
+    if (!this.isAiEnabled()) {
+      throw new ServiceUnavailableException('AI features are disabled');
+    }
     const doc = await this.docRepo.findOne({
       where: { _id: new ObjectId(documentId) },
     });

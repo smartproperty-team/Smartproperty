@@ -96,6 +96,33 @@ tokens on a public repository.
 To enable Dependabot alerts as well as its pull requests: **Settings → Code
 security → Dependabot alerts**.
 
+## ai-services is switched off
+
+The Python AI service is not deployed and not analysed. It powers
+description generation, price prediction, virtual staging, virtual tour
+generation, best-match recommendations and document fraud checks. With it
+off:
+
+| Where | What happens |
+|---|---|
+| Backend | `AI_SERVICE_ENABLED` defaults to `false`. AI routes answer 503 *AI features are disabled* without trying to reach the service. Verification uploads still work; their fraud check is recorded as *not run*. |
+| Frontend | AI buttons and panels are hidden unless the build sets `VITE_ENABLE_AI_FEATURES=true`. The home page shows the regular listings instead of best matches. |
+| Analysis | Left out of SonarQube Cloud, CodeQL, Trivy, hadolint and Dependabot. |
+| Local Docker | `docker compose up` does not start it. |
+
+To bring it back:
+
+1. Set `AI_SERVICE_ENABLED=true` and `AI_SERVICE_URL` on the backend
+2. Build the frontend with `VITE_ENABLE_AI_FEATURES=true`
+3. Locally: `docker compose --profile ai up`
+4. Put `ai-services/app` and `ai-services/tests` back in
+   `sonar-project.properties`, add `python` back to the CodeQL matrix and
+   `ai-services/Dockerfile` to the hadolint matrix in `security.yml`, remove
+   `ai-services` from Trivy's `skip-dirs`, and restore the pip and docker
+   entries in `dependabot.yml`
+5. Set `JWT_SECRET` and `FRAUD_ALLOWED_HOSTS` on the service. Both fail
+   closed when unset.
+
 ## What is not automated, and why
 
 **Deployment.** `deploy.yml` is gated behind an `AZURE_DEPLOY_ENABLED`

@@ -40,13 +40,8 @@ updates:
     allow:
       - dependency-type: direct
 
-  - package-ecosystem: pip
-    directory: "/ai-services"
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 3
-    labels: [dependencies, python]
+  # ai-services (pip and docker) is left out while the service is switched
+  # off: updating code nobody runs is noise. See docs/DEVOPS.md to re-enable.
 
   - package-ecosystem: docker
     directory: "/backend"
@@ -56,12 +51,6 @@ updates:
 
   - package-ecosystem: docker
     directory: "/frontend"
-    schedule:
-      interval: weekly
-    labels: [dependencies, docker]
-
-  - package-ecosystem: docker
-    directory: "/ai-services"
     schedule:
       interval: weekly
     labels: [dependencies, docker]
