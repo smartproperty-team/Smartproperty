@@ -28,14 +28,6 @@ export const PROPERTY_MEDIA_UPLOAD_ROLES: UserRole[] = [
   ...PLATFORM_ADMIN_ROLES,
 ];
 
-export const STORAGE_FILE_DELETE_ROLES: UserRole[] = [
-  UserRole.OWNER,
-  UserRole.BRANCH_MANAGER,
-  UserRole.REAL_ESTATE_AGENT,
-  UserRole.RENTAL_MANAGER,
-  ...PLATFORM_ADMIN_ROLES,
-];
-
 export const VERIFICATION_REVIEW_ROLES: UserRole[] = [
   UserRole.BRANCH_MANAGER,
   ...PLATFORM_ADMIN_ROLES,

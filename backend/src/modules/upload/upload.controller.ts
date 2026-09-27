@@ -5,13 +5,9 @@
 import {
   BadRequestException,
   Controller,
-  Delete,
   Get,
-  HttpCode,
-  HttpStatus,
   Param,
   Post,
-  Query,
   UploadedFile,
   UploadedFiles,
   UseGuards,
@@ -31,7 +27,6 @@ import {
   ApiConsumes,
   ApiOperation,
   ApiParam,
-  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -39,10 +34,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import {
-  PROPERTY_MANAGEMENT_ROLES,
-  STORAGE_FILE_DELETE_ROLES,
-} from '../users/role-groups';
+import { PROPERTY_MANAGEMENT_ROLES } from '../users/role-groups';
 import {
   MinioService,
   UploadedFile as UploadedFileResult,
@@ -64,12 +56,6 @@ class UploadResponseDto {
 class MultipleUploadResponseDto {
   files: UploadResponseDto[];
   count: number;
-}
-
-class PresignedUrlResponseDto {
-  url: string;
-  key: string;
-  expiresIn: number;
 }
 
 // ===========================================
@@ -232,32 +218,6 @@ export class UploadController {
   }
 
   // ===========================================
-  // Delete Image
-  // ===========================================
-
-  @Delete('file')
-  @HttpCode(HttpStatus.OK)
-  @Roles(...STORAGE_FILE_DELETE_ROLES)
-  @ApiOperation({ summary: 'Delete a file from storage' })
-  @ApiQuery({ name: 'key', description: 'File key/path to delete' })
-  @ApiResponse({ status: 200, description: 'File deleted successfully' })
-  @ApiResponse({ status: 404, description: 'File not found' })
-  async deleteFile(@Query('key') key: string): Promise<{ message: string }> {
-    if (!key) {
-      throw new BadRequestException('File key is required');
-    }
-
-    const exists = await this.minioService.fileExists(key);
-    if (!exists) {
-      throw new BadRequestException('File not found');
-    }
-
-    await this.minioService.deleteFile(key);
-
-    return { message: 'File deleted successfully' };
-  }
-
-  // ===========================================
   // List Property Images
   // ===========================================
 
@@ -278,44 +238,6 @@ export class UploadController {
     return {
       images: urls,
       count: urls.length,
-    };
-  }
-
-  // ===========================================
-  // Get Presigned Upload URL
-  // ===========================================
-
-  @Get('presigned-url')
-  @ApiOperation({ summary: 'Get a presigned URL for direct upload' })
-  @ApiQuery({ name: 'folder', description: 'Target folder', required: false })
-  @ApiQuery({ name: 'filename', description: 'File name', required: true })
-  @ApiQuery({
-    name: 'expiry',
-    description: 'URL expiry in seconds',
-    required: false,
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Presigned URL generated',
-    type: PresignedUrlResponseDto,
-  })
-  async getPresignedUploadUrl(
-    @Query('folder') folder: string = 'temp',
-    @Query('filename') filename: string,
-    @Query('expiry') expiry: number = 3600,
-    @CurrentUser('id') userId: string,
-  ): Promise<PresignedUrlResponseDto> {
-    if (!filename) {
-      throw new BadRequestException('Filename is required');
-    }
-
-    const key = `${folder}/${userId}/${Date.now()}-${filename}`;
-    const url = await this.minioService.getPresignedUploadUrl(key, expiry);
-
-    return {
-      url,
-      key,
-      expiresIn: expiry,
     };
   }
 }

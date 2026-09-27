@@ -223,30 +223,6 @@ export class MinioService implements OnModuleInit {
     );
   }
 
-  async getPresignedUploadUrl(
-    key: string,
-    expirySeconds?: number,
-  ): Promise<string> {
-    const expiry =
-      expirySeconds ||
-      this.configService.get<number>('minio.presignedUrlExpiry') ||
-      3600;
-    return await this.minioClient.presignedPutObject(
-      this.bucketName,
-      key,
-      expiry,
-    );
-  }
-
-  async fileExists(key: string): Promise<boolean> {
-    try {
-      await this.minioClient.statObject(this.bucketName, key);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
   async listFiles(prefix: string): Promise<string[]> {
     const objects: string[] = [];
     const stream = this.minioClient.listObjects(this.bucketName, prefix, true);

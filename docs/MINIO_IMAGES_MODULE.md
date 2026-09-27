@@ -111,8 +111,6 @@ npm run start:dev
 | `POST` | `/api/upload/property/:propertyId/images` | Upload multiple images |
 | `POST` | `/api/upload/property/:propertyId/image` | Upload single image |
 | `POST` | `/api/upload/user/avatar` | Upload user avatar |
-| `GET` | `/api/upload/presigned-url` | Get presigned URL for direct upload |
-| `DELETE` | `/api/upload/file` | Delete a file by key |
 
 ---
 
