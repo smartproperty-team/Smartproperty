@@ -168,6 +168,8 @@ export const en = {
     statusLabel: "Status",
     allStatuses: "All statuses",
     anyOption: "Any",
+    minPrice: "Min price (TND)",
+    maxPrice: "Max price (TND)",
     cityLabel: "City",
     cityPlaceholder: "City...",
     cityShortPlaceholder: "City",

@@ -1,6 +1,6 @@
 import type { PropertyStatus, PropertyType } from "@/types/property";
 import { Filter, MapPin, Search, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 
 interface AdvancedPropertySearchBarProps {
   searchQuery: string;
@@ -15,6 +15,13 @@ interface AdvancedPropertySearchBarProps {
   onBedroomsChange: (value: string) => void;
   bathroomsValue: string;
   onBathroomsChange: (value: string) => void;
+  /** Price range in TND. The fields show only when both handlers are given. */
+  minPriceValue?: string;
+  onMinPriceChange?: (value: string) => void;
+  maxPriceValue?: string;
+  onMaxPriceChange?: (value: string) => void;
+  /** Start with the filters panel open, e.g. when a filter is active. */
+  defaultFiltersOpen?: boolean;
   onSearch: () => void;
   onReset: () => void;
   onOpenNearbyMap: () => void;
@@ -49,6 +56,8 @@ interface AdvancedPropertySearchBarProps {
     typeLand: string;
     reset: string;
     clearNearby: string;
+    minPrice?: string;
+    maxPrice?: string;
   };
   showCityField?: boolean;
 }
@@ -74,6 +83,11 @@ export default function AdvancedPropertySearchBar({
   onBedroomsChange,
   bathroomsValue,
   onBathroomsChange,
+  minPriceValue = "",
+  onMinPriceChange,
+  maxPriceValue = "",
+  onMaxPriceChange,
+  defaultFiltersOpen = false,
   onSearch,
   onReset,
   onOpenNearbyMap,
@@ -84,7 +98,8 @@ export default function AdvancedPropertySearchBar({
   labels,
   showCityField = true,
 }: AdvancedPropertySearchBarProps) {
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(defaultFiltersOpen);
+  const priceId = useId();
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   const suggestions = useMemo(() => {
@@ -261,6 +276,49 @@ export default function AdvancedPropertySearchBar({
                 <option value="4">4</option>
               </select>
             </div>
+
+            {onMinPriceChange && onMaxPriceChange && (
+              <>
+                <div>
+                  <label
+                    htmlFor={`${priceId}-min`}
+                    className="mb-1 block text-sm font-medium text-slate-700"
+                  >
+                    {labels.minPrice}
+                  </label>
+                  <input
+                    id={`${priceId}-min`}
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    step={100}
+                    placeholder={labels.any}
+                    value={minPriceValue}
+                    onChange={(event) => onMinPriceChange(event.target.value)}
+                    className="h-12 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none ring-blue-500 transition focus:ring-2"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor={`${priceId}-max`}
+                    className="mb-1 block text-sm font-medium text-slate-700"
+                  >
+                    {labels.maxPrice}
+                  </label>
+                  <input
+                    id={`${priceId}-max`}
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    step={100}
+                    placeholder={labels.any}
+                    value={maxPriceValue}
+                    onChange={(event) => onMaxPriceChange(event.target.value)}
+                    className="h-12 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none ring-blue-500 transition focus:ring-2"
+                  />
+                </div>
+              </>
+            )}
 
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">

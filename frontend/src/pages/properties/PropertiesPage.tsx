@@ -165,6 +165,13 @@ export default function PropertiesPage() {
   const [bathroomsText, setBathroomsText] = useState(
     filters.bathrooms?.toString() || "",
   );
+  // Seeded from the URL, so a price chosen on the home page is visible here.
+  const [minPriceText, setMinPriceText] = useState(
+    filters.minPrice?.toString() || "",
+  );
+  const [maxPriceText, setMaxPriceText] = useState(
+    filters.maxPrice?.toString() || "",
+  );
   const [showNearbyPanel, setShowNearbyPanel] = useState(
     filters.nearLat !== undefined && filters.nearLng !== undefined,
   );
@@ -341,6 +348,8 @@ export default function PropertiesPage() {
       city: cityText || undefined,
       bedrooms: parsePositiveIntegerParam(bedroomsText),
       bathrooms: parsePositiveIntegerParam(bathroomsText),
+      minPrice: parsePositiveNumberParam(minPriceText),
+      maxPrice: parsePositiveNumberParam(maxPriceText),
       page: 1,
     };
     setFilters(newFilters);
@@ -353,6 +362,8 @@ export default function PropertiesPage() {
     setCityText("");
     setBedroomsText("");
     setBathroomsText("");
+    setMinPriceText("");
+    setMaxPriceText("");
     setShowNearbyPanel(false);
     setNearbySelectionDraft(undefined);
     setNearbyLocationDraft("");
@@ -602,6 +613,13 @@ export default function PropertiesPage() {
               onBedroomsChange={setBedroomsText}
               bathroomsValue={bathroomsText}
               onBathroomsChange={setBathroomsText}
+              minPriceValue={minPriceText}
+              onMinPriceChange={setMinPriceText}
+              maxPriceValue={maxPriceText}
+              onMaxPriceChange={setMaxPriceText}
+              defaultFiltersOpen={
+                filters.minPrice !== undefined || filters.maxPrice !== undefined
+              }
               onSearch={handleSearch}
               onReset={handleResetFilters}
               onOpenNearbyMap={() => setShowNearbyPanel(true)}
@@ -629,6 +647,8 @@ export default function PropertiesPage() {
                 nearbyTrigger: t.properties.openNearbyMap,
                 nearbyPlaceholder: t.properties.nearbyPlaceholder,
                 any: t.properties.anyOption,
+                minPrice: t.properties.minPrice,
+                maxPrice: t.properties.maxPrice,
                 allTypes: t.properties.allTypes,
                 allStatuses: t.properties.allStatuses,
                 available: t.properties.available,

@@ -172,6 +172,8 @@ export const fr: Translations = {
     statusLabel: "Statut",
     allStatuses: "Tous les statuts",
     anyOption: "Tous",
+    minPrice: "Prix min (TND)",
+    maxPrice: "Prix max (TND)",
     cityLabel: "Ville",
     cityPlaceholder: "Ville...",
     cityShortPlaceholder: "Ville",
