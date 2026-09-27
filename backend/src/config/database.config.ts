@@ -7,7 +7,7 @@ import { registerAs } from '@nestjs/config';
 export const databaseConfig = registerAs('database', () => ({
   // MongoDB connection settings
   host: process.env.MONGODB_HOST || 'localhost',
-  port: parseInt(process.env.MONGODB_PORT ?? '27017', 10),
+  port: Number.parseInt(process.env.MONGODB_PORT ?? '27017', 10),
   database: process.env.MONGODB_DATABASE || 'smartproperty',
   // No fallbacks: validation.schema.ts requires both, so a default here
   // could never apply and would only put a password in the source.

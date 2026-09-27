@@ -152,7 +152,10 @@ export const USER_STATUS_DESCRIPTIONS: Record<string, string> = {
  * Validation Rules
  */
 export const VALIDATION_RULES = {
-  EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+  // Domain labels cannot contain dots, so there is exactly one way to match:
+  // linear time. The previous pattern backtracked quadratically on long
+  // dotted input (1.5 s at 40k characters).
+  EMAIL_REGEX: /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/,
   PASSWORD_REGEX:
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
   PHONE_REGEX: /^\+?[1-9]\d{1,14}$/,

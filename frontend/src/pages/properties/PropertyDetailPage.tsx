@@ -112,17 +112,17 @@ async function geocodeAddress(
     .filter(Boolean)
     .join(", ");
   const r1 = await nominatimSearch(full);
-  if (r1) return { lat: parseFloat(r1.lat), lng: parseFloat(r1.lon), zoom: 17 };
+  if (r1) return { lat: Number.parseFloat(r1.lat), lng: Number.parseFloat(r1.lon), zoom: 17 };
 
   // Strategy 2 — street + city + country
   const mid = [street, city, country].filter(Boolean).join(", ");
   const r2 = await nominatimSearch(mid);
-  if (r2) return { lat: parseFloat(r2.lat), lng: parseFloat(r2.lon), zoom: 16 };
+  if (r2) return { lat: Number.parseFloat(r2.lat), lng: Number.parseFloat(r2.lon), zoom: 16 };
 
   // Strategy 3 — city + state + country (neighbourhood level)
   const broad = [city, state, country].filter(Boolean).join(", ");
   const r3 = await nominatimSearch(broad);
-  if (r3) return { lat: parseFloat(r3.lat), lng: parseFloat(r3.lon), zoom: 13 };
+  if (r3) return { lat: Number.parseFloat(r3.lat), lng: Number.parseFloat(r3.lon), zoom: 13 };
 
   return null;
 }

@@ -252,8 +252,8 @@ export default function AddressInput({
   };
 
   const handleCoordinateChange = (field: "lat" | "lng", val: string) => {
-    const numValue = parseFloat(val);
-    if (isNaN(numValue)) return;
+    const numValue = Number.parseFloat(val);
+    if (Number.isNaN(numValue)) return;
 
     onChange({
       ...value,

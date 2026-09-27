@@ -7,7 +7,7 @@ import { registerAs } from '@nestjs/config';
 export const appConfig = registerAs('app', () => ({
   nodeEnv: process.env.NODE_ENV || 'development',
   name: process.env.APP_NAME || 'SmartProperty API',
-  port: parseInt(process.env.PORT || '3000', 10),
+  port: Number.parseInt(process.env.PORT || '3000', 10),
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
 
   // CORS_ORIGIN may legitimately be a comma-separated allow-list. Links in
@@ -32,7 +32,7 @@ export const appConfig = registerAs('app', () => ({
   aiService: {
     enabled: process.env.AI_SERVICE_ENABLED === 'true',
     url: process.env.AI_SERVICE_URL || 'http://localhost:8000',
-    timeoutMs: parseInt(process.env.AI_SERVICE_TIMEOUT_MS || '60000', 10),
-    retries: parseInt(process.env.AI_SERVICE_RETRIES || '1', 10),
+    timeoutMs: Number.parseInt(process.env.AI_SERVICE_TIMEOUT_MS || '60000', 10),
+    retries: Number.parseInt(process.env.AI_SERVICE_RETRIES || '1', 10),
   },
 }));
