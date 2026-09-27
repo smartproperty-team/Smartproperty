@@ -124,3 +124,6 @@ backend/package-lock.json
 # TypeScript build outputs from `tsc -b` on config files
 # (src/vite-env.d.ts is hand-written and stays tracked)
 frontend/*.config.d.ts
+
+# Backups written by backend/src/seeds/fix-listing-images.ts --apply
+listing-images-backup-*.json

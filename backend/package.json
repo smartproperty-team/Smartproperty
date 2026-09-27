@@ -26,6 +26,7 @@
     "update:properties-validator": "node scripts/update-properties-validator.js",
     "seed:properties": "ts-node -r tsconfig-paths/register src/seeds/seed-properties.ts",
     "seed:all": "ts-node -r tsconfig-paths/register src/seeds/seed-all.ts",
+    "seed:fix-images": "ts-node -r tsconfig-paths/register src/seeds/fix-listing-images.ts",
     "postinstall": "node ./scripts/create-resolve-uri-shim.js"
   },
   "dependencies": {
