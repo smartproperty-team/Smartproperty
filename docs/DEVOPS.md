@@ -4,7 +4,7 @@ Three workflows, separated so each gives feedback at the speed it can.
 
 | Workflow | Triggers | Purpose |
 |---|---|---|
-| `ci.yml` | push, PR | Typecheck, test with coverage, build, SonarCloud |
+| `ci.yml` | push, PR | Typecheck, test with coverage, build, SonarQube Cloud |
 | `security.yml` | push, PR, weekly | Secrets, SAST, dependencies, Dockerfiles, image, SBOM |
 | `deploy.yml` | push to `main` | Build and publish image, deploy to Azure — **currently gated off** |
 
@@ -22,7 +22,7 @@ them.
 | **CodeQL** | Injection, unsafe flows, logic bugs | GitHub-native SAST, free on public repositories, no server to run. Understands data flow rather than matching patterns. |
 | **Trivy** | Vulnerable dependencies and OS packages | One tool for filesystem, image and SBOM, so results are consistent. Free and fast. |
 | **hadolint** | Dockerfile mistakes | Cheap. Would have caught the missing `scripts/` copy that broke the first image build. |
-| **SonarCloud** | Code smells, duplication, coverage, hotspots | Already configured for this project via Jenkins; free for public repositories. Covers quality, which the others do not. |
+| **SonarQube Cloud** (formerly SonarCloud) | Code smells, duplication, coverage, hotspots | Free for public repositories, no server to run. Covers quality, which the others do not. Self-hosting SonarQube on Azure means 2 GB of RAM running around the clock plus a PostgreSQL server, roughly $70-85 a month against a $100 credit. |
 | **Dependabot** | Outdated dependencies | Turns a backlog of 113 advisories into small reviewable pull requests instead of one large upgrade later. |
 
 Everything writes **SARIF** and uploads to GitHub code scanning, so findings
@@ -47,21 +47,39 @@ now.
 
 ## Setup
 
-### SonarCloud (one-time, ~10 minutes)
+### SonarQube Cloud (one-time, ~10 minutes)
 
 1. Sign in at **https://sonarcloud.io** with GitHub
-2. **+ → Analyze new project** → pick `smartproperty-team/Smartproperty`
-3. Choose **With GitHub Actions** — it shows a `SONAR_TOKEN`
-4. Repository **Settings → Secrets and variables → Actions → New repository
+2. **+ → Analyze new project → Import an organization** → pick
+   `smartproperty-team`. This installs the SonarQube Cloud app on the GitHub
+   organisation, so it needs an **organisation owner** — ask one if you are
+   not.
+3. Keep the SonarQube Cloud organisation key as `smartproperty-team`, choose
+   the **Free** plan, then select the `Smartproperty` repository
+4. **Administration → Analysis Method**: turn *Automatic Analysis* **off**.
+   It conflicts with the CI scan, and it cannot read coverage anyway.
+5. On the same page, choose **GitHub Actions**. It shows a `SONAR_TOKEN`.
+6. Repository **Settings → Secrets and variables → Actions → New repository
    secret**, name `SONAR_TOKEN`
-5. In SonarCloud, **Administration → Analysis Method**, turn *Automatic
-   Analysis* **off** — it conflicts with the CI-based scan and the two will
-   fight
-6. Confirm the organisation and project key in `sonar-project.properties`
-   match what SonarCloud created
+7. Confirm the organisation and project key in `sonar-project.properties`
+   match what SonarQube Cloud created (`smartproperty-team_Smartproperty`)
+8. Push, or re-run the CI workflow. The dashboard fills in after the first
+   run.
 
 Until `SONAR_TOKEN` exists the Sonar job skips itself and reports why, rather
-than failing. Nothing else needs configuring.
+than failing.
+
+**Quality gate.** The scan waits for the gate result and reports it in the
+run summary, but a failing gate does not fail the build yet. The default gate
+wants 80% coverage on new code, and the project is far from that. Blocking
+now would turn every push red. Once coverage has caught up, set the
+repository **variable** (not secret) `SONAR_GATE_BLOCKING` to `true` to
+enforce it. No code change is needed.
+
+**Local SonarQube.** `docker compose up -d sonarqube` starts a self-hosted
+server on http://localhost:9092 for the Jenkins pipelines
+(`Jenkinsfile.*-ci`). It is useful for learning the server side: quality
+profiles, custom gates, webhooks. The GitHub pipeline does not use it.
 
 ### Everything else
 

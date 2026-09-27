@@ -320,7 +320,8 @@ services:
   # SonarQube (Code Quality)
   # =====================
   sonarqube:
-    image: sonarqube:lts-community
+    # Not lts-community: that tag is the frozen, end-of-life 9.9 line.
+    image: sonarqube:26.9.0.129388-community
     container_name: smartproperty-sonarqube
     restart: unless-stopped
     ports:
