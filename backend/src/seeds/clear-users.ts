@@ -2,7 +2,7 @@
 // SmartProperty - Clear Users Collection
 // ===========================================
 
-import './load-env';
+import { requireEnv } from './load-env';
 
 import { DataSource } from 'typeorm';
 import { User } from '../modules/users/entities/user.entity';
@@ -14,8 +14,7 @@ async function clearUsers() {
   const dataSource = new DataSource({
     type: 'mongodb',
     url:
-      process.env.MONGODB_URI ||
-      'mongodb://smartproperty_user:smartproperty_pass_2024@localhost:27017/smartproperty?authSource=admin',
+      requireEnv('MONGODB_URI'),
     database: process.env.MONGODB_DATABASE || 'smartproperty',
     // Cosmos DB's Mongo API rejects retryable writes outright. The
     // connection string carries retrywrites=false, but TypeORM builds its
