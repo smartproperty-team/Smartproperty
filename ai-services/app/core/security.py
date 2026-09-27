@@ -43,6 +43,14 @@ async def verify_token(
     
     Raises HTTPException if token is invalid.
     """
+    if not settings.jwt_secret:
+        # Fail closed. With no secret there is nothing to verify against,
+        # and a built-in fallback would be public in this repository.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication is not configured",
+        )
+
     token = credentials.credentials
     
     try:
