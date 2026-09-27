@@ -324,23 +324,6 @@ export default function LoginPage() {
                 </CardFooter>
               </form>
             </Card>
-
-            <div className="auth-note mt-6 rounded-lg border border-home-border p-4">
-              <p className="text-center text-sm text-home-muted">
-                <span className="font-medium">Testing?</span> Register a new
-                account or use the API docs at{" "}
-                <a
-                  href="http://localhost:3000/api/docs"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Open API docs (opens in new tab)"
-                  className="text-home-primary hover:underline"
-                >
-                  localhost:3000/api/docs
-                  <span className="sr-only"> (opens in a new tab)</span>
-                </a>
-              </p>
-            </div>
           </div>
         </main>
       </div>

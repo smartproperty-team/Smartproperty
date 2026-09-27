@@ -2,6 +2,8 @@
 // SmartProperty - Properties List Page
 // ===========================================
 
+import { CompareShareActions } from "@/components/properties/CompareShareActions";
+import { ListingCard } from "@/components/properties/ListingCard";
 import { HomeFooter, Navbar } from "@/components/layout";
 import AdvancedPropertySearchBar from "@/components/properties/AdvancedPropertySearchBar";
 import PropertyMapView from "@/components/properties/PropertyMapView";
@@ -24,63 +26,6 @@ import "./properties.css";
 // ===========================================
 // Icons
 // ===========================================
-
-const LocationIcon = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
-    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-    <circle cx="12" cy="10" r="3" />
-  </svg>
-);
-
-const BedIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
-    <path d="M3 7v11a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7" />
-    <path d="M21 7H3l2-4h14l2 4z" />
-  </svg>
-);
-
-const BathIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
-    <path d="M4 12h16a1 1 0 0 1 1 1v3a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-3a1 1 0 0 1 1-1z" />
-    <path d="M6 12V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v7" />
-  </svg>
-);
-
-const AreaIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
-    <rect x="3" y="3" width="18" height="18" rx="2" />
-    <path d="M3 9h18" />
-    <path d="M9 21V9" />
-  </svg>
-);
 
 const PlusIcon = () => (
   <svg
@@ -137,178 +82,6 @@ const MapIcon = () => (
     <line x1="15" y1="6" x2="15" y2="21" />
   </svg>
 );
-
-// ===========================================
-// Property Card Component
-// ===========================================
-
-interface PropertyCardProps {
-  property: Property;
-  onToggleCompare?: (property: Property) => void;
-  onQuickShare?: (property: Property) => void;
-  isCompared?: boolean;
-  compareDisabled?: boolean;
-  isSharing?: boolean;
-  isHighlighted?: boolean;
-  onMouseEnter?: (id: string) => void;
-  onMouseLeave?: () => void;
-  t: ReturnType<typeof import("@/i18n").useTranslation>;
-}
-
-function PropertyCard({
-  property,
-  onToggleCompare,
-  onQuickShare,
-  isCompared = false,
-  compareDisabled = false,
-  isSharing = false,
-  isHighlighted = false,
-  onMouseEnter,
-  onMouseLeave,
-  t,
-}: PropertyCardProps) {
-  const propertyId = property.id || property._id || "";
-  const sortedImages = [...(property.images ?? [])].sort((a, b) => {
-    if (a.isPrimary) return -1;
-    if (b.isPrimary) return 1;
-    return (a.order || 0) - (b.order || 0);
-  });
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-
-  useEffect(() => {
-    setSelectedImageIndex(0);
-  }, [propertyId, sortedImages.length]);
-
-  const currentImage = sortedImages[selectedImageIndex] || sortedImages[0];
-  const imageUrl = currentImage?.url || "/placeholder-property.svg";
-  const hasMultipleImages = sortedImages.length > 1;
-
-  const statusLabel =
-    property.status === "available"
-      ? t.properties.available
-      : property.status === "rented"
-        ? t.properties.rented
-        : property.status === "maintenance"
-          ? t.properties.maintenance
-          : t.properties.unlisted;
-
-  const typeLabel =
-    property.type === "apartment"
-      ? t.properties.typeApartment
-      : property.type === "house"
-        ? t.properties.typeHouse
-        : property.type === "villa"
-          ? t.properties.typeVilla
-          : property.type === "studio"
-            ? t.properties.typeStudio
-            : property.type === "condo"
-              ? t.properties.typeCondo
-              : t.properties.typeLand;
-
-  return (
-    <article
-      className={`property-card${isHighlighted ? " highlighted" : ""}`}
-      aria-label={property.title}
-      onMouseEnter={() => onMouseEnter?.(propertyId)}
-      onMouseLeave={() => onMouseLeave?.()}
-    >
-      <div className="property-card-image">
-        <img
-          src={imageUrl}
-          alt={property.title}
-          loading="lazy"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = "/placeholder-property.svg";
-          }}
-        />
-        <span className={`property-badge ${property.status}`}>
-          {statusLabel}
-        </span>
-        <span className="property-type-badge">{typeLabel}</span>
-        {hasMultipleImages && (
-          <div className="property-image-dots" aria-label="Property images">
-            {sortedImages.map((_, index) => (
-              <button
-                key={`${propertyId}-img-${index}`}
-                type="button"
-                className={`property-image-dot ${
-                  index === selectedImageIndex ? "active" : ""
-                }`}
-                aria-label={`Show image ${index + 1}`}
-                aria-pressed={index === selectedImageIndex}
-                onClick={() => setSelectedImageIndex(index)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="property-card-content">
-        <h3 className="property-title">{property.title}</h3>
-
-        <p className="property-address">
-          <LocationIcon />
-          {property.address.city}, {property.address.country}
-        </p>
-
-        <dl className="property-meta">
-          {property.features?.bedrooms !== undefined && (
-            <div className="meta-item">
-              <BedIcon />
-              <dd>
-                {property.features.bedrooms} {t.properties.beds}
-              </dd>
-            </div>
-          )}
-          {property.features?.bathrooms !== undefined && (
-            <div className="meta-item">
-              <BathIcon />
-              <dd>
-                {property.features.bathrooms} {t.properties.baths}
-              </dd>
-            </div>
-          )}
-          {property.features?.area !== undefined && (
-            <div className="meta-item">
-              <AreaIcon />
-              <dd>{property.features.area} m²</dd>
-            </div>
-          )}
-        </dl>
-
-        <div className="property-price">
-          <span className="price">{property.price.toLocaleString()}</span>
-          <span className="currency">{property.currency}</span>
-        </div>
-
-        <button
-          type="button"
-          className={`btn-compare-toggle ${isCompared ? "active" : ""}`}
-          disabled={compareDisabled && !isCompared}
-          onClick={() => onToggleCompare?.(property)}
-        >
-          {isCompared
-            ? t.properties.removeFromCompare
-            : t.properties.addToCompare}
-        </button>
-
-        <div className="property-card-actions">
-          <Link to={`/properties/${propertyId}`} className="btn-view">
-            {t.properties.viewBtn}
-          </Link>
-          <button
-            type="button"
-            className="btn-share"
-            onClick={() => onQuickShare?.(property)}
-            disabled={isSharing}
-          >
-            {isSharing ? t.common.loading : t.properties.shareBtn}
-          </button>
-        </div>
-      </div>
-    </article>
-  );
-}
 
 // ===========================================
 // Main Properties Page
@@ -392,6 +165,13 @@ export default function PropertiesPage() {
   );
   const [bathroomsText, setBathroomsText] = useState(
     filters.bathrooms?.toString() || "",
+  );
+  // Seeded from the URL, so a price chosen on the home page is visible here.
+  const [minPriceText, setMinPriceText] = useState(
+    filters.minPrice?.toString() || "",
+  );
+  const [maxPriceText, setMaxPriceText] = useState(
+    filters.maxPrice?.toString() || "",
   );
   const [showNearbyPanel, setShowNearbyPanel] = useState(
     filters.nearLat !== undefined && filters.nearLng !== undefined,
@@ -569,6 +349,8 @@ export default function PropertiesPage() {
       city: cityText || undefined,
       bedrooms: parsePositiveIntegerParam(bedroomsText),
       bathrooms: parsePositiveIntegerParam(bathroomsText),
+      minPrice: parsePositiveNumberParam(minPriceText),
+      maxPrice: parsePositiveNumberParam(maxPriceText),
       page: 1,
     };
     setFilters(newFilters);
@@ -581,6 +363,8 @@ export default function PropertiesPage() {
     setCityText("");
     setBedroomsText("");
     setBathroomsText("");
+    setMinPriceText("");
+    setMaxPriceText("");
     setShowNearbyPanel(false);
     setNearbySelectionDraft(undefined);
     setNearbyLocationDraft("");
@@ -800,6 +584,13 @@ export default function PropertiesPage() {
               onBedroomsChange={setBedroomsText}
               bathroomsValue={bathroomsText}
               onBathroomsChange={setBathroomsText}
+              minPriceValue={minPriceText}
+              onMinPriceChange={setMinPriceText}
+              maxPriceValue={maxPriceText}
+              onMaxPriceChange={setMaxPriceText}
+              defaultFiltersOpen={
+                filters.minPrice !== undefined || filters.maxPrice !== undefined
+              }
               onSearch={handleSearch}
               onReset={handleResetFilters}
               onOpenNearbyMap={() => setShowNearbyPanel(true)}
@@ -827,6 +618,8 @@ export default function PropertiesPage() {
                 nearbyTrigger: t.properties.openNearbyMap,
                 nearbyPlaceholder: t.properties.nearbyPlaceholder,
                 any: t.properties.anyOption,
+                minPrice: t.properties.minPrice,
+                maxPrice: t.properties.maxPrice,
                 allTypes: t.properties.allTypes,
                 allStatuses: t.properties.allStatuses,
                 available: t.properties.available,
@@ -1106,20 +899,28 @@ export default function PropertiesPage() {
             <div className="properties-list-panel">
               <div className="properties-grid">
                 {properties.map((property) => (
-                  <PropertyCard
-                    key={property.id || property._id}
+                  <ListingCard
+                    key={getPropertyId(property)}
                     property={property}
-                    onToggleCompare={handleToggleCompare}
-                    onQuickShare={handleQuickShare}
-                    isCompared={comparisonIds.includes(getPropertyId(property))}
-                    compareDisabled={comparisonIds.length >= 3}
-                    isSharing={sharingPropertyId === getPropertyId(property)}
-                    isHighlighted={
-                      hoveredPropertyId === getPropertyId(property)
+                    gallery
+                    highlighted={hoveredPropertyId === getPropertyId(property)}
+                    onMouseEnter={() =>
+                      setHoveredPropertyId(getPropertyId(property))
                     }
-                    onMouseEnter={setHoveredPropertyId}
                     onMouseLeave={() => setHoveredPropertyId(null)}
-                    t={t}
+                    actions={
+                      <CompareShareActions
+                        isCompared={comparisonIds.includes(
+                          getPropertyId(property),
+                        )}
+                        compareFull={comparisonIds.length >= 3}
+                        isSharing={
+                          sharingPropertyId === getPropertyId(property)
+                        }
+                        onToggleCompare={() => handleToggleCompare(property)}
+                        onShare={() => handleQuickShare(property)}
+                      />
+                    }
                   />
                 ))}
               </div>
@@ -1182,15 +983,21 @@ export default function PropertiesPage() {
             {/* Properties Grid */}
             <div className="properties-grid">
               {properties.map((property) => (
-                <PropertyCard
-                  key={property.id || property._id}
+                <ListingCard
+                  key={getPropertyId(property)}
                   property={property}
-                  onToggleCompare={handleToggleCompare}
-                  onQuickShare={handleQuickShare}
-                  isCompared={comparisonIds.includes(getPropertyId(property))}
-                  compareDisabled={comparisonIds.length >= 3}
-                  isSharing={sharingPropertyId === getPropertyId(property)}
-                  t={t}
+                  gallery
+                  actions={
+                    <CompareShareActions
+                      isCompared={comparisonIds.includes(
+                        getPropertyId(property),
+                      )}
+                      compareFull={comparisonIds.length >= 3}
+                      isSharing={sharingPropertyId === getPropertyId(property)}
+                      onToggleCompare={() => handleToggleCompare(property)}
+                      onShare={() => handleQuickShare(property)}
+                    />
+                  }
                 />
               ))}
             </div>

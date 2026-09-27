@@ -67,6 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.meta.outputs.image }}
+      digest: ${{ steps.build.outputs.digest }}
     steps:
       - uses: actions/checkout@v4
 
@@ -84,6 +85,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: ./backend
@@ -96,6 +98,23 @@ jobs:
             ${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Report the image to deploy
+        # Deployment is manual while CD is gated off (see docs/DEVOPS.md), so
+        # print the exact reference to use. Deploying by digest pins the build
+        # that passed this run, and needs no Docker on the deploying machine.
+        env:
+          REF: ${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+        run: |
+          {
+            echo "### API image"
+            echo ""
+            echo "Built from ${GITHUB_SHA}. Deploy exactly this build with:"
+            echo ""
+            echo '```'
+            echo "az containerapp update -n <app> -g rg-smartproperty --image ${REF}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # ---------------------------------------------------------------
   deploy-backend:
@@ -129,7 +148,7 @@ jobs:
           resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
           template: infra/main.bicep
           parameters: >-
-            backendImage=${{ needs.build-image.outputs.image }}
+            backendImage=${{ env.IMAGE_NAME }}@${{ needs.build-image.outputs.digest }}
             apiNameSuffix=${{ vars.API_NAME_SUFFIX }}
             ghcrUsername=${{ github.actor }}
             ghcrToken=${{ secrets.GHCR_PULL_TOKEN }}
@@ -149,7 +168,7 @@ jobs:
 
       - name: Roll the API to this image
         run: |
-          az containerapp update             --name "${{ steps.appname.outputs.name }}"             --resource-group "$AZURE_RESOURCE_GROUP"             --image "${{ needs.build-image.outputs.image }}"
+          az containerapp update             --name "${{ steps.appname.outputs.name }}"             --resource-group "$AZURE_RESOURCE_GROUP"             --image "${{ env.IMAGE_NAME }}@${{ needs.build-image.outputs.digest }}"
 
       - name: Read deployed URLs
         id: urls

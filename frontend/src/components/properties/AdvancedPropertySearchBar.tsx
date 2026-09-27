@@ -1,6 +1,6 @@
 import type { PropertyStatus, PropertyType } from "@/types/property";
 import { Filter, MapPin, Search, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 
 interface AdvancedPropertySearchBarProps {
   searchQuery: string;
@@ -15,6 +15,13 @@ interface AdvancedPropertySearchBarProps {
   onBedroomsChange: (value: string) => void;
   bathroomsValue: string;
   onBathroomsChange: (value: string) => void;
+  /** Price range in TND. The fields show only when both handlers are given. */
+  minPriceValue?: string;
+  onMinPriceChange?: (value: string) => void;
+  maxPriceValue?: string;
+  onMaxPriceChange?: (value: string) => void;
+  /** Start with the filters panel open, e.g. when a filter is active. */
+  defaultFiltersOpen?: boolean;
   onSearch: () => void;
   onReset: () => void;
   onOpenNearbyMap: () => void;
@@ -49,6 +56,8 @@ interface AdvancedPropertySearchBarProps {
     typeLand: string;
     reset: string;
     clearNearby: string;
+    minPrice?: string;
+    maxPrice?: string;
   };
   showCityField?: boolean;
 }
@@ -74,6 +83,11 @@ export default function AdvancedPropertySearchBar({
   onBedroomsChange,
   bathroomsValue,
   onBathroomsChange,
+  minPriceValue = "",
+  onMinPriceChange,
+  maxPriceValue = "",
+  onMaxPriceChange,
+  defaultFiltersOpen = false,
   onSearch,
   onReset,
   onOpenNearbyMap,
@@ -84,7 +98,8 @@ export default function AdvancedPropertySearchBar({
   labels,
   showCityField = true,
 }: AdvancedPropertySearchBarProps) {
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(defaultFiltersOpen);
+  const fieldId = useId();
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   const suggestions = useMemo(() => {
@@ -178,10 +193,14 @@ export default function AdvancedPropertySearchBar({
         <div id="property-advanced-filters" className="bg-slate-50 p-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">
+              <label
+                htmlFor={`${fieldId}-type`}
+                className="mb-1 block text-sm font-medium text-slate-700"
+              >
                 {labels.type}
               </label>
               <select
+                id={`${fieldId}-type`}
                 value={typeValue || ""}
                 onChange={(event) => onTypeChange(event.target.value)}
                 className="h-12 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none ring-blue-500 transition focus:ring-2"
@@ -197,10 +216,14 @@ export default function AdvancedPropertySearchBar({
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">
+              <label
+                htmlFor={`${fieldId}-status`}
+                className="mb-1 block text-sm font-medium text-slate-700"
+              >
                 {labels.status}
               </label>
               <select
+                id={`${fieldId}-status`}
                 value={statusValue || ""}
                 onChange={(event) => onStatusChange(event.target.value)}
                 className="h-12 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none ring-blue-500 transition focus:ring-2"
@@ -215,10 +238,14 @@ export default function AdvancedPropertySearchBar({
 
             {showCityField && (
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">
+                <label
+                  htmlFor={`${fieldId}-city`}
+                  className="mb-1 block text-sm font-medium text-slate-700"
+                >
                   {labels.city}
                 </label>
                 <input
+                  id={`${fieldId}-city`}
                   type="text"
                   value={cityValue}
                   onChange={(event) => onCityChange(event.target.value)}
@@ -229,10 +256,14 @@ export default function AdvancedPropertySearchBar({
             )}
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">
+              <label
+                htmlFor={`${fieldId}-bedrooms`}
+                className="mb-1 block text-sm font-medium text-slate-700"
+              >
                 {labels.bedrooms}
               </label>
               <select
+                id={`${fieldId}-bedrooms`}
                 value={bedroomsValue}
                 onChange={(event) => onBedroomsChange(event.target.value)}
                 className="h-12 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none ring-blue-500 transition focus:ring-2"
@@ -246,10 +277,14 @@ export default function AdvancedPropertySearchBar({
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">
+              <label
+                htmlFor={`${fieldId}-bathrooms`}
+                className="mb-1 block text-sm font-medium text-slate-700"
+              >
                 {labels.bathrooms}
               </label>
               <select
+                id={`${fieldId}-bathrooms`}
                 value={bathroomsValue}
                 onChange={(event) => onBathroomsChange(event.target.value)}
                 className="h-12 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none ring-blue-500 transition focus:ring-2"
@@ -261,6 +296,49 @@ export default function AdvancedPropertySearchBar({
                 <option value="4">4</option>
               </select>
             </div>
+
+            {onMinPriceChange && onMaxPriceChange && (
+              <>
+                <div>
+                  <label
+                    htmlFor={`${fieldId}-min`}
+                    className="mb-1 block text-sm font-medium text-slate-700"
+                  >
+                    {labels.minPrice}
+                  </label>
+                  <input
+                    id={`${fieldId}-min`}
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    step={100}
+                    placeholder={labels.any}
+                    value={minPriceValue}
+                    onChange={(event) => onMinPriceChange(event.target.value)}
+                    className="h-12 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none ring-blue-500 transition focus:ring-2"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor={`${fieldId}-max`}
+                    className="mb-1 block text-sm font-medium text-slate-700"
+                  >
+                    {labels.maxPrice}
+                  </label>
+                  <input
+                    id={`${fieldId}-max`}
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    step={100}
+                    placeholder={labels.any}
+                    value={maxPriceValue}
+                    onChange={(event) => onMaxPriceChange(event.target.value)}
+                    className="h-12 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none ring-blue-500 transition focus:ring-2"
+                  />
+                </div>
+              </>
+            )}
 
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">

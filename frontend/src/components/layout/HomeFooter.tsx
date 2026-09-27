@@ -68,7 +68,7 @@ export default function HomeFooter() {
               <Link to="/properties?type=villa">{t.home.villa}</Link>
             </li>
             <li>
-              <Link to="/properties?type=office">{t.home.office}</Link>
+              <Link to="/properties?type=studio">{t.home.studio}</Link>
             </li>
           </ul>
         </nav>
@@ -90,6 +90,10 @@ export default function HomeFooter() {
         <p>
           &copy; {year} SmartProperty. {t.siteFooter.rights}
         </p>
+        <nav className="site-footer-legal" aria-label={t.legal.navLabel}>
+          <Link to="/privacy">{t.legal.privacy}</Link>
+          <Link to="/terms">{t.legal.terms}</Link>
+        </nav>
       </div>
     </footer>
   );

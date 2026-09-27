@@ -35,6 +35,13 @@ export const fr: Translations = {
   },
 
   // ---- Home Page ----
+  legal: {
+    navLabel: "Informations légales",
+    privacy: "Politique de confidentialité",
+    terms: "Conditions d'utilisation",
+    agreePrefix: "En créant un compte, vous acceptez les",
+    agreeMiddle: "et prenez connaissance de la",
+  },
   siteFooter: {
     tagline:
       "Des biens à vendre et à louer partout en Tunisie, avec candidatures, baux et maintenance dans un seul compte.",
@@ -60,7 +67,7 @@ export const fr: Translations = {
     apartment: "Appartement",
     house: "Maison",
     villa: "Villa",
-    office: "Bureau",
+    studio: "Studio",
     fieldRooms: "Chambres",
     anyRooms: "Indifférent",
     fieldBudget: "Budget",
@@ -165,6 +172,8 @@ export const fr: Translations = {
     statusLabel: "Statut",
     allStatuses: "Tous les statuts",
     anyOption: "Tous",
+    minPrice: "Prix min (TND)",
+    maxPrice: "Prix max (TND)",
     cityLabel: "Ville",
     cityPlaceholder: "Ville...",
     cityShortPlaceholder: "Ville",

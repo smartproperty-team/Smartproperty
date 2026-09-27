@@ -221,17 +221,17 @@ async function seedProperties() {
         },
         images: [
           {
-            url: toPublicImageUrl('tq_4mbtfjfs1k-qkmj-1500h.png'),
-            key: 'seed/tq_4mbtfjfs1k-qkmj-1500h.png',
+            url: toPublicImageUrl('tq_4mbtfjfs1k-qkmj-1500h.webp'),
+            key: 'seed/tq_4mbtfjfs1k-qkmj-1500h.webp',
             caption: 'Main facade',
             isPrimary: true,
             order: 0,
             uploadedAt: now,
           },
           {
-            url: toPublicImageUrl('tq_g0llmth1q9-t1v-200h.png'),
-            key: 'seed/tq_g0llmth1q9-t1v-200h.png',
-            caption: 'Outdoor lounge',
+            url: toPublicImageUrl('tq_zli_mi6kgi-62r4-1500h.webp'),
+            key: 'seed/tq_zli_mi6kgi-62r4-1500h.webp',
+            caption: 'Villa exterior',
             isPrimary: false,
             order: 1,
             uploadedAt: now,
@@ -275,17 +275,17 @@ async function seedProperties() {
         },
         images: [
           {
-            url: toPublicImageUrl('tq_a7h2f2xeaz-7bp-1500h.png'),
-            key: 'seed/tq_a7h2f2xeaz-7bp-1500h.png',
+            url: toPublicImageUrl('tq_a7h2f2xeaz-7bp-1500h.webp'),
+            key: 'seed/tq_a7h2f2xeaz-7bp-1500h.webp',
             caption: 'Front facade',
             isPrimary: true,
             order: 0,
             uploadedAt: now,
           },
           {
-            url: toPublicImageUrl('tq_gbgopwda6u-gudd-200h.png'),
-            key: 'seed/tq_gbgopwda6u-gudd-200h.png',
-            caption: 'Terrace detail',
+            url: toPublicImageUrl('tq_kacx_subrj-k4pl-1500h.webp'),
+            key: 'seed/tq_kacx_subrj-k4pl-1500h.webp',
+            caption: 'Living room',
             isPrimary: false,
             order: 1,
             uploadedAt: now,
@@ -329,17 +329,17 @@ async function seedProperties() {
         },
         images: [
           {
-            url: toPublicImageUrl('tq_b4rcqm58py-gcw-1500h.png'),
-            key: 'seed/tq_b4rcqm58py-gcw-1500h.png',
+            url: toPublicImageUrl('tq_b4rcqm58py-gcw-1500h.webp'),
+            key: 'seed/tq_b4rcqm58py-gcw-1500h.webp',
             caption: 'Garden entrance',
             isPrimary: true,
             order: 0,
             uploadedAt: now,
           },
           {
-            url: toPublicImageUrl('tq_h51ykrmpmt-3ssc-200h.png'),
-            key: 'seed/tq_h51ykrmpmt-3ssc-200h.png',
-            caption: 'Patio corner',
+            url: toPublicImageUrl('tq_nolfwamtip-r06-700h.webp'),
+            key: 'seed/tq_nolfwamtip-r06-700h.webp',
+            caption: 'Front of the house',
             isPrimary: false,
             order: 1,
             uploadedAt: now,
@@ -383,8 +383,8 @@ async function seedProperties() {
         },
         images: [
           {
-            url: toPublicImageUrl('tq_brzn8uwaca-vatm-1500h.png'),
-            key: 'seed/tq_brzn8uwaca-vatm-1500h.png',
+            url: toPublicImageUrl('tq_brzn8uwaca-vatm-1500h.webp'),
+            key: 'seed/tq_brzn8uwaca-vatm-1500h.webp',
             caption: 'Poolside deck',
             isPrimary: true,
             order: 0,
@@ -429,8 +429,8 @@ async function seedProperties() {
         },
         images: [
           {
-            url: toPublicImageUrl('tq_eg61ro6xoc-8z2e-1500h.png'),
-            key: 'seed/tq_eg61ro6xoc-8z2e-1500h.png',
+            url: toPublicImageUrl('tq_eg61ro6xoc-8z2e-1500h.webp'),
+            key: 'seed/tq_eg61ro6xoc-8z2e-1500h.webp',
             caption: 'Living area',
             isPrimary: true,
             order: 0,
@@ -470,8 +470,8 @@ async function seedProperties() {
         },
         images: [
           {
-            url: toPublicImageUrl('tq_ev3u-afbuo-tv-1500h.png'),
-            key: 'seed/tq_ev3u-afbuo-tv-1500h.png',
+            url: toPublicImageUrl('tq_ev3u-afbuo-tv-1500h.webp'),
+            key: 'seed/tq_ev3u-afbuo-tv-1500h.webp',
             caption: 'Condo exterior',
             isPrimary: true,
             order: 0,
@@ -512,8 +512,8 @@ async function seedProperties() {
         },
         images: [
           {
-            url: toPublicImageUrl('tq_fqz__chb9i-7br-1500h.png'),
-            key: 'seed/tq_fqz__chb9i-7br-1500h.png',
+            url: toPublicImageUrl('tq_fqz__chb9i-7br-1500h.webp'),
+            key: 'seed/tq_fqz__chb9i-7br-1500h.webp',
             caption: 'Main garden facade',
             isPrimary: true,
             order: 0,
@@ -557,9 +557,9 @@ async function seedProperties() {
         },
         images: [
           {
-            url: toPublicImageUrl('tq_g0llmth1q9-t1v-200h.png'),
-            key: 'seed/tq_g0llmth1q9-t1v-200h.png',
-            caption: 'Studio preview',
+            url: toPublicImageUrl('tq_n3wuetzgxm-8cio-1500h.webp'),
+            key: 'seed/tq_n3wuetzgxm-8cio-1500h.webp',
+            caption: 'Living and dining area',
             isPrimary: true,
             order: 0,
             uploadedAt: now,

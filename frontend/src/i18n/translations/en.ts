@@ -33,6 +33,13 @@ export const en = {
   },
 
   // ---- Home Page ----
+  legal: {
+    navLabel: "Legal",
+    privacy: "Privacy Policy",
+    terms: "Terms of Use",
+    agreePrefix: "By creating an account, you agree to the",
+    agreeMiddle: "and acknowledge the",
+  },
   siteFooter: {
     tagline:
       "Homes for sale and rent across Tunisia, with applications, leases and maintenance in one account.",
@@ -58,7 +65,7 @@ export const en = {
     apartment: "Apartment",
     house: "House",
     villa: "Villa",
-    office: "Office",
+    studio: "Studio",
     fieldRooms: "Bedrooms",
     anyRooms: "Any",
     fieldBudget: "Budget",
@@ -161,6 +168,8 @@ export const en = {
     statusLabel: "Status",
     allStatuses: "All statuses",
     anyOption: "Any",
+    minPrice: "Min price (TND)",
+    maxPrice: "Max price (TND)",
     cityLabel: "City",
     cityPlaceholder: "City...",
     cityShortPlaceholder: "City",

@@ -30,6 +30,12 @@ export default defineConfig({
             return undefined;
           }
 
+          // Stripe - only the payment page needs it. Checked before the
+          // React rule, which would otherwise catch @stripe/react-stripe-js.
+          if (id.includes("@stripe/")) {
+            return "stripe-vendor";
+          }
+
           // Core React - loaded on every page
           if (
             id.includes("react") ||

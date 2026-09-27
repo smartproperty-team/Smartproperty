@@ -36,9 +36,7 @@ const RegisterPage = lazy(() => import("./pages/auth/RegisterPage"));
 const ForgotPasswordPage = lazy(
   () => import("./pages/auth/ForgotPasswordPage"),
 );
-const ResetPasswordPage = lazy(
-  () => import("./pages/auth/ResetPasswordPage"),
-);
+const ResetPasswordPage = lazy(() => import("./pages/auth/ResetPasswordPage"));
 const VerifyEmailPage = lazy(() => import("./pages/auth/VerifyEmailPage"));
 const GoogleCallbackPage = lazy(
   () => import("./pages/auth/GoogleCallbackPage"),
@@ -86,6 +84,7 @@ const BranchManagerAgencyOnboardingPage = lazy(
 );
 
 // Property pages
+const LegalPage = lazy(() => import("./pages/legal/LegalPage"));
 const PropertiesPage = lazy(() => import("./pages/properties/PropertiesPage"));
 const MyPropertiesPage = lazy(
   () => import("./pages/properties/MyPropertiesPage"),
@@ -542,6 +541,10 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Legal */}
+          <Route path="/privacy" element={<LegalPage kind="privacy" />} />
+          <Route path="/terms" element={<LegalPage kind="terms" />} />
 
           {/* Properties Routes */}
           <Route path="/properties" element={<PropertiesPage />} />

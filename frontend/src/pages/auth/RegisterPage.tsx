@@ -10,6 +10,7 @@ import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { HomeFooter, Navbar } from "../../components/layout";
+import { useTranslation } from "../../i18n";
 import {
   Alert,
   Button,
@@ -77,6 +78,7 @@ const registerSchema = z
 type RegisterFormData = z.input<typeof registerSchema>;
 
 export default function RegisterPage() {
+  const t = useTranslation();
   const navigate = useNavigate();
   const {
     register: registerUser,
@@ -298,22 +300,17 @@ export default function RegisterPage() {
               </form>
             </Card>
 
-            <div className="auth-note mt-6 rounded-lg border border-home-border p-4">
-              <p className="text-center text-sm text-home-muted">
-                <span className="font-medium">Testing?</span> Register a new
-                account or use the API docs at{" "}
-                <a
-                  href="http://localhost:3000/api/docs"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Open API docs (opens in new tab)"
-                  className="text-home-primary hover:underline"
-                >
-                  localhost:3000/api/docs
-                  <span className="sr-only"> (opens in a new tab)</span>
-                </a>
-              </p>
-            </div>
+            <p className="auth-note mt-6 text-center text-sm text-home-muted">
+              {t.legal.agreePrefix}{" "}
+              <Link to="/terms" className="text-home-primary underline">
+                {t.legal.terms}
+              </Link>{" "}
+              {t.legal.agreeMiddle}{" "}
+              <Link to="/privacy" className="text-home-primary underline">
+                {t.legal.privacy}
+              </Link>
+              .
+            </p>
           </div>
         </main>
       </div>

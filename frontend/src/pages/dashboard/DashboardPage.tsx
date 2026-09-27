@@ -2459,69 +2459,71 @@ export default function DashboardPage() {
             </Card>
           )}
 
-          {/* API Testing Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle>🧪 API Testing Tools</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <a
-                  href="http://localhost:3000/api/docs"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Open Swagger API docs (opens in new tab)"
-                  className="flex items-center rounded-lg border border-gray-200 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100">
-                    <FileText className="h-5 w-5 text-indigo-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="font-medium text-gray-900">
-                      Swagger API Docs
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      localhost:3000/api/docs
-                    </p>
-                  </div>
-                </a>
+          {/* Local developer tools (Swagger, MailHog on localhost): development builds only. */}
+          {import.meta.env.DEV && (
+            <Card>
+              <CardHeader>
+                <CardTitle>🧪 API Testing Tools</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <a
+                    href="http://localhost:3000/api/docs"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open Swagger API docs (opens in new tab)"
+                    className="flex items-center rounded-lg border border-gray-200 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100">
+                      <FileText className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <div className="ml-3">
+                      <p className="font-medium text-gray-900">
+                        Swagger API Docs
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        localhost:3000/api/docs
+                      </p>
+                    </div>
+                  </a>
 
-                <a
-                  href="http://localhost:8025"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Open MailHog (opens in new tab)"
-                  className="flex items-center rounded-lg border border-gray-200 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
-                    <Mail className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="font-medium text-gray-900">MailHog</p>
-                    <p className="text-sm text-gray-500">View sent emails</p>
-                  </div>
-                </a>
+                  <a
+                    href="http://localhost:8025"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open MailHog (opens in new tab)"
+                    className="flex items-center rounded-lg border border-gray-200 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
+                      <Mail className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div className="ml-3">
+                      <p className="font-medium text-gray-900">MailHog</p>
+                      <p className="text-sm text-gray-500">View sent emails</p>
+                    </div>
+                  </a>
 
-                <a
-                  href="http://localhost:8081"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Open Mongo Express (opens in new tab)"
-                  className="flex items-center rounded-lg border border-gray-200 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
-                    <Building2 className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="font-medium text-gray-900">Mongo Express</p>
-                    <p className="text-sm text-gray-500">
-                      Database super administrator
-                    </p>
-                  </div>
-                </a>
-              </div>
-            </CardContent>
-          </Card>
+                  <a
+                    href="http://localhost:8081"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open Mongo Express (opens in new tab)"
+                    className="flex items-center rounded-lg border border-gray-200 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
+                      <Building2 className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div className="ml-3">
+                      <p className="font-medium text-gray-900">Mongo Express</p>
+                      <p className="text-sm text-gray-500">
+                        Database super administrator
+                      </p>
+                    </div>
+                  </a>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </main>
       </div>
       {withdrawDraft && (
