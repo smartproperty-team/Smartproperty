@@ -17,7 +17,7 @@ const MAX_IMAGE_SIZE_BYTES = 50 * 1024 * 1024;
 const PANORAMA_CAPTION_PREFIX = "__VR360__";
 
 const buildRoomId = () =>
-  `room-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  `room-${crypto.randomUUID()}`;
 
 const extractApiErrorMessage = (error: unknown): string => {
   if (!error || typeof error !== "object") {

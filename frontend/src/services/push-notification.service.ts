@@ -147,20 +147,12 @@ class PushNotificationService {
       // Convert subscription to plain JSON object to ensure all properties are included
       const subscriptionJson = subscription.toJSON();
 
-      console.log(
-        '📤 Push Notification: Sending subscription:',
-        JSON.stringify(subscriptionJson),
-      );
-
-      const response = await api.post(
+      await api.post(
         '/notifications/push/subscribe',
         subscriptionJson,
       );
 
-      console.log(
-        '✅ Push Notification: Subscription sent to backend',
-        response.data,
-      );
+      console.log('✅ Push Notification: Subscription sent to backend');
     } catch (error) {
       console.error('❌ Push Notification: Failed to send subscription', error);
       if ((error as any)?.response?.data) {
