@@ -124,6 +124,31 @@ describe("ListingCard", () => {
     expect(onMouseEnter).toHaveBeenCalled();
   });
 
+  it("swaps a photo that fails to load for the placeholder, once", () => {
+    renderCard();
+    fireEvent.error(photo());
+    expect(photo().getAttribute("src")).toBe("/placeholder-property.svg");
+    // A failing placeholder must not loop.
+    fireEvent.error(photo());
+    expect(photo().getAttribute("src")).toBe("/placeholder-property.svg");
+  });
+
+  it("copes with a listing that has no address or features", () => {
+    render(
+      <MemoryRouter>
+        <ListingCard
+          property={property({
+            address: undefined as never,
+            features: undefined,
+            type: "office",
+          })}
+        />
+      </MemoryRouter>,
+    );
+    const card = screen.getByRole("article");
+    expect(within(card).getByText("Office")).toBeTruthy();
+    expect(card.querySelector(".listing-place")).toBeNull();
+  });
   it("falls back to a placeholder when there is no photo", () => {
     render(
       <MemoryRouter>

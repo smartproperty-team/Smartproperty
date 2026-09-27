@@ -2,6 +2,7 @@
 // SmartProperty - Properties List Page
 // ===========================================
 
+import { CompareShareActions } from "@/components/properties/CompareShareActions";
 import { ListingCard } from "@/components/properties/ListingCard";
 import { HomeFooter, Navbar } from "@/components/layout";
 import AdvancedPropertySearchBar from "@/components/properties/AdvancedPropertySearchBar";
@@ -529,36 +530,6 @@ export default function PropertiesPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Compare and share, shown under each listing card.
-  const renderCardActions = (property: Property) => {
-    const id = getPropertyId(property);
-    const isCompared = comparisonIds.includes(id);
-    const isSharing = sharingPropertyId === id;
-    return (
-      <>
-        <button
-          type="button"
-          className={`listing-action${isCompared ? " listing-action--active" : ""}`}
-          aria-pressed={isCompared}
-          disabled={!isCompared && comparisonIds.length >= 3}
-          onClick={() => handleToggleCompare(property)}
-        >
-          {isCompared
-            ? t.properties.removeFromCompare
-            : t.properties.addToCompare}
-        </button>
-        <button
-          type="button"
-          className="listing-action"
-          disabled={isSharing}
-          onClick={() => handleQuickShare(property)}
-        >
-          {isSharing ? t.common.loading : t.properties.shareBtn}
-        </button>
-      </>
-    );
-  };
-
   return (
     <div className="properties-page">
       <Navbar />
@@ -937,7 +908,19 @@ export default function PropertiesPage() {
                       setHoveredPropertyId(getPropertyId(property))
                     }
                     onMouseLeave={() => setHoveredPropertyId(null)}
-                    actions={renderCardActions(property)}
+                    actions={
+                      <CompareShareActions
+                        isCompared={comparisonIds.includes(
+                          getPropertyId(property),
+                        )}
+                        compareFull={comparisonIds.length >= 3}
+                        isSharing={
+                          sharingPropertyId === getPropertyId(property)
+                        }
+                        onToggleCompare={() => handleToggleCompare(property)}
+                        onShare={() => handleQuickShare(property)}
+                      />
+                    }
                   />
                 ))}
               </div>
@@ -1004,7 +987,17 @@ export default function PropertiesPage() {
                   key={getPropertyId(property)}
                   property={property}
                   gallery
-                  actions={renderCardActions(property)}
+                  actions={
+                    <CompareShareActions
+                      isCompared={comparisonIds.includes(
+                        getPropertyId(property),
+                      )}
+                      compareFull={comparisonIds.length >= 3}
+                      isSharing={sharingPropertyId === getPropertyId(property)}
+                      onToggleCompare={() => handleToggleCompare(property)}
+                      onShare={() => handleQuickShare(property)}
+                    />
+                  }
                 />
               ))}
             </div>
