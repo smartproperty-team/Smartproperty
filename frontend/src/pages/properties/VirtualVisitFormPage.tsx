@@ -1,4 +1,5 @@
 import { Suspense, useCallback, useRef, useState } from "react";
+import { activateOnKey } from "../../utils/a11y";
 import { useNavigate, useParams } from "react-router-dom";
 import { HomeFooter, Navbar } from "../../components/layout";
 import Sphere360Viewer from "../../components/properties/Sphere360Viewer";
@@ -379,6 +380,11 @@ function RoomCard({
         <div
           className={`virtual-visit-dropzone${dragOver ? " is-active" : ""}`}
           onClick={() => fileInputRef.current?.click()}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) =>
+            activateOnKey(e, () => fileInputRef.current?.click())
+          }
         >
           <span className="virtual-visit-dropzone-icon">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

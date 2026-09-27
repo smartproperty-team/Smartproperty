@@ -210,6 +210,7 @@ export default function MapPicker({
 
   return (
     <div
+      role="presentation"
       style={{
         position: "fixed",
         top: 0,

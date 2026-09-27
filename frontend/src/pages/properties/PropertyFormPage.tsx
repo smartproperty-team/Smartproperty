@@ -1388,6 +1388,7 @@ export default function PropertyFormPage() {
 
             <div
               className="image-upload-zone"
+              role="button"
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}

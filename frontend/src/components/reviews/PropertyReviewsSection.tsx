@@ -135,8 +135,8 @@ function StarRatingInput({
 
   return (
     <div
-      role="radiogroup"
-      aria-label="Rating"
+      role="group"
+      aria-label={`Rating: ${value} of 5`}
       style={{ display: "inline-flex", gap: 2 }}
       onMouseLeave={() => setHoverValue(null)}
     >

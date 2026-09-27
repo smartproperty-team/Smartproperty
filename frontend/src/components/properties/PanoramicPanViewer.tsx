@@ -129,6 +129,11 @@ export default function PanoramicPanViewer({
       }}
       aria-label={altText}
       tabIndex={0}
+      role="slider"
+      aria-orientation="horizontal"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(panPosition)}
     >
       <div
         aria-label={altText || "Panoramic room image"}

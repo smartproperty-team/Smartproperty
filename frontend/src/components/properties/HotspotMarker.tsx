@@ -6,6 +6,7 @@
 
 import { Html } from "@react-three/drei";
 import { useCallback } from "react";
+import { activateOnKey } from "../../utils/a11y";
 
 interface HotspotMarkerProps {
   position: [number, number, number];
@@ -54,7 +55,19 @@ export default function HotspotMarker({
   return (
     <group position={position}>
       <Html center zIndexRange={[50, 0]} style={{ pointerEvents: "auto" }}>
-        <div className="hotspot-marker" onClick={handleClick}>
+        <div
+          className="hotspot-marker"
+          role="button"
+          tabIndex={0}
+          aria-label={`Go to ${label}`}
+          onClick={handleClick}
+          onKeyDown={(e) =>
+            activateOnKey(e, () => {
+              e.stopPropagation();
+              onClick();
+            })
+          }
+        >
           <div className="hotspot-ring" />
           <div className="hotspot-dot">
             <svg

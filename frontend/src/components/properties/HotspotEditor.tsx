@@ -52,9 +52,17 @@ interface RoomDropdownProps {
   value: string;
   onChange: (key: string) => void;
   label?: string;
+  /** Put on the trigger button so a <label htmlFor> can name it. */
+  id?: string;
 }
 
-function RoomDropdown({ rooms, value, onChange, label }: RoomDropdownProps) {
+function RoomDropdown({
+  rooms,
+  value,
+  onChange,
+  label,
+  id,
+}: RoomDropdownProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -75,6 +83,7 @@ function RoomDropdown({ rooms, value, onChange, label }: RoomDropdownProps) {
     <div className="room-dropdown" ref={ref}>
       {label && <span className="room-dropdown-label">{label}</span>}
       <button
+        id={id}
         type="button"
         className="room-dropdown-trigger"
         onClick={() => setOpen((p) => !p)}
@@ -299,10 +308,11 @@ export default function HotspotEditor({
         {pending && (
           <div className="hotspot-place-form">
             <h4>Place Hotspot</h4>
-            <label>
+            <label htmlFor="hotspot-target-room">
               Target room
               <div style={{ marginTop: "0.25rem" }}>
                 <RoomDropdown
+                  id="hotspot-target-room"
                   rooms={otherRooms}
                   value={pendingTargetKey}
                   onChange={handleTargetChange}

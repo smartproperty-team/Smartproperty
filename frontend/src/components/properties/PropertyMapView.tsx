@@ -94,6 +94,7 @@ function PropertyPopupCard({
 
   return (
     <div
+      role="presentation"
       className="map-popup-card"
       style={{ left: pos.left, top: pos.top }}
       // Prevent map click from closing the popup when clicking inside the card

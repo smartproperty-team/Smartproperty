@@ -420,10 +420,11 @@ export default function MaintenanceRequestFormPage() {
             {currentStep === 0 && (
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="md:col-span-2">
-                  <label className="mb-1.5 block text-sm font-medium text-home-text">
+                  <label htmlFor="maintenance-property" className="mb-1.5 block text-sm font-medium text-home-text">
                     Property <span className="text-red-600">*</span>
                   </label>
                   <select
+                    id="maintenance-property"
                     value={formData.propertyId}
                     onChange={(e) => setField("propertyId", e.target.value)}
                     className="h-10 w-full rounded-lg border border-home-border px-3 text-sm"
@@ -452,10 +453,11 @@ export default function MaintenanceRequestFormPage() {
                 />
 
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-home-text">
+                  <label htmlFor="maintenance-category" className="mb-1.5 block text-sm font-medium text-home-text">
                     Category <span className="text-red-600">*</span>
                   </label>
                   <select
+                    id="maintenance-category"
                     value={formData.category}
                     onChange={(e) => setField("category", e.target.value)}
                     className="h-10 w-full rounded-lg border border-home-border px-3 text-sm"
@@ -475,10 +477,11 @@ export default function MaintenanceRequestFormPage() {
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-home-text">
+                  <label htmlFor="maintenance-priority" className="mb-1.5 block text-sm font-medium text-home-text">
                     Priority <span className="text-red-600">*</span>
                   </label>
                   <select
+                    id="maintenance-priority"
                     value={formData.priority}
                     onChange={(e) => setField("priority", e.target.value)}
                     className="h-10 w-full rounded-lg border border-home-border px-3 text-sm"
@@ -511,10 +514,11 @@ export default function MaintenanceRequestFormPage() {
             {currentStep === 1 && (
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="md:col-span-2">
-                  <label className="mb-1.5 block text-sm font-medium text-home-text">
+                  <label htmlFor="maintenance-description" className="mb-1.5 block text-sm font-medium text-home-text">
                     Detailed description <span className="text-red-600">*</span>
                   </label>
                   <textarea
+                    id="maintenance-description"
                     value={formData.description}
                     onChange={(e) => setField("description", e.target.value)}
                     rows={5}
@@ -612,10 +616,11 @@ export default function MaintenanceRequestFormPage() {
             {currentStep === 3 && (
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="md:col-span-2">
-                  <label className="mb-1.5 block text-sm font-medium text-home-text">
+                  <label htmlFor="maintenance-visit-windows" className="mb-1.5 block text-sm font-medium text-home-text">
                     Preferred visit windows
                   </label>
                   <textarea
+                    id="maintenance-visit-windows"
                     rows={3}
                     value={formData.preferredVisitWindows}
                     onChange={(e) =>
@@ -635,10 +640,11 @@ export default function MaintenanceRequestFormPage() {
                 />
 
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-home-text">
+                  <label htmlFor="maintenance-entry-permission" className="mb-1.5 block text-sm font-medium text-home-text">
                     Entry permission <span className="text-red-600">*</span>
                   </label>
                   <select
+                    id="maintenance-entry-permission"
                     value={formData.entryPermission}
                     onChange={(e) =>
                       setField("entryPermission", e.target.value)

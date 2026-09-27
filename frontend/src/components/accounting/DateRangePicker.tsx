@@ -2,6 +2,7 @@
 // SmartProperty - Date Range + Granularity Picker
 // ===========================================
 
+import { useId } from 'react';
 import {
   AnalyticsGranularity,
 } from '../../types/accounting';
@@ -51,11 +52,13 @@ export function DateRangePicker({
   onGranularityChange,
   showGranularity = true,
 }: DateRangePickerProps) {
+  const fieldId = useId();
   return (
     <div className="flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-3">
       <div className="flex flex-col">
-        <label className="mb-1 text-xs font-medium text-gray-600">From</label>
+        <label htmlFor={`${fieldId}-from`} className="mb-1 text-xs font-medium text-gray-600">From</label>
         <input
+          id={`${fieldId}-from`}
           type="date"
           value={startDate}
           onChange={(e) => onStartDateChange(e.target.value)}
@@ -63,8 +66,9 @@ export function DateRangePicker({
         />
       </div>
       <div className="flex flex-col">
-        <label className="mb-1 text-xs font-medium text-gray-600">To</label>
+        <label htmlFor={`${fieldId}-to`} className="mb-1 text-xs font-medium text-gray-600">To</label>
         <input
+          id={`${fieldId}-to`}
           type="date"
           value={endDate}
           onChange={(e) => onEndDateChange(e.target.value)}
@@ -74,10 +78,11 @@ export function DateRangePicker({
 
       {showGranularity && (
         <div className="flex flex-col">
-          <label className="mb-1 text-xs font-medium text-gray-600">
+          <label htmlFor={`${fieldId}-granularity`} className="mb-1 text-xs font-medium text-gray-600">
             Granularity
           </label>
           <select
+            id={`${fieldId}-granularity`}
             value={granularity}
             onChange={(e) =>
               onGranularityChange(e.target.value as AnalyticsGranularity)

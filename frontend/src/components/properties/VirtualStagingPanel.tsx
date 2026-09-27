@@ -5,6 +5,7 @@
 // Select an image, pick a style, adjust strength, generate.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { arrowKeyStep, clampPercent } from "../../utils/a11y";
 import { propertyService } from "../../services/property.service";
 import type { PropertyImage, StagingJob, StagingStyle } from "../../types/property";
 
@@ -175,6 +176,13 @@ export default function VirtualStagingPanel({
     [handleSliderMove],
   );
 
+  const handleSliderKey = useCallback((e: React.KeyboardEvent) => {
+    const step = arrowKeyStep(e.key, 5);
+    if (step === 0) return;
+    e.preventDefault();
+    setSliderPos((pos) => clampPercent(pos + step));
+  }, []);
+
   const activeStyle = styles.find((s) => s.id === selectedStyle);
 
   return (
@@ -329,6 +337,13 @@ export default function VirtualStagingPanel({
                   <div
                     ref={sliderRef}
                     className="staging-slider-compare"
+                    role="slider"
+                    tabIndex={0}
+                    aria-label="Before and after comparison"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(sliderPos)}
+                    onKeyDown={handleSliderKey}
                     onMouseMove={handleSliderDrag}
                     onMouseDown={handleSliderMove}
                     onTouchMove={handleSliderMove}
