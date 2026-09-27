@@ -20,3 +20,18 @@ import { config as loadEnvFile } from 'dotenv';
 for (const envFile of ['.env', '.env.development', '.env.local']) {
   loadEnvFile({ path: envFile });
 }
+
+/**
+ * Read a variable the seed cannot run without. There is deliberately no
+ * fallback: a default connection string puts a database password in the
+ * source, where anyone reading the repository has it.
+ */
+export function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(
+      `${name} is not set. Add it to backend/.env - see backend/.env.example.`,
+    );
+  }
+  return value;
+}

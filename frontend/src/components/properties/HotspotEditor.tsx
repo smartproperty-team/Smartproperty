@@ -28,7 +28,7 @@ const getRoomDisplayName = (image: PropertyImage, index?: number): string => {
 };
 
 const buildHotspotId = () =>
-  `hs-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  `hs-${crypto.randomUUID()}`;
 
 // ── Types ──────────────────────────────────────────────────────
 

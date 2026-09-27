@@ -10,7 +10,12 @@ Write-Host ""
 
 # Configuration MongoDB
 $mongoUser = "smartproperty_user"
-$mongoPass = "smartproperty_pass_2024"
+# Mot de passe lu depuis l'environnement, jamais ecrit dans le script
+$mongoPass = $env:MONGODB_PASSWORD
+if (-not $mongoPass) {
+    Write-Error "MONGODB_PASSWORD n'est pas defini. Exemple: `$env:MONGODB_PASSWORD = '...'"
+    exit 1
+}
 $mongoDb = "smartproperty"
 $mongoUri = "mongodb://${mongoUser}:${mongoPass}@localhost:27017/${mongoDb}?authSource=admin"
 

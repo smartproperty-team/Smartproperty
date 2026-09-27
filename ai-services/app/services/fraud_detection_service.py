@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 from loguru import logger
@@ -477,8 +478,29 @@ def _compute_risk_level(score: int) -> str:
     return "low"
 
 
+def assert_allowed_document_url(url: str) -> None:
+    """
+    Refuse any URL outside our own object storage.
+
+    file_url arrives in the request body. Without this check the service
+    fetches whatever address it is given, including internal ones such as
+    a cloud metadata endpoint (server-side request forgery).
+    """
+    allowed = {
+        host.strip().lower()
+        for host in settings.fraud_allowed_hosts.split(",")
+        if host.strip()
+    }
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme not in {"http", "https"} or host not in allowed:
+        raise ValueError(f"document host is not allowed: {host or url[:40]!r}")
+
+
 async def fetch_image(url: str) -> tuple[bytes, str]:
-    async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+    assert_allowed_document_url(url)
+    # No redirects: a redirect from an allowed host could lead anywhere.
+    async with httpx.AsyncClient(timeout=15.0, follow_redirects=False) as client:
         resp = await client.get(url)
         resp.raise_for_status()
         mime = resp.headers.get("content-type", "image/jpeg").split(";")[0]

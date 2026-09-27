@@ -44,7 +44,10 @@ class Settings(BaseSettings):
     backend_api_url: str = "http://localhost:3000/api"
 
     # JWT
-    jwt_secret: str = "your-super-secret-jwt-key"
+    # No default: a known value lets anyone who reads this repository mint
+    # tokens this service accepts. Must match the backend's JWT_SECRET.
+    # verify_token refuses every request while it is unset.
+    jwt_secret: str = ""
     jwt_algorithm: str = "HS256"
 
     # AWS S3
@@ -75,9 +78,13 @@ class Settings(BaseSettings):
     fraud_detection_timeout_ms: int = 30000
     fraud_detection_use_llm: bool = True
     fraud_detection_use_ocr: bool = True
+    # Hosts documents may be fetched from, comma-separated: the object
+    # storage public host, e.g. pub-xxxx.r2.dev, or localhost for MinIO in
+    # development. Empty refuses every fetch.
+    fraud_allowed_hosts: str = ""
 
     # Virtual Staging (Stability AI)
-    stability_api_key: str = "sk-q6XFnQyEAb2CKb32m30US7MvdtygmdRgVOIX0jRpFjYYL32d"
+    stability_api_key: str = ""
     staging_output_dir: str = "./data/staging"
     staging_max_image_size_mb: int = 10
     staging_cache_ttl_seconds: int = 60 * 60 * 24  # 24h

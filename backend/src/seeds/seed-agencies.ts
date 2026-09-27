@@ -2,7 +2,7 @@
 // SmartProperty - Agency Seed Script
 // ===========================================
 
-import './load-env';
+import { requireEnv } from './load-env';
 
 import { ObjectId } from 'mongodb';
 import { DataSource } from 'typeorm';
@@ -27,9 +27,7 @@ type AgencyTemplate = {
   branchManagerIndex: number;
 };
 
-const MONGODB_URI =
-  process.env.MONGODB_URI ||
-  'mongodb://smartproperty_user:smartproperty_pass_2024@localhost:27017/smartproperty?authSource=admin';
+const MONGODB_URI = requireEnv('MONGODB_URI');
 
 const MONGODB_DATABASE = process.env.MONGODB_DATABASE || 'smartproperty';
 

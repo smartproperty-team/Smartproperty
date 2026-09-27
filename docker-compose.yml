@@ -259,6 +259,9 @@ services:
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: smartproperty_minio
       MINIO_SECRET_KEY: smartproperty_minio_secret_2024
+      # Hosts fraud detection may fetch documents from (SSRF allowlist).
+      # Matches the backend's MINIO_PUBLIC_URL.
+      FRAUD_ALLOWED_HOSTS: localhost
     ports:
       - "8000:8000"
     volumes:

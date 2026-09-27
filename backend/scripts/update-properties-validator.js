@@ -1,10 +1,15 @@
 /* eslint-disable no-console */
+// Run through npm outside Nest, so nothing else loads backend/.env.
+require('dotenv').config();
 const { MongoClient } = require('mongodb');
 
 async function updatePropertiesValidator() {
-  const uri =
-    process.env.MONGODB_URI ||
-    'mongodb://smartproperty_user:smartproperty_pass_2024@localhost:27017/smartproperty?authSource=admin';
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    throw new Error(
+      'MONGODB_URI is not set. Add it to backend/.env - see backend/.env.example.',
+    );
+  }
   const databaseName = process.env.MONGODB_DATABASE || 'smartproperty';
 
   const client = new MongoClient(uri);

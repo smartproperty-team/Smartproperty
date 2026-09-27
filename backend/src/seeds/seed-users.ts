@@ -2,7 +2,7 @@
 // SmartProperty - User Seed Script
 // ===========================================
 
-import './load-env';
+import { requireEnv } from './load-env';
 
 import * as bcrypt from 'bcrypt';
 import { ObjectId } from 'mongodb';
@@ -20,8 +20,7 @@ async function seedUsers() {
   const dataSource = new DataSource({
     type: 'mongodb',
     url:
-      process.env.MONGODB_URI ||
-      'mongodb://smartproperty_user:smartproperty_pass_2024@localhost:27017/smartproperty?authSource=admin',
+      requireEnv('MONGODB_URI'),
     database: process.env.MONGODB_DATABASE || 'smartproperty',
     // Cosmos DB's Mongo API rejects retryable writes outright. The
     // connection string carries retrywrites=false, but TypeORM builds its
