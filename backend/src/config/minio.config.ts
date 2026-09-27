@@ -7,7 +7,7 @@ import { registerAs } from '@nestjs/config';
 export const minioConfig = registerAs('minio', () => ({
   // MinIO server connection
   endpoint: process.env.MINIO_ENDPOINT || 'localhost',
-  port: parseInt(process.env.MINIO_PORT || '9000', 10),
+  port: Number.parseInt(process.env.MINIO_PORT || '9000', 10),
   useSSL: process.env.MINIO_USE_SSL === 'true',
 
   // S3 region. Left undefined for a real MinIO server, which does not need

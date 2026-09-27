@@ -90,7 +90,10 @@ function sanitizeFileToken(value: string): string {
   return value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    // Runs are already collapsed to one dash, so at most one to trim at each
+    // end; two anchored single-character patterns cannot backtrack.
+    .replace(/^-/, "")
+    .replace(/-$/, "");
 }
 
 export default function BranchManagerAgencyOnboardingPage() {

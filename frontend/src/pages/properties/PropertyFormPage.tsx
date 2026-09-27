@@ -575,7 +575,7 @@ export default function PropertyFormPage() {
     if (!formData.title.trim()) {
       e.title = t.properties.form.validation.titleRequired;
     }
-    if (!formData.price || parseFloat(formData.price) <= 0) {
+    if (!formData.price || Number.parseFloat(formData.price) <= 0) {
       e.price = t.properties.form.validation.pricePositive;
     }
     if (!formData.address.street.trim()) {
@@ -670,7 +670,7 @@ export default function PropertyFormPage() {
         type: formData.type,
         category: formData.category,
         status: formData.status,
-        price: parseFloat(formData.price),
+        price: Number.parseFloat(formData.price),
         currency: formData.currency,
         virtualTour: formData.virtualTour.trim() || undefined,
         address: {
@@ -682,13 +682,13 @@ export default function PropertyFormPage() {
           coordinates: formData.address.coordinates,
         },
         features: {
-          bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : undefined,
+          bedrooms: formData.bedrooms ? Number.parseInt(formData.bedrooms) : undefined,
           bathrooms: formData.bathrooms
-            ? parseInt(formData.bathrooms)
+            ? Number.parseInt(formData.bathrooms)
             : undefined,
-          area: formData.area ? parseInt(formData.area) : undefined,
+          area: formData.area ? Number.parseInt(formData.area) : undefined,
           parkingSpaces: formData.parkingSpaces
-            ? parseInt(formData.parkingSpaces)
+            ? Number.parseInt(formData.parkingSpaces)
             : undefined,
           furnished: formData.furnished,
           petFriendly: formData.petFriendly,
@@ -1388,6 +1388,7 @@ export default function PropertyFormPage() {
 
             <div
               className="image-upload-zone"
+              role="button"
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}

@@ -26,6 +26,7 @@ import {
   FraudStatusPill,
 } from '../../components/verification/FraudAnalysisDisplay';
 import { verificationService } from '../../services/verification.service';
+import { formatBytes } from '../../utils/format';
 import {
   AdminVerificationItem,
   FraudAnalysisStatus,
@@ -72,14 +73,6 @@ function statusConfig(status: VerificationStatus) {
     },
   };
   return map[status];
-}
-
-function formatBytes(bytes: number) {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
 function timeAgo(dateStr: string) {
@@ -758,10 +751,11 @@ export default function AdminVerificationPage() {
                       {/* Rejection reason input */}
                       {rejectingId === v.id && (
                         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
-                          <label className="mb-2 block text-sm font-medium text-red-700">
+                          <label htmlFor={`reject-reason-${v.id}`} className="mb-2 block text-sm font-medium text-red-700">
                             Rejection Reason
                           </label>
                           <textarea
+                            id={`reject-reason-${v.id}`}
                             value={rejectReason}
                             onChange={(e) => setRejectReason(e.target.value)}
                             placeholder="Explain why the verification was rejected..."
@@ -863,6 +857,7 @@ export default function AdminVerificationPage() {
             <XCircle className="h-6 w-6" />
           </button>
           <div
+            role="presentation"
             className="relative max-h-[90vh] max-w-5xl"
             onClick={(e) => e.stopPropagation()}
           >

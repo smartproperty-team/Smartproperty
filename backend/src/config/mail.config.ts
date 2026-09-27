@@ -11,7 +11,7 @@ export const mailConfig = registerAs('mail', () => {
   return {
     // SMTP settings
     host: process.env.SMTP_HOST || 'localhost',
-    port: parseInt(process.env.SMTP_PORT ?? '1025', 10), // MailHog default for dev
+    port: Number.parseInt(process.env.SMTP_PORT ?? '1025', 10), // MailHog default for dev
     secure: process.env.SMTP_SECURE === 'true',
 
     // Authentication - only include if credentials are provided (MailHog doesn't need auth)

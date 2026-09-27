@@ -1,7 +1,7 @@
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { LocateFixed } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { UserLocationPreference } from "../../types/auth";
 
 import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
@@ -89,6 +89,7 @@ export default function LocationPreferenceMap({
   disabled = false,
   showRadius = true,
 }: LocationPreferenceMapProps) {
+  const radiusId = useId();
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
@@ -406,10 +407,11 @@ export default function LocationPreferenceMap({
 
       {showRadius && (
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-600">
+          <label htmlFor={radiusId} className="mb-2 block text-sm font-medium text-gray-600">
             Radius
           </label>
           <select
+            id={radiusId}
             value={radiusKm}
             onChange={(event) => {
               const nextRadius = Number(event.target.value);

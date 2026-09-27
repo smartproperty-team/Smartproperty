@@ -1,8 +1,13 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  // Same "@" alias as vite.config.ts, so source files resolve in tests.
+  resolve: {
+    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) }
+  },
   test: {
     // happy-dom, not jsdom: jsdom 28+ and its undici dependency require
     // Node >= 22, while this project targets Node 20 (node:20-alpine in the

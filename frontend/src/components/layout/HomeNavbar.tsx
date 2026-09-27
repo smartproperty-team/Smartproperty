@@ -60,12 +60,11 @@ export default function HomeNavbar() {
   const [isExtendingSession, setIsExtendingSession] = useState(false);
   const dismissedSessionExpiryRef = useRef<number | null>(null);
 
+  // Only routes that exist. Pages, Blog and Contact had no routes behind
+  // them, and Home showed a dropdown chevron with no dropdown.
   const navLinks = [
-    { to: "/", label: t.nav.home, hasDropdown: true },
+    { to: "/", label: t.nav.home, hasDropdown: false },
     { to: "/properties", label: t.nav.listings, hasDropdown: true },
-    { to: "/pages", label: t.nav.pages, hasDropdown: true },
-    { to: "/blog", label: t.nav.blog, hasDropdown: true },
-    { to: "/contact", label: t.nav.contact, hasDropdown: false },
   ];
 
   const handleRoutePrefetch = useCallback((path: string) => {
@@ -370,6 +369,16 @@ export default function HomeNavbar() {
     setShowListingsDropdown(false);
   }, [location.pathname, location.search]);
 
+  // Compact, shadowed bar once the page has scrolled; flat at the very top.
+  const [scrolled, setScrolled] = useState(
+    () => typeof window !== "undefined" && window.scrollY > 8,
+  );
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   useEffect(() => {
     if (mobileMenuOpen) {
       document.body.style.overflow = "hidden";
@@ -425,21 +434,29 @@ export default function HomeNavbar() {
         <button
           type="button"
           onClick={openOnboarding}
-          className="fixed right-6 top-20 z-50 flex animate-bounce items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-red-200 hover:bg-red-700"
+          className="fixed right-6 top-20 z-50 flex motion-safe:animate-bounce items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-red-200 hover:bg-red-700"
         >
           <BellRing className="h-4 w-4" />
           {t.nav.completeQuestions}
         </button>
       )}
       <nav
-        className="fixed inset-x-0 top-0 z-40 border-b border-white/20 bg-[#1A3263] shadow-[0_10px_28px_rgba(20,40,79,0.38)] backdrop-blur"
+        className={`fixed inset-x-0 top-0 z-40 border-b bg-[#1A3263] transition-shadow duration-300 motion-reduce:transition-none ${
+          scrolled
+            ? "border-white/10 shadow-[0_8px_24px_rgba(15,31,61,0.28)]"
+            : "border-transparent shadow-none"
+        }`}
         aria-label="Main navigation"
       >
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-3.5 sm:px-6 lg:px-8">
+        <div
+          className={`mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 transition-[padding] duration-300 motion-reduce:transition-none sm:px-6 lg:px-8 ${
+            scrolled ? "py-2.5" : "py-3.5"
+          }`}
+        >
           <Link
             to="/"
             className="inline-flex shrink-0 items-center gap-2 text-white transition-colors hover:text-[#FFC570]"
-            aria-label="Smart Property - Home"
+            aria-label="SmartProperty - Home"
           >
             <svg
               className="h-7 w-7"
@@ -454,8 +471,8 @@ export default function HomeNavbar() {
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
               <polyline points="9 22 9 12 15 12 15 22" />
             </svg>
-            <span className="whitespace-nowrap text-xl font-extrabold tracking-[0.01em]">
-              Smart Property
+            <span className="whitespace-nowrap text-lg font-extrabold tracking-[0.01em] sm:text-xl">
+              SmartProperty
             </span>
           </Link>
 
@@ -703,24 +720,21 @@ export default function HomeNavbar() {
               )}
             </div>
           ) : (
-            <Link
-              to="/login"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#FFC570] bg-[#FFC570] text-[#1A3263] transition-colors hover:bg-[#f2b75e]"
-              aria-label="User account"
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                aria-hidden="true"
+            <>
+              <Link
+                to="/login"
+                className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-white/95 transition-colors hover:bg-white/10 hover:text-white sm:inline-flex"
               >
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-            </Link>
+                {t.nav.signIn}
+              </Link>
+              <Link
+                to="/register"
+                className="hidden h-10 items-center rounded-lg bg-[#FFC570] px-4 text-sm font-bold text-[#1A3263] transition-colors hover:bg-[#f2b75e] sm:inline-flex"
+              >
+                {t.nav.getStarted}
+              </Link>
+              {/* Phones: both links live in the menu instead. */}
+            </>
           )}
 
           {user && (
@@ -881,9 +895,10 @@ export default function HomeNavbar() {
             </Link>
           )}
 
+          {/* Under 360px the bar has no room for it; it moves into the menu. */}
           <LanguageToggle
             variant="pill"
-            className="border-white/55 bg-white/10 text-white hover:border-[#FFC570] hover:bg-white/20 hover:text-[#FFC570]"
+            className="border-white/55 bg-white/10 text-white hover:border-[#FFC570] hover:bg-white/20 hover:text-[#FFC570] max-[359px]:hidden"
           />
         </div>
 
@@ -891,7 +906,7 @@ export default function HomeNavbar() {
           id="mobile-menu"
           ref={mobileMenuRef}
           className={`overflow-hidden border-t border-white/20 bg-[#1A3263] transition-all duration-300 md:hidden ${
-            mobileMenuOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
+            mobileMenuOpen ? "max-h-[28rem] opacity-100" : "max-h-0 opacity-0"
           }`}
           aria-hidden={!mobileMenuOpen}
         >
@@ -956,6 +971,34 @@ export default function HomeNavbar() {
                 </Link>
               );
             })}
+            {!user && (
+              <div className="mt-2 flex gap-2 border-t border-white/15 pt-3">
+                <Link
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex-1 rounded-lg border border-white/30 px-3 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                  tabIndex={mobileMenuOpen ? 0 : -1}
+                >
+                  {t.nav.signIn}
+                </Link>
+                <Link
+                  to="/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex-1 rounded-lg bg-[#FFC570] px-3 py-2.5 text-center text-sm font-bold text-[#1A3263] transition-colors hover:bg-[#f2b75e]"
+                  tabIndex={mobileMenuOpen ? 0 : -1}
+                >
+                  {t.nav.getStarted}
+                </Link>
+              </div>
+            )}
+            {mobileMenuOpen && (
+              <div className="mt-2 border-t border-white/15 pt-3 min-[360px]:hidden">
+                <LanguageToggle
+                  variant="pill"
+                  className="border-white/55 bg-white/10 text-white"
+                />
+              </div>
+            )}
           </div>
         </div>
       </nav>

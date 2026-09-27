@@ -107,3 +107,14 @@ For icon buttons, keep icon size 16–18px and spacing 8px.
 3. If a new pattern is needed, add it to `src/index.css` under `@layer components`.
 4. Do not place CSS inside `.tsx` files.
 5. Keep hover/focus states defined for accessibility.
+
+## 10) Motion
+
+Tokens and rules live in `src/styles/motion.css`.
+
+- **Scroll reveal:** wrap content in `<Reveal>` (`src/components/motion/Reveal.tsx`). Variants `up` (default), `fade` and `scale`; `stagger` reveals direct children one after another (110 ms apart); `delay` adds a start delay. It fires once, when about 20% of the element is visible, via `useReveal` (IntersectionObserver).
+- **Page-load entrance:** for above-the-fold content use the CSS classes `enter-rise`, `enter-line` (masked heading lines) and `enter-settle` (large media, transform only), with `--enter-delay`. No JavaScript involved.
+- **Only opacity and transform** are animated. Keep movement small: 16-24 px, 500-850 ms, `--ease-out-soft`.
+- **Never hidden without JavaScript:** the hidden starting state applies only under `html.motion-ready`, which `main.tsx` adds at start-up.
+- **Reduced motion:** `prefers-reduced-motion: reduce` shows everything immediately with no movement, and stops looping animations. Any new animation must be covered by that media query.
+- **Hover:** lift of 3 px at most, image zoom of 4-5% inside a clipped frame.

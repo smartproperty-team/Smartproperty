@@ -2,13 +2,13 @@
 // SmartProperty - Auth Validation
 // ===========================================
 
+import { VALIDATION_RULES } from "../config/authConfig";
+
 /**
  * Validate email format
  */
-export const isValidEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
+export const isValidEmail = (email: string): boolean =>
+  VALIDATION_RULES.EMAIL_REGEX.test(email);
 
 /**
  * Validate password strength

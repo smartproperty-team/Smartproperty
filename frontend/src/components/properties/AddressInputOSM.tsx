@@ -171,8 +171,8 @@ export default function AddressInput({
       country:
         country || t.properties.form.addressHelper.fallback.countryUnspecified,
       coordinates: {
-        lat: parseFloat(result.lat),
-        lng: parseFloat(result.lon),
+        lat: Number.parseFloat(result.lat),
+        lng: Number.parseFloat(result.lon),
       },
     };
 
@@ -218,8 +218,8 @@ export default function AddressInput({
 
   // Handle coordinate change
   const handleCoordinateChange = (field: "lat" | "lng", val: string) => {
-    const numValue = parseFloat(val);
-    if (isNaN(numValue)) return;
+    const numValue = Number.parseFloat(val);
+    if (Number.isNaN(numValue)) return;
 
     onChange({
       ...value,

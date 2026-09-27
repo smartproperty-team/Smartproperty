@@ -17,6 +17,7 @@ import {
 } from "../../components/ui";
 import { authService } from "../../services";
 import { useAuthStore } from "../../store";
+import { isValidEmail } from "../../utils/authValidation";
 
 export default function ProfilePage({
   embedded = false,
@@ -94,9 +95,8 @@ export default function ProfilePage({
     if (!user?.email) return;
 
     const normalizedEmail = newEmail.trim().toLowerCase();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!emailRegex.test(normalizedEmail)) {
+    if (!isValidEmail(normalizedEmail)) {
       setEmailChangeMessage({
         type: "error",
         text: "Please enter a valid email address.",

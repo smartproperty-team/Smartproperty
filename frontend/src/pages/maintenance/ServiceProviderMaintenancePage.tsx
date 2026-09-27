@@ -293,10 +293,11 @@ export default function ServiceProviderMaintenancePage() {
 
                                 <div className="grid gap-3 md:grid-cols-3">
                                   <div className="md:col-span-1">
-                                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    <label htmlFor={`status-${item.id}`} className="mb-1 block text-sm font-medium text-gray-700">
                                       Update status
                                     </label>
                                     <select
+                                      id={`status-${item.id}`}
                                       className="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm"
                                       value={statusDraftById[item.id] || ""}
                                       disabled={isLocked}
@@ -320,10 +321,11 @@ export default function ServiceProviderMaintenancePage() {
                                   </div>
 
                                   <div className="md:col-span-2">
-                                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    <label htmlFor={`status-note-${item.id}`} className="mb-1 block text-sm font-medium text-gray-700">
                                       Status note (optional)
                                     </label>
                                     <input
+                                      id={`status-note-${item.id}`}
                                       className="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm"
                                       value={reasonById[item.id] || ""}
                                       disabled={isLocked}

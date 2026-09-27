@@ -10,6 +10,10 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App.tsx";
 import "./index.css";
 
+// Entrance and scroll animations start from a hidden state. Scoping that
+// state to this class means content stays visible if this script never runs.
+document.documentElement.classList.add("motion-ready");
+
 // Initialize Stripe
 const stripePromise = loadStripe(
   import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ||

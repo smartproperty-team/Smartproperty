@@ -1,0 +1,1112 @@
+/* ===========================================
+   SmartProperty - Home page
+   ===========================================
+   Tokens are scoped to .home-page on purpose: the previous stylesheet set
+   them on :root, which re-coloured other pages once the home page had
+   loaded. Motion lives in src/styles/motion.css. */
+
+.home-page {
+  /* Brand */
+  --home-navy: #1a3263;
+  --home-navy-deep: #14284f;
+  --home-slate: #3f6077;
+  --home-gold: #ffc570;
+  --home-gold-deep: #f2b75e;
+  --home-gold-ink: #8a5a14;
+
+  /* Surfaces and text */
+  --home-sand: #f5efe7;
+  --home-sand-deep: #eee0d0;
+  --home-surface: #ffffff;
+  --home-ink: #16233b;
+  --home-text: #2b3a52;
+  --home-muted: #4f6478;
+  --home-line: #e2e6ec;
+  --home-line-warm: #e4d9cc;
+
+  /* Shape */
+  --radius-control: 12px;
+  --radius-card: 16px;
+  --radius-panel: 20px;
+  --radius-pill: 999px;
+
+  /* Elevation: soft and navy-tinted rather than grey */
+  --shadow-card:
+    0 1px 2px rgba(20, 40, 79, 0.06), 0 8px 24px rgba(20, 40, 79, 0.06);
+  --shadow-card-hover:
+    0 2px 4px rgba(20, 40, 79, 0.08), 0 18px 40px rgba(20, 40, 79, 0.12);
+  --shadow-panel:
+    0 1px 2px rgba(20, 40, 79, 0.06), 0 24px 56px rgba(20, 40, 79, 0.16);
+
+  /* Layout */
+  --container: 1200px;
+  --gutter: clamp(1rem, 4vw, 2rem);
+  --space-section: clamp(4rem, 8vw, 7rem);
+  --nav-offset: 72px;
+
+  /* Interaction */
+  --focus-ring: 0 0 0 3px #ffffff, 0 0 0 5px var(--home-navy);
+  --hover-lift: -3px;
+
+  font-family:
+    ui-sans-serif,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  color: var(--home-text);
+  background: var(--home-surface);
+  line-height: 1.6;
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+}
+
+.home-page :where(a, button, input, select):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.home-page main {
+  scroll-margin-top: var(--nav-offset);
+}
+
+.home-page main:focus {
+  outline: none;
+}
+
+/* ---------- Buttons and links ---------- */
+
+.home-page .button-primary,
+.home-page .button-secondary,
+.home-page .button-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  padding: 0 1.4rem;
+  border-radius: var(--radius-control);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease,
+    transform 200ms ease;
+}
+
+.home-page .button-primary {
+  background: var(--home-navy);
+  color: #ffffff;
+}
+
+.home-page .button-primary:hover {
+  background: var(--home-navy-deep);
+}
+
+.home-page .button-secondary {
+  border: 1px solid var(--home-line);
+  background: var(--home-surface);
+  color: var(--home-navy);
+}
+
+.home-page .button-secondary:hover {
+  border-color: var(--home-navy);
+}
+
+.home-page .button-ghost {
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  color: #ffffff;
+}
+
+.home-page .button-ghost:hover {
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.home-page :is(.button-primary, .button-secondary) svg,
+.home-page .text-link svg {
+  transition: transform 200ms ease;
+}
+
+.home-page :is(.button-primary, .button-secondary, .text-link):hover svg {
+  transform: translateX(3px);
+}
+
+.home-page .text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--home-navy);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: rgba(26, 50, 99, 0.3);
+  text-underline-offset: 0.25em;
+  border-radius: 4px;
+}
+
+.home-page .text-link:hover {
+  text-decoration-color: currentColor;
+}
+
+/* ---------- Hero ---------- */
+
+.hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  min-height: min(100svh, 900px);
+  padding: calc(var(--nav-offset) + clamp(2.5rem, 7vh, 5rem)) var(--gutter)
+    clamp(5rem, 11vh, 7rem);
+  background: var(--home-sand);
+}
+
+/* The room photo sits right; the sand wash on the left keeps the text at
+   full contrast. Transform-only entrance, so the image paints at once. */
+.hero-media {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(245, 239, 231, 0.98) 0%,
+      rgba(245, 239, 231, 0.94) 38%,
+      rgba(245, 239, 231, 0.55) 62%,
+      rgba(245, 239, 231, 0.05) 88%
+    ),
+    url("/images/hero_background.webp") 72% 60% / cover no-repeat;
+  transform-origin: 70% 50%;
+}
+
+.hero-inner {
+  width: 100%;
+  max-width: var(--container);
+  margin: 0 auto;
+}
+
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+  color: var(--home-slate);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.hero-eyebrow::before {
+  content: "";
+  width: 28px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--home-gold-deep);
+}
+
+.hero-heading {
+  margin: 1rem 0 1.25rem;
+  color: var(--home-navy);
+  font-size: clamp(2.25rem, 1.45rem + 2.9vw, 3.75rem);
+  font-weight: 750;
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.hero-heading-accent {
+  color: var(--home-slate);
+  font-weight: 600;
+}
+
+.hero-lede {
+  max-width: 36rem;
+  margin: 0 0 2rem;
+  color: var(--home-text);
+  font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
+  line-height: 1.6;
+}
+
+/* ---------- Hero search ---------- */
+
+.hero-search {
+  max-width: 1000px;
+  padding: 0.5rem;
+  border: 1px solid rgba(26, 50, 99, 0.08);
+  border-radius: var(--radius-panel);
+  background: var(--home-surface);
+  box-shadow: var(--shadow-panel);
+}
+
+.search-mode {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin: 0.35rem 0.35rem 0.6rem;
+  padding: 0.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--home-sand);
+}
+
+.search-mode-btn {
+  min-height: 40px;
+  padding: 0 1.25rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--home-muted);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 200ms ease,
+    color 200ms ease;
+}
+
+.search-mode-btn:hover {
+  color: var(--home-navy);
+}
+
+.search-mode-btn[aria-pressed="true"] {
+  background: var(--home-navy);
+  color: #ffffff;
+}
+
+.search-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr)) auto;
+  align-items: stretch;
+}
+
+.search-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  padding: 0.55rem 1rem 0.65rem;
+  border-left: 1px solid var(--home-line);
+  border-radius: var(--radius-control);
+  transition: background-color 200ms ease;
+}
+
+.search-field:first-child {
+  border-left: 0;
+}
+
+.search-field:focus-within {
+  background: #f5f7fb;
+  box-shadow: inset 0 0 0 2px var(--home-navy);
+}
+
+.search-field label {
+  color: var(--home-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.search-field input,
+.search-field select {
+  width: 100%;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  color: var(--home-ink);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
+
+/* The field container shows the focus; the control itself does not. */
+.search-field :is(input, select):focus-visible {
+  box-shadow: none;
+}
+
+.search-field input::placeholder {
+  color: #7d8b9c;
+  font-weight: 400;
+}
+
+.search-field select {
+  appearance: none;
+  padding-right: 1.25rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234f6478' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-position: right center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+.search-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 56px;
+  margin: 0.2rem;
+  padding: 0 1.6rem;
+  border: 0;
+  border-radius: 14px;
+  background: var(--home-navy);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 200ms ease;
+}
+
+.search-submit:hover {
+  background: var(--home-navy-deep);
+}
+
+.hero-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 2rem;
+  margin-top: 1.5rem;
+}
+
+.hero-proof {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--home-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.hero-proof li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hero-proof li::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--home-gold-deep);
+}
+
+/* ---------- Scroll cue ---------- */
+
+.scroll-cue {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: clamp(1rem, 3vh, 2rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  width: max-content;
+  margin: 0 auto;
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--home-muted);
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.scroll-cue:hover {
+  color: var(--home-navy);
+}
+
+.scroll-cue-line {
+  position: relative;
+  width: 1px;
+  height: 36px;
+  overflow: hidden;
+  background: rgba(26, 50, 99, 0.18);
+}
+
+.scroll-cue-line::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 12px;
+  background: var(--home-navy);
+  animation: scroll-cue-drop 2.6s var(--ease-out-soft) infinite;
+}
+
+@keyframes scroll-cue-drop {
+  0% {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  70%,
+  100% {
+    transform: translateY(36px);
+    opacity: 0;
+  }
+}
+
+/* Only where there is room below the search; never over mobile controls. */
+@media (max-width: 767px), (max-height: 760px) {
+  .scroll-cue {
+    display: none;
+  }
+}
+
+/* ---------- Sections ---------- */
+
+.home-section {
+  padding: var(--space-section) 0;
+}
+
+.home-section--tinted {
+  background: var(--home-sand);
+}
+
+.home-container {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem 3rem;
+  margin-bottom: clamp(2rem, 4vw, 3rem);
+}
+
+.section-head-text {
+  max-width: 40rem;
+}
+
+.section-eyebrow {
+  margin: 0 0 0.75rem;
+  color: var(--home-slate);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.section-heading {
+  margin: 0;
+  color: var(--home-navy);
+  font-size: clamp(1.75rem, 1.3rem + 1.8vw, 2.625rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.section-lede {
+  max-width: 36rem;
+  margin: 0.9rem 0 0;
+  color: var(--home-muted);
+  font-size: 1.0625rem;
+}
+
+.section-empty {
+  margin: 0;
+  padding: 2.5rem 1.5rem;
+  border: 1px dashed var(--home-line);
+  border-radius: var(--radius-card);
+  color: var(--home-muted);
+  text-align: center;
+}
+
+/* ---------- Listing cards ---------- */
+
+.listing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listing-grid > li {
+  display: flex;
+}
+
+.listing-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--home-line);
+  border-radius: var(--radius-card);
+  background: var(--home-surface);
+  box-shadow: var(--shadow-card);
+  transition:
+    transform 350ms var(--ease-out-soft),
+    box-shadow 350ms var(--ease-out-soft);
+}
+
+.listing-card:hover {
+  transform: translateY(var(--hover-lift));
+  box-shadow: var(--shadow-card-hover);
+}
+
+.listing-card:has(.listing-link:focus-visible) {
+  box-shadow: var(--focus-ring), var(--shadow-card-hover);
+}
+
+.listing-card-media {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--home-sand-deep);
+}
+
+.listing-card-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 600ms var(--ease-out-soft);
+}
+
+.listing-card:hover .listing-card-media img {
+  transform: scale(1.04);
+}
+
+.listing-badge {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+.listing-badge--sale {
+  background: var(--home-navy);
+  color: #ffffff;
+}
+
+.listing-badge--rent {
+  background: var(--home-gold);
+  color: var(--home-navy-deep);
+}
+
+.listing-badge--managed {
+  border: 1px solid var(--home-line);
+  background: var(--home-surface);
+  color: var(--home-navy);
+}
+
+.listing-card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.1rem 1.25rem 1.2rem;
+}
+
+.listing-price {
+  margin: 0;
+  color: var(--home-navy);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.listing-price-unit {
+  margin-left: 0.15rem;
+  color: var(--home-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.listing-title {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--home-ink);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.listing-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Stretch the title link over the whole card: one link, one tab stop. */
+.listing-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.listing-link:focus-visible {
+  box-shadow: none;
+}
+
+.listing-place {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  overflow: hidden;
+  color: var(--home-muted);
+  font-size: 0.875rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.listing-place svg {
+  flex-shrink: 0;
+}
+
+.listing-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin: auto 0 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--home-line);
+  color: var(--home-muted);
+  font-size: 0.8125rem;
+}
+
+.listing-meta dd {
+  margin: 0;
+}
+
+/* Skeletons reserve the same space as cards, so nothing shifts on load. */
+.listing-skeleton {
+  overflow: hidden;
+  border: 1px solid var(--home-line);
+  border-radius: var(--radius-card);
+  background: var(--home-surface);
+}
+
+.listing-skeleton-media {
+  aspect-ratio: 4 / 3;
+  background: var(--home-sand);
+}
+
+.listing-skeleton-line {
+  height: 12px;
+  margin: 1.1rem 1.25rem 0;
+  border-radius: 6px;
+  background: var(--home-sand);
+}
+
+.listing-skeleton-line--short {
+  width: 45%;
+  margin-bottom: 1.4rem;
+}
+
+.listing-skeleton > * {
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* ---------- How it works ---------- */
+
+.home-section--steps {
+  border-top: 1px solid var(--home-line);
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1.5rem, 4vw, 3rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  padding-top: 1.5rem;
+  border-top: 2px solid var(--home-navy);
+}
+
+.step-index {
+  display: block;
+  margin-bottom: 1.25rem;
+  color: var(--home-gold-ink);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  font-variant-numeric: tabular-nums;
+}
+
+.step-title {
+  margin: 0 0 0.5rem;
+  color: var(--home-navy);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.step-text {
+  max-width: 32ch;
+  margin: 0;
+  color: var(--home-muted);
+}
+
+/* ---------- Why SmartProperty ---------- */
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  align-items: center;
+  gap: clamp(2rem, 6vw, 5rem);
+}
+
+.split-text .section-head {
+  margin-bottom: 2rem;
+}
+
+.feature-list {
+  display: grid;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feature-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1rem;
+}
+
+.feature-mark {
+  width: 10px;
+  height: 10px;
+  margin: 0.5rem 0.25rem 0;
+  border-radius: 50%;
+  background: var(--home-gold-deep);
+  box-shadow: 0 0 0 5px rgba(255, 197, 112, 0.28);
+}
+
+.feature-title {
+  margin: 0 0 0.25rem;
+  color: var(--home-navy);
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.feature-text {
+  margin: 0;
+  color: var(--home-muted);
+}
+
+.split-media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* ---------- Cities ---------- */
+
+.city-grid {
+  display: grid;
+  /* auto-fit: six cities make one row; fewer stretch to fill it. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.city-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  height: 100%;
+  min-height: 150px;
+  padding: 1.25rem;
+  border: 1px solid var(--home-line-warm);
+  border-radius: var(--radius-card);
+  background: var(--home-surface);
+  color: var(--home-navy);
+  text-decoration: none;
+  box-shadow: var(--shadow-card);
+  transition:
+    transform 350ms var(--ease-out-soft),
+    box-shadow 350ms var(--ease-out-soft),
+    border-color 200ms ease;
+}
+
+.city-card:hover {
+  transform: translateY(var(--hover-lift));
+  border-color: var(--home-navy);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.city-card-pin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--home-sand);
+  color: var(--home-gold-ink);
+}
+
+.city-card-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.city-card-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: auto;
+  color: var(--home-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.city-card-meta svg {
+  transition: transform 200ms ease;
+}
+
+.city-card:hover .city-card-meta svg {
+  transform: translateX(3px);
+}
+
+/* ---------- Closing call to action ---------- */
+
+.closing-cta {
+  padding: var(--space-section) var(--gutter);
+  background: linear-gradient(
+    160deg,
+    var(--home-navy) 0%,
+    var(--home-navy-deep) 100%
+  );
+  color: #ffffff;
+}
+
+.closing-cta-inner {
+  max-width: 760px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.closing-cta-title {
+  margin: 0;
+  font-size: clamp(1.9rem, 1.4rem + 2vw, 2.75rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.closing-cta-text {
+  max-width: 34rem;
+  margin: 1rem auto 2rem;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 1.0625rem;
+}
+
+.closing-cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.closing-cta .button-primary {
+  background: var(--home-gold);
+  color: var(--home-navy-deep);
+}
+
+.closing-cta .button-primary:hover {
+  background: var(--home-gold-deep);
+}
+
+.closing-cta :where(a):focus-visible {
+  box-shadow:
+    0 0 0 3px var(--home-navy-deep),
+    0 0 0 5px var(--home-gold);
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 1023px) {
+  .search-fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    padding: 0 0.35rem 0.35rem;
+  }
+
+  .search-field,
+  .search-field:first-child {
+    border: 1px solid var(--home-line);
+  }
+
+  .search-field--location,
+  .search-submit {
+    grid-column: 1 / -1;
+  }
+
+  .search-submit {
+    margin: 0.25rem 0 0;
+  }
+
+  .split {
+    grid-template-columns: 1fr;
+  }
+
+  .split-media {
+    order: -1;
+  }
+}
+
+@media (max-width: 767px) {
+  .hero {
+    min-height: 0;
+    align-items: flex-start;
+    padding-top: calc(var(--nav-offset) + 1.5rem);
+    padding-bottom: 3.5rem;
+  }
+
+  .hero-eyebrow {
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+  }
+
+  .hero-eyebrow::before {
+    width: 18px;
+  }
+
+  .hero-lede {
+    margin-bottom: 1.5rem;
+  }
+
+  /* Text spans the full width here, so the wash covers the whole photo. */
+  .hero-media {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(245, 239, 231, 0.9) 0%,
+        rgba(245, 239, 231, 0.97) 55%
+      ),
+      url("/images/hero_background.webp") 60% 50% / cover no-repeat;
+  }
+
+  .steps {
+    grid-template-columns: 1fr;
+  }
+
+  .city-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .section-head {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 599px) {
+  .search-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .search-field:has(#search-price) {
+    grid-column: 1 / -1;
+  }
+
+  .search-field {
+    padding: 0.45rem 0.8rem 0.5rem;
+  }
+}
+
+@media (max-width: 359px) {
+  .search-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 479px) {
+  .search-mode {
+    display: flex;
+  }
+
+  .search-mode-btn {
+    flex: 1;
+  }
+
+  .hero-secondary {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .listing-card,
+  .listing-card-media img,
+  .city-card,
+  .home-page
+    :is(.button-primary, .button-secondary, .text-link, .city-card-meta)
+    svg {
+    transition: none;
+  }
+
+  .listing-card:hover,
+  .listing-card:hover .listing-card-media img,
+  .city-card:hover,
+  .home-page :is(.button-primary, .button-secondary, .text-link):hover svg,
+  .city-card:hover .city-card-meta svg {
+    transform: none;
+  }
+
+  .scroll-cue-line::after,
+  .listing-skeleton > * {
+    animation: none;
+  }
+}

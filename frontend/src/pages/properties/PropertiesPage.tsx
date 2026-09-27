@@ -378,6 +378,8 @@ export default function PropertiesPage() {
     nearLat: parseNumberParam(searchParams.get("nearLat")),
     nearLng: parseNumberParam(searchParams.get("nearLng")),
     radiusKm: parsePositiveNumberParam(searchParams.get("radiusKm")),
+    minPrice: parsePositiveNumberParam(searchParams.get("minPrice")),
+    maxPrice: parsePositiveNumberParam(searchParams.get("maxPrice")),
     city: searchParams.get("city") || undefined,
     search: searchParams.get("search") || undefined,
   });
@@ -511,6 +513,8 @@ export default function PropertiesPage() {
       nearLat: parseNumberParam(searchParams.get("nearLat")),
       nearLng: parseNumberParam(searchParams.get("nearLng")),
       radiusKm: parsePositiveNumberParam(searchParams.get("radiusKm")),
+      minPrice: parsePositiveNumberParam(searchParams.get("minPrice")),
+      maxPrice: parsePositiveNumberParam(searchParams.get("maxPrice")),
       city: searchParams.get("city") || undefined,
       search: searchParams.get("search") || undefined,
     };
@@ -541,6 +545,8 @@ export default function PropertiesPage() {
       if (f.nearLat !== undefined) params.set("nearLat", String(f.nearLat));
       if (f.nearLng !== undefined) params.set("nearLng", String(f.nearLng));
       if (f.radiusKm !== undefined) params.set("radiusKm", String(f.radiusKm));
+      if (f.minPrice !== undefined) params.set("minPrice", String(f.minPrice));
+      if (f.maxPrice !== undefined) params.set("maxPrice", String(f.maxPrice));
       if (f.city) params.set("city", f.city);
       if (f.search) params.set("search", f.search);
       setSearchParams(params);
