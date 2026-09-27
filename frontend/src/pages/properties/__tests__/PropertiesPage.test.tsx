@@ -16,11 +16,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Property } from "../../../types/property";
 
 const getProperties = vi.fn();
+const getPropertyShareData = vi.fn();
 
 vi.mock("@/services/property.service", () => ({
   propertyService: {
     getProperties: (...args: unknown[]) => getProperties(...args),
-    getShareLink: vi.fn(),
+    getPropertyShareData: (...args: unknown[]) => getPropertyShareData(...args),
   },
 }));
 // Leaflet maps are not what these tests are about.
@@ -144,6 +145,71 @@ describe("PropertiesPage", () => {
         .getAttribute("aria-pressed"),
     ).toBe("true");
     expect(within(card).getByRole("button", { name: "Share" })).toBeTruthy();
+  });
+
+  it("clears the price range with the other filters", async () => {
+    renderPage("?minPrice=1000&maxPrice=2000");
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+
+    expect(
+      (screen.getByLabelText("Min price (TND)") as HTMLInputElement).value,
+    ).toBe("");
+    expect(
+      (screen.getByLabelText("Max price (TND)") as HTMLInputElement).value,
+    ).toBe("");
+    await waitFor(() =>
+      expect(screen.getByTestId("url").textContent).not.toContain("Price"),
+    );
+  });
+
+  it("highlights a card while the pointer is over it", async () => {
+    renderPage("");
+    const card = (
+      await screen.findByRole("link", { name: "Marina flat" })
+    ).closest("article")!;
+
+    fireEvent.mouseEnter(card);
+    expect(card.classList.contains("listing-card--highlighted")).toBe(true);
+    fireEvent.mouseLeave(card);
+    expect(card.classList.contains("listing-card--highlighted")).toBe(false);
+  });
+
+  it.each([
+    ["next to the map", false],
+    ["in the grid without the map", true],
+  ])("copies a listing's share link %s", async (_where, hideMap) => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    getPropertyShareData.mockResolvedValue({
+      shareUrl: "https://smartproperties.tech/properties/p2",
+    });
+    renderPage("");
+    await screen.findByRole("link", { name: "Old town studio" });
+    if (hideMap) {
+      fireEvent.click(screen.getByRole("button", { name: /Hide map/ }));
+    }
+
+    const card = screen
+      .getByRole("link", { name: "Old town studio" })
+      .closest("article")!;
+    fireEvent.click(within(card).getByRole("button", { name: "Share" }));
+
+    expect(await screen.findByText("Property link copied.")).toBeTruthy();
+    expect(getPropertyShareData).toHaveBeenCalledWith("p2");
+    expect(writeText).toHaveBeenCalledWith(
+      "https://smartproperties.tech/properties/p2",
+    );
+
+    fireEvent.click(
+      within(card).getByRole("button", { name: "Add to compare" }),
+    );
+    expect(
+      within(card).getByRole("button", { name: "Remove from compare" }),
+    ).toBeTruthy();
   });
 
   it("orders photos by their position when none is primary", async () => {
