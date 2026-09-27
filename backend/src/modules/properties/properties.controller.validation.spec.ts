@@ -12,6 +12,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { AiDescriptionService } from './ai-description.service';
 import { AiPricingService } from './ai-pricing.service';
+import { AiRecommendationService } from './ai-recommendation.service';
 import { PropertyType } from './entities/property.entity';
 import { PropertiesController } from './properties.controller';
 import { PropertiesService } from './properties.service';
@@ -41,6 +42,10 @@ describe('PropertiesController (validation)', () => {
           useValue: {
             suggestPrice: jest.fn(),
           },
+        },
+        {
+          provide: AiRecommendationService,
+          useValue: { getUserRecommendations: jest.fn() },
         },
       ],
     })

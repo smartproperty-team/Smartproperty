@@ -48,7 +48,6 @@ jobs:
       - name: Test with coverage
         run: npx jest --coverage --ci --passWithNoTests
         working-directory: backend
-        continue-on-error: true   # see note in the summary step
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -213,9 +212,4 @@ jobs:
             echo "| Backend | ${{ needs.backend.result }} |"
             echo "| Frontend | ${{ needs.frontend.result }} |"
             echo "| SonarQube Cloud | ${{ needs.sonar.result }} |"
-            echo ""
-            echo "Backend tests are non-blocking: three specs fail on a"
-            echo "pre-existing AiPricingService dependency-injection problem,"
-            echo "unrelated to any change. Remove continue-on-error from the"
-            echo "backend job once those are fixed."
           } >> "$GITHUB_STEP_SUMMARY"
