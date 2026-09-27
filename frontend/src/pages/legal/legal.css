@@ -103,7 +103,9 @@
   margin-top: 0.5rem;
 }
 
-.legal-page a {
+/* Scoped to the article: the navbar and footer keep their own link styles
+   (navy text here would vanish on the navy navbar). */
+.legal-article a {
   border-radius: 3px;
   color: var(--legal-navy);
   font-weight: 600;
@@ -112,18 +114,11 @@
   text-underline-offset: 0.2em;
 }
 
-.legal-page a:hover {
+.legal-article a:hover {
   text-decoration-color: currentColor;
 }
 
-.legal-page a:focus-visible {
+.legal-article a:focus-visible {
   outline: 2px solid var(--legal-navy);
   outline-offset: 2px;
-}
-
-/* The navbar and footer keep their own link styles. */
-.legal-page nav[aria-label="Main navigation"] a,
-.legal-page .site-footer a {
-  font-weight: inherit;
-  text-decoration: none;
 }
