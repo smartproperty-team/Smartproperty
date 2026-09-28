@@ -56,74 +56,84 @@ az provider register --namespace Microsoft.Storage
 The resource group may sit in `westeurope` even though resources may not —
 a group's location only stores its metadata.
 
-### 2. OIDC federated credentials
+### 2. Deploy identity (OIDC)
 
-This is what lets the workflow authenticate **without storing an Azure secret
-in GitHub**. Replace `<owner>/<repo>`:
+This lets the Deploy workflow sign in to Azure **without any Azure secret
+stored in GitHub**. GitHub gives each job a short-lived OIDC token, and Azure
+exchanges it for an access token because a federated credential trusts it.
+
+The usual recipe puts that credential on an Entra **app registration**, but
+this tenant does not let student accounts create one (`az ad app create`
+returns *Insufficient privileges*). A **user-assigned managed identity** can
+carry federated credentials too, and it is an ordinary Azure resource, so the
+subscription's Owner can create it:
 
 ```bash
-appId=$(az ad app create --display-name smartproperty-deploy --query appId -o tsv)
-az ad sp create --id "$appId"
+rg=rg-smartproperty
+az identity create -n id-smartproperty-deploy -g $rg -l italynorth
 
-az ad app federated-credential create --id "$appId" --parameters '{
-  "name": "github-main",
-  "issuer": "https://token.actions.githubusercontent.com",
-  "subject": "repo:<owner>/<repo>:ref:refs/heads/main",
-  "audiences": ["api://AzureADTokenExchange"]
-}'
-
-subId=$(az account show --query id -o tsv)
-rg="/subscriptions/$subId/resourceGroups/rg-smartproperty"
-
-# Control plane: create and update resources in this group only
-az role assignment create --assignee "$appId" --role Contributor --scope "$rg"
-
-# Data plane: Contributor does NOT allow writing blobs. The frontend upload
-# uses --auth-mode login, so this second assignment is required or the
-# deploy job fails with an authorization error at the upload step.
-az role assignment create --assignee "$appId" \
-  --role "Storage Blob Data Contributor" --scope "$rg"
-
-echo "AZURE_CLIENT_ID=$appId"
-echo "AZURE_SUBSCRIPTION_ID=$subId"
-echo "AZURE_TENANT_ID=$(az account show --query tenantId -o tsv)"
+az identity federated-credential create \
+  --identity-name id-smartproperty-deploy -g $rg --name github-production \
+  --issuer https://token.actions.githubusercontent.com \
+  --subject "repo:smartproperty-team/Smartproperty:environment:production" \
+  --audiences api://AzureADTokenExchange
 ```
 
-The `subject` must match the workflow's trigger exactly. A run on another
-branch, or from a pull request, produces a different subject, does not match,
-and fails with a generic credential error — it is not a wrong secret, it is a
-trust rule that does not cover that run.
+The identity is not attached to the container app (the express environment
+rejects that); it exists only for the workflow to sign in as.
 
-### 3. GitHub repository secrets
+The `subject` trusts **only jobs that run in this repository's `production`
+environment**. A pull request, a fork, or any job without that environment
+presents a different subject and is refused.
 
-Settings → Secrets and variables → Actions. Six values:
+It gets three narrow roles rather than Contributor on the group:
 
-| Secret | Value |
-|---|---|
-| `AZURE_CLIENT_ID` | from step 2 |
-| `AZURE_TENANT_ID` | from step 2 |
-| `AZURE_SUBSCRIPTION_ID` | from step 2 |
-| `JWT_SECRET` | `openssl rand -base64 48` |
-| `JWT_REFRESH_SECRET` | `openssl rand -base64 48` — a different value |
-| `GHCR_PULL_TOKEN` | GitHub PAT with `read:packages`, for pulling the image |
-| `CORS_ORIGIN` | extra origins only; the site's own URL is added automatically |
+```bash
+pid=$(az identity show -n id-smartproperty-deploy -g $rg --query principalId -o tsv)
+scope=$(az group show -n $rg --query id -o tsv)
+grant() {
+  az role assignment create --assignee-object-id "$pid" \
+    --assignee-principal-type ServicePrincipal --role "$1" --scope "$scope/providers/$2"
+}
+# Change the API's image
+grant "Container Apps Contributor" Microsoft.App/containerApps/ca-smartproperty-api2
+# Updating an app also needs managedEnvironments/join/action on its
+# environment. On the environment itself this role grants only read and join.
+grant "Container Apps Contributor" Microsoft.App/managedEnvironments/cae-smartproperty
+# Publish the site: blob access to the $web container only
+grant "Storage Blob Data Contributor" \
+  'Microsoft.Storage/storageAccounts/stwebsmartpropertybyzjdc/blobServices/default/containers/$web'
+```
 
-Optional repository **variable** (not a secret): `API_NAME_SUFFIX`. Set it to
-`2`, `3`, … only to recover from a stuck express-environment artifact, as
-described under Notes. It changes the container app's name and FQDN.
+So a deploy can do anything to the API's container app, including reading and
+changing its settings and secrets, and can write the site's files - and
+nothing else: no other resource, no other blob, no role assignments.
 
-`GHCR_PULL_TOKEN` is required because this organization disables public and
-internal package visibility, so the image cannot be pulled anonymously. If it
-is absent the template renders `registries: []` and the container app fails to
+### 3. GitHub settings
+
+Settings → Secrets and variables → Actions:
+
+| Name | Kind | Value |
+|---|---|---|
+| `AZURE_CLIENT_ID` | secret | `az identity show -n id-smartproperty-deploy -g rg-smartproperty --query clientId -o tsv` |
+| `AZURE_TENANT_ID` | secret | `az account show --query tenantId -o tsv` |
+| `AZURE_SUBSCRIPTION_ID` | secret | `az account show --query id -o tsv` |
+| `AZURE_DEPLOY_ENABLED` | variable | `true` to deploy every push to `main` |
+
+None of the three IDs is a credential - the trust lives in the federated
+credential - but secrets keep them out of the logs.
+
+The first run that deploys creates the `production` environment. Then, under
+Settings → Environments → production, set **Deployment branches** to `main`
+only, so a run started by hand on another branch cannot deploy. Adding
+**Required reviewers** there would make every deploy wait for an approval.
+
+`main.bicep` is applied by hand (see First deployment), not by the workflow.
+It needs `jwtSecret` and `jwtRefreshSecret` (at least 32 characters each, or
+the API refuses to boot) and, because this organization disables public
+packages, `ghcrUsername` and `ghcrToken` (a PAT with `read:packages`). Without
+the token the template renders `registries: []` and the container app fails to
 pull with an error that does not mention authentication.
-
-Both JWT secrets must be at least 32 characters. Shorter and the API
-deliberately refuses to boot.
-
-No database secrets: the template creates the Cosmos account and reads its
-connection string and key with `listConnectionStrings()` and `listKeys()`,
-which ARM resolves at deploy time. No database credential is ever typed by
-hand or stored in CI.
 
 ## Database
 
@@ -164,8 +174,9 @@ There is a deliberate two-pass ordering:
    build time, so runtime settings cannot supply them.
 3. Set `CORS_ORIGIN` to the static website URL and redeploy the API.
 
-The workflow handles pass 2 by reading the API URL from the deployment
-output. `CORS_ORIGIN` is the one value set by hand once the site URL exists.
+The Deploy workflow repeats pass 2 on every deploy, reading the API URL from
+the container app. `CORS_ORIGIN` is the one value set by hand once the site
+URL exists.
 
 ## After deploying
 
@@ -242,18 +253,54 @@ That is expected and harmless - the error is caught and the buckets already
 exist. Create a new bucket in the Cloudflare dashboard, then add it to the
 token.
 
-## Deploying a new image
+## Continuous deployment
 
-Container Apps caches `:latest`, and cycling replicas does not re-pull it.
-Deploy by digest so the rollout is unambiguous:
+`.github/workflows/deploy.yml`, on every push to `main`:
+
+1. **Test** - backend type check and a frontend build.
+2. **Build and push API image** - tagged with the commit and pushed to GHCR.
+   The commit is baked into the image, and `/api/health` reports it.
+3. **Deploy API**, in the `production` environment - records the running
+   image, points the container app at the new one *by digest*, then checks it:
+   - `/api/health` must report this commit within 5 minutes;
+   - then 10 healthy responses in a row, within 3 minutes;
+   - then `GET /api/properties` must succeed, which needs the database.
+
+   If a check fails, the job puts the previous image back and fails.
+4. **Deploy frontend** - builds the site against the API's URL and uploads the
+   hashed bundles, then the other files, then `index.html` last, so no visitor
+   gets a page whose scripts are missing. It then checks the live site serves
+   the new bundle. Hashed bundles are cached for a year; `index.html` is not
+   cached.
+
+Steps 3 and 4 run on a push only while `AZURE_DEPLOY_ENABLED` is `true`.
+Running the workflow by hand (Actions → Deploy → Run workflow) always deploys.
+Deploys queue behind each other and are never cancelled half-way.
+
+The workflow does **not** apply `main.bicep`. Production has moved on from the
+template - MongoDB Atlas instead of Cosmos DB, R2 storage settings set by hand -
+so applying it would overwrite live settings. Until the template is brought
+back in line, treat it as the record of the initial setup.
+
+**A deploy briefly drops requests.** The express environment keeps a single
+revision, `latest`, and replaces it in place, so the old and new versions never
+serve side by side, and the readiness probe cannot close that gap. When last
+measured, requests failed intermittently for about two minutes. The checks in
+step 3 allow for that gap, but not for a build that keeps failing.
+
+### Deploying or rolling back by hand
+
+Every Build run's summary prints the command to deploy its image, and every
+Deploy run's summary shows the image it replaced. Either way it is one command:
 
 ```bash
-docker build --target prod -t ghcr.io/<owner>/smartproperty-backend:latest ./backend
-docker push ghcr.io/<owner>/smartproperty-backend:latest   # note the digest
-az containerapp update -n ca-smartproperty-api2 -g rg-smartproperty   --image ghcr.io/<owner>/smartproperty-backend@sha256:<digest>
+az containerapp update -n ca-smartproperty-api2 -g rg-smartproperty \
+  --image ghcr.io/smartproperty-team/smartproperty-backend@sha256:<digest>
 ```
 
-Changing the image this way does restart the container, unlike a secret change.
+Always deploy by digest. Container Apps caches `:latest`, and cycling replicas
+does not re-pull it. Changing the image restarts the container, unlike a secret
+change.
 
 ## Operational notes
 
@@ -292,6 +339,7 @@ the list needs `0.0.0.0/0`.
 - The Cosmos account sets `totalThroughputLimit: 1000`, a hard ceiling at the
   free allowance so nothing can quietly overrun it.
 - Static website hosting is a data-plane setting that ARM cannot enable, so
-  the workflow turns it on with `az storage blob service-properties update`.
+  it was switched on once by hand with
+  `az storage blob service-properties update --static-website`.
   `index.html` is also the 404 document, which gives the React SPA its
   client-side routing fallback.

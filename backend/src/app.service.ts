@@ -11,6 +11,8 @@ export interface HealthCheck {
   uptime: number;
   environment: string;
   version: string;
+  /** Git commit the image was built from; the deploy waits until it shows. */
+  commit: string;
 }
 
 export interface ApiInfo {
@@ -40,6 +42,8 @@ export class AppService {
       environment:
         this.configService.get<string>('app.nodeEnv') || 'development',
       version: '1.0.0',
+      // Baked into the image at build time (Dockerfile ARG GIT_COMMIT).
+      commit: process.env.GIT_COMMIT || 'unknown',
     };
   }
 

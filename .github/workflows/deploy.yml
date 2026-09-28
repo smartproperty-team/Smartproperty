@@ -1,9 +1,18 @@
 # ===========================================
 # SmartProperty - Build and deploy to Azure
 # ===========================================
-# Authenticates with OIDC federated credentials. No Azure secret is stored
-# in GitHub: the workflow exchanges a short-lived GitHub token for an Azure
-# one at run time. See infra/README.md for the one-time setup.
+# Every push to main is tested and built into an image on GHCR. While
+# continuous deployment is on (repository variable AZURE_DEPLOY_ENABLED),
+# that exact image - by digest - is rolled out to the API, checked, and rolled
+# back automatically if the check fails; then the frontend is published.
+# Running the workflow by hand always deploys.
+#
+# Azure sign-in uses OIDC: GitHub's short-lived token is exchanged for an
+# Azure one through a federated credential, so no Azure secret is stored
+# anywhere. The credential sits on a user-assigned managed identity rather
+# than an app registration, because this student tenant forbids those. It
+# only trusts jobs running in this repository's `production` environment.
+# See infra/README.md, "Continuous deployment".
 
 name: Deploy
 
@@ -11,25 +20,21 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      deploy_infra:
-        description: 'Run the Bicep deployment as well'
-        type: boolean
-        default: false
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  # One production deploy at a time, in order, and never cancelled half-way.
+  group: deploy-production
   cancel-in-progress: false
 
 env:
   AZURE_RESOURCE_GROUP: rg-smartproperty
-  AZURE_LOCATION: westeurope
+  CONTAINER_APP: ca-smartproperty-api2
+  STORAGE_ACCOUNT: stwebsmartpropertybyzjdc
+  SITE_URL: https://smartproperties.tech
   IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/smartproperty-backend
 
 permissions:
   contents: read
-  packages: write
-  id-token: write   # required for OIDC
 
 jobs:
   # ---------------------------------------------------------------
@@ -65,15 +70,13 @@ jobs:
     name: Build and push API image
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     outputs:
-      image: ${{ steps.meta.outputs.image }}
       digest: ${{ steps.build.outputs.digest }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Resolve image tag
-        id: meta
-        run: echo "image=${{ env.IMAGE_NAME }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-buildx-action@v3
 
@@ -91,28 +94,28 @@ jobs:
           context: ./backend
           target: prod
           push: true
+          # Reported by /api/health, so the deploy can tell when this build
+          # is the one answering.
+          build-args: GIT_COMMIT=${{ github.sha }}
           # Immutable SHA tag so a rollback is one command against a known
           # good build, plus a moving latest for convenience.
           tags: |
-            ${{ steps.meta.outputs.image }}
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Report the image to deploy
-        # Deployment is manual while CD is gated off (see docs/DEVOPS.md), so
-        # print the exact reference to use. Deploying by digest pins the build
-        # that passed this run, and needs no Docker on the deploying machine.
+      - name: Report the image
         env:
           REF: ${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
         run: |
           {
             echo "### API image"
             echo ""
-            echo "Built from ${GITHUB_SHA}. Deploy exactly this build with:"
+            echo "Built from \`${GITHUB_SHA}\`. To deploy exactly this build by hand:"
             echo ""
             echo '```'
-            echo "az containerapp update -n <app> -g rg-smartproperty --image ${REF}"
+            echo "az containerapp update -n ${CONTAINER_APP} -g ${AZURE_RESOURCE_GROUP} --image ${REF}"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -120,20 +123,19 @@ jobs:
   deploy-backend:
     name: Deploy API
     needs: build-image
+    if: vars.AZURE_DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    # Skipped until Azure credentials exist. Creating them needs an Entra app
-    # registration, which this tenant does not permit for student accounts, so
-    # deployment is currently manual. Gating keeps test and build-image green
-    # rather than failing the whole run on a missing secret.
-    if: vars.AZURE_DEPLOY_ENABLED == 'true'
+    environment:
+      name: production
+      url: https://smartproperties.tech
+    permissions:
+      contents: read
+      id-token: write # for the OIDC sign-in
     outputs:
-      app_name: ${{ steps.appname.outputs.name }}
-      api_url: ${{ steps.urls.outputs.api_url }}
-      site_url: ${{ steps.urls.outputs.site_url }}
-      storage_account: ${{ steps.urls.outputs.storage_account }}
+      api_url: ${{ steps.api.outputs.url }}
+    env:
+      IMAGE: ghcr.io/${{ github.repository_owner }}/smartproperty-backend@${{ needs.build-image.outputs.digest }}
     steps:
-      - uses: actions/checkout@v4
-
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
@@ -141,66 +143,102 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy infrastructure
-        uses: azure/arm-deploy@v2
-        with:
-          scope: resourcegroup
-          resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
-          template: infra/main.bicep
-          parameters: >-
-            backendImage=${{ env.IMAGE_NAME }}@${{ needs.build-image.outputs.digest }}
-            apiNameSuffix=${{ vars.API_NAME_SUFFIX }}
-            ghcrUsername=${{ github.actor }}
-            ghcrToken=${{ secrets.GHCR_PULL_TOKEN }}
-            jwtSecret=${{ secrets.JWT_SECRET }}
-            jwtRefreshSecret=${{ secrets.JWT_REFRESH_SECRET }}
-            corsOrigin=${{ secrets.CORS_ORIGIN }}
-          failOnStdErr: false
-
-      - name: Resolve names from the deployment output
-        id: appname
-        # apiNameSuffix changes the container app's name, so never hard-code
-        # it - read back what the template actually created.
+      - name: Record the running image, for rollback
+        id: before
         run: |
-          name=$(az deployment group show             --resource-group "$AZURE_RESOURCE_GROUP" --name main             --query properties.outputs.backendAppName.value -o tsv)
-          echo "name=${name}" >> "$GITHUB_OUTPUT"
-          echo "Deployed container app: ${name}"
+          image=$(az containerapp show -n "$CONTAINER_APP" -g "$AZURE_RESOURCE_GROUP" \
+            --query 'properties.template.containers[0].image' -o tsv)
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
+          echo "Running before this deploy: ${image}"
 
-      - name: Roll the API to this image
+      - name: Roll the API to this build
         run: |
-          az containerapp update             --name "${{ steps.appname.outputs.name }}"             --resource-group "$AZURE_RESOURCE_GROUP"             --image "${{ env.IMAGE_NAME }}@${{ needs.build-image.outputs.digest }}"
+          az containerapp update -n "$CONTAINER_APP" -g "$AZURE_RESOURCE_GROUP" \
+            --image "$IMAGE" -o none
 
-      - name: Read deployed URLs
-        id: urls
+      - name: Check the new build
+        id: api
         run: |
-          api_fqdn=$(az deployment group show             --resource-group "$AZURE_RESOURCE_GROUP" --name main             --query properties.outputs.backendFqdn.value -o tsv)
-          storage=$(az deployment group show             --resource-group "$AZURE_RESOURCE_GROUP" --name main             --query properties.outputs.frontendStorageAccount.value -o tsv)
-          site=$(az deployment group show             --resource-group "$AZURE_RESOURCE_GROUP" --name main             --query properties.outputs.frontendUrl.value -o tsv)
-          echo "api_url=https://${api_fqdn}/api" >> "$GITHUB_OUTPUT"
-          echo "storage_account=${storage}" >> "$GITHUB_OUTPUT"
-          echo "site_url=${site%/}" >> "$GITHUB_OUTPUT"
+          fqdn=$(az containerapp show -n "$CONTAINER_APP" -g "$AZURE_RESOURCE_GROUP" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          api="https://${fqdn}/api"
+          echo "url=${api}" >> "$GITHUB_OUTPUT"
 
-      - name: Smoke test the health endpoint
-        run: |
-          api_url="${{ steps.urls.outputs.api_url }}"
-          for attempt in $(seq 1 12); do
-            code=$(curl -s -o /dev/null -w '%{http_code}' "${api_url}/health" || true)
-            if [ "$code" = "200" ]; then
-              echo "healthy after ${attempt} attempt(s)"
-              exit 0
-            fi
-            echo "attempt ${attempt}: got ${code}, retrying..."
-            sleep 10
+          # 1. Wait (up to 5 minutes) for this commit to be the one answering.
+          commit=""
+          for attempt in $(seq 1 60); do
+            commit=$(curl -fsS -m 10 "${api}/health" | jq -r '.commit // empty' || true)
+            [ "$commit" = "$GITHUB_SHA" ] && break
+            sleep 5
           done
-          echo "API never became healthy. Recent logs:"
-          az containerapp logs show             --name "${{ steps.appname.outputs.name }}"             --resource-group "$AZURE_RESOURCE_GROUP" --tail 60 || true
-          exit 1
+          if [ "$commit" != "$GITHUB_SHA" ]; then
+            echo "::error::The new build never answered; last commit seen: '${commit:-none}'."
+            exit 1
+          fi
+          echo "New build answering after ${attempt} checks."
 
+          # 2. It must then settle: 10 health checks in a row, within 3
+          #    minutes. The switch-over can drop a few requests; a build that
+          #    keeps failing does not get past this.
+          streak=0
+          for attempt in $(seq 1 60); do
+            if curl -fsS -m 10 -o /dev/null "${api}/health"; then
+              streak=$((streak + 1))
+              [ "$streak" -ge 10 ] && break
+            else
+              streak=0
+            fi
+            sleep 3
+          done
+          if [ "$streak" -lt 10 ]; then
+            echo "::error::The API did not stay healthy after the switch."
+            exit 1
+          fi
+
+          # 3. /health does not touch the database; the listings do.
+          curl -fsS -m 20 -o /dev/null "${api}/properties?limit=1" || {
+            echo "::error::GET /properties failed: the API cannot read its database."
+            exit 1
+          }
+          echo "Healthy, and reading from the database."
+
+      - name: Roll back to the previous image
+        if: failure() && steps.before.outputs.image != ''
+        env:
+          PREVIOUS: ${{ steps.before.outputs.image }}
+        run: |
+          echo "::warning::Deploy failed; rolling back to ${PREVIOUS}"
+          az containerapp update -n "$CONTAINER_APP" -g "$AZURE_RESOURCE_GROUP" \
+            --image "$PREVIOUS" -o none
+          {
+            echo "### Rolled back"
+            echo ""
+            echo "\`${IMAGE}\` failed its checks. The API is back on \`${PREVIOUS}\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Summary
+        run: |
+          {
+            echo "### API deployed"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Image | \`${IMAGE}\` |"
+            echo "| Replaced | \`${{ steps.before.outputs.image }}\` |"
+            echo "| API | ${{ steps.api.outputs.url }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------
   deploy-frontend:
     name: Deploy frontend
-    needs: [build-image, deploy-backend]
+    needs: deploy-backend
     runs-on: ubuntu-latest
-    if: vars.AZURE_DEPLOY_ENABLED == 'true'
+    environment:
+      name: production
+      url: https://smartproperties.tech
+    permissions:
+      contents: read
+      id-token: write # for the OIDC sign-in
     steps:
       - uses: actions/checkout@v4
 
@@ -213,10 +251,12 @@ jobs:
         run: npm ci
 
       - name: Build
-        # VITE_* variables are substituted at build time and frozen into the
-        # bundle, so the API URL has to be known here, not at runtime.
+        # VITE_* values are frozen into the bundle at build time. Both keys
+        # are public by design: they ship inside the page's JavaScript.
         env:
           VITE_API_URL: ${{ needs.deploy-backend.outputs.api_url }}
+          VITE_RECAPTCHA_SITE_KEY: 6LeVNmMsAAAAAH5tfjXkOtyScNdfrptlgxooPLHJ
+          VITE_STRIPE_PUBLISHABLE_KEY: pk_test_51QwtaHCdbmFmls5VgXjMi6xq3hp8X2dSLmYMf0rY9aJROXfe3ZO6Z9mtxejKrKgtT59YtpaG3qpDlp8o7gKh061V00PTfumZHa
         run: npm run build --prefix frontend
 
       - name: Azure login (OIDC)
@@ -226,25 +266,40 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Enable static website hosting
-        # Data-plane setting, so ARM cannot do it. index.html doubles as the
-        # error document, giving the React SPA its deep-link fallback.
+      - name: Publish the site
+        # In three steps so no visitor gets a page whose scripts are missing:
+        # the hashed bundles first (cached for a year, since any change gets a
+        # new name), then the other files, and index.html last.
         run: |
-          az storage blob service-properties update             --account-name "${{ needs.deploy-backend.outputs.storage_account }}"             --static-website --auth-mode login             --index-document index.html             --404-document index.html
+          # The static website container is literally named $web.
+          # shellcheck disable=SC2016
+          site='$web'
+          mv frontend/dist/index.html "$RUNNER_TEMP/index.html"
+          mv frontend/dist/assets "$RUNNER_TEMP/assets"
+          upload() {
+            az storage blob upload-batch --account-name "$STORAGE_ACCOUNT" \
+              --auth-mode login -d "$site" --overwrite --no-progress -o none "$@"
+          }
+          upload -s "$RUNNER_TEMP/assets" --destination-path assets \
+            --content-cache-control 'public, max-age=31536000, immutable'
+          upload -s frontend/dist
+          az storage blob upload --account-name "$STORAGE_ACCOUNT" \
+            --auth-mode login -c "$site" -n index.html -f "$RUNNER_TEMP/index.html" \
+            --content-type 'text/html; charset=utf-8' \
+            --content-cache-control 'no-cache' --overwrite --no-progress -o none
 
-      - name: Upload the bundle
+      - name: Check the live site serves this build
         run: |
-          az storage blob upload-batch             --account-name "${{ needs.deploy-backend.outputs.storage_account }}"             --auth-mode login             --destination '$web'             --source frontend/dist             --overwrite
-
-      - name: Summary
-        run: |
-          {
-            echo "### Deployed"
-            echo ""
-            echo "| | |"
-            echo "|---|---|"
-            echo "| Frontend | ${{ needs.deploy-backend.outputs.site_url }} |"
-            echo "| API | ${{ needs.deploy-backend.outputs.api_url }} |"
-            echo "| App | \`${{ needs.deploy-backend.outputs.app_name }}\` |"
-            echo "| Image | \`${{ needs.build-image.outputs.image }}\` |"
-          } >> "$GITHUB_STEP_SUMMARY"
+          expected=$(grep -o 'assets/index-[A-Za-z0-9_-]*\.js' "$RUNNER_TEMP/index.html" | head -1)
+          for _ in $(seq 1 12); do
+            live=$(curl -fsS -m 10 "${SITE_URL}/?deploy=${GITHUB_RUN_ID}" \
+              | grep -o 'assets/index-[A-Za-z0-9_-]*\.js' | head -1 || true)
+            if [ "$live" = "$expected" ]; then
+              echo "${SITE_URL} serves ${expected}"
+              echo "### Frontend deployed: ${SITE_URL} (\`${expected}\`)" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::${SITE_URL} still serves '${live}', expected '${expected}'."
+          exit 1

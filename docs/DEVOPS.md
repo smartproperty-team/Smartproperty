@@ -6,7 +6,7 @@ Three workflows, separated so each gives feedback at the speed it can.
 |---|---|---|
 | `ci.yml` | push, PR | Typecheck, test with coverage, build, SonarQube Cloud |
 | `security.yml` | push, PR, weekly | Secrets, SAST, dependencies, Dockerfiles, image, SBOM |
-| `deploy.yml` | push to `main` | Build and publish image, deploy to Azure — **currently gated off** |
+| `deploy.yml` | push to `main`, manual | Build and publish image, deploy to Azure, check, roll back on failure |
 
 They are separate on purpose. A container build and scan takes minutes; a
 developer waiting on a typecheck should not wait for it. The weekly schedule
@@ -125,19 +125,16 @@ To bring it back:
 
 ## What is not automated, and why
 
-**Deployment.** `deploy.yml` is gated behind an `AZURE_DEPLOY_ENABLED`
-repository variable and does not run. Azure login needs an Entra app
-registration, and this tenant does not permit student accounts to create one —
-`az ad app create` returns *Insufficient privileges*. Every credential-based
-method (OIDC, service principal, `AZURE_CREDENTIALS`) needs that same
-registration, so this is a tenant policy rather than a configuration gap.
+**Infrastructure changes.** `deploy.yml` ships new builds but does not apply
+`infra/main.bicep`: production has drifted from the template (MongoDB Atlas,
+R2 storage), so applying it would overwrite live settings. Infrastructure is
+changed by hand until the template is brought back in line.
 
-Deployment is therefore manual; see `infra/README.md`. To enable CD, ask for
-the **Application Developer** role in Entra ID, then follow the OIDC setup in
-that document and set `AZURE_DEPLOY_ENABLED` to `true`.
-
-The image build and scan still run in CI, so the pipeline proves the artefact
-is sound even though it cannot ship it.
+Deployment itself is automated. This tenant does not let student accounts
+create an Entra app registration, which the usual OIDC recipe needs, so the
+federated credential sits on a user-assigned managed identity instead. It
+trusts only jobs in the repository's `production` environment and holds three
+narrowly scoped roles. See "Continuous deployment" in `infra/README.md`.
 
 ## Worth adding next
 
@@ -147,7 +144,7 @@ Ordered by value for this project:
    merge. Without it the pipeline is advisory. Settings → Branches → Add rule.
 2. **`cosign` image signing** — sign the image in CI and verify before
    deployment, so the thing that runs is provably the thing that was built.
-   Meaningful supply-chain step once CD works.
+   The natural next supply-chain step now that deployment is automated.
 3. **OWASP ZAP baseline scan** — DAST against the running site, complementing
    CodeQL's static view. Scheduled rather than per-push.
 4. **Playwright smoke tests** — one end-to-end journey (log in, open a

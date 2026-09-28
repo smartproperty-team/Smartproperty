@@ -69,6 +69,13 @@ RUN apk upgrade --no-cache libcrypto3 libssl3  && rm -rf /usr/local/lib/node_mod
 USER node
 EXPOSE 3000
 
+# The commit this image was built from, reported by /api/health so a deploy
+# can tell when the new build is the one answering. Declared last so a new
+# commit does not invalidate the cached layers above.
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT=${GIT_COMMIT}
+LABEL org.opencontainers.image.revision=${GIT_COMMIT}
+
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
