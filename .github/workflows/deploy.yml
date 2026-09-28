@@ -255,8 +255,8 @@ jobs:
         # are public by design: they ship inside the page's JavaScript.
         env:
           VITE_API_URL: ${{ needs.deploy-backend.outputs.api_url }}
-          VITE_RECAPTCHA_SITE_KEY: 6LeVNmMsAAAAAH5tfjXkOtyScNdfrptlgxooPLHJ
-          VITE_STRIPE_PUBLISHABLE_KEY: pk_test_51QwtaHCdbmFmls5VgXjMi6xq3hp8X2dSLmYMf0rY9aJROXfe3ZO6Z9mtxejKrKgtT59YtpaG3qpDlp8o7gKh061V00PTfumZHa
+          VITE_RECAPTCHA_SITE_KEY: 6LeVNmMsAAAAAH5tfjXkOtyScNdfrptlgxooPLHJ # gitleaks:allow (public site key)
+          VITE_STRIPE_PUBLISHABLE_KEY: pk_test_51QwtaHCdbmFmls5VgXjMi6xq3hp8X2dSLmYMf0rY9aJROXfe3ZO6Z9mtxejKrKgtT59YtpaG3qpDlp8o7gKh061V00PTfumZHa # gitleaks:allow (publishable key)
         run: npm run build --prefix frontend
 
       - name: Azure login (OIDC)
