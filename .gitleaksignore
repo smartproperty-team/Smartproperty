@@ -1,0 +1,6 @@
+# Findings gitleaks may ignore, one fingerprint per line.
+# The reCAPTCHA site key and Stripe publishable key in deploy.yml are public
+# by design (they ship in the site's JavaScript). These two lines cover the
+# commit that added them; later commits mark them with gitleaks:allow.
+f40f904fb6ac8346f02fdfd82ed9dc49c6857329:.github/workflows/deploy.yml:generic-api-key:258
+f40f904fb6ac8346f02fdfd82ed9dc49c6857329:.github/workflows/deploy.yml:generic-api-key:259
