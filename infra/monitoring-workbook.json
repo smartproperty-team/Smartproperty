@@ -65,7 +65,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "AppAvailabilityResults\n| summarize Availability = round(100.0 * countif(Success == true) / count(), 2), Runs = count() by Name",
+        "query": "AppAvailabilityResults\n| summarize Availability = round(100.0 * countif(Success == true) / count(), 2), Checks = strcat(count(), ' checks') by Name",
         "size": 0,
         "title": "Availability",
         "timeContextFromParameter": "TimeRange",
@@ -84,7 +84,7 @@
             "columnMatch": "Availability",
             "formatter": 12,
             "formatOptions": {
-              "palette": "redGreen"
+              "palette": "green"
             },
             "numberFormat": {
               "unit": 1,
@@ -95,7 +95,7 @@
             }
           },
           "subtitleContent": {
-            "columnMatch": "Runs",
+            "columnMatch": "Checks",
             "formatter": 1
           },
           "showBorder": true
