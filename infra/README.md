@@ -31,7 +31,7 @@ Default region is `italynorth`, the closest permitted region to Tunisia.
 |---|---|---|
 | Log Analytics workspace | Container Apps requires one | $0 (5 GB/mo free) |
 | Container Apps environment | Networking and logging boundary | $0 |
-| Container App `ca-smartproperty-api` | The NestJS API | ~$3–5/mo warm |
+| Container App `ca-smartproperty-api` | The NestJS API | ~$5.80/mo warm (see Cost) |
 | Cosmos DB (MongoDB, RU, free tier) | Database, capped at 1000 RU/s | $0 |
 | Storage account `stweb…` | Static website for the React build | ~$0.05/mo |
 
@@ -321,16 +321,17 @@ providers, which a new subscription may not have registered
 
 | Alert | Source | Fires when | Severity |
 |---|---|---|---|
-| `api-down` | Availability test on `/api/health` from West Europe and France Central | Both locations fail (bad status, no `"status":"ok"`, or a certificate with under 7 days left) | 1 |
-| `site-down` | Availability test on the site from North Europe | The page fails or lacks its title | 1 |
+| `api-down` | Availability test on `/api/health` from West Europe, every 15 minutes | The check fails (bad status, no `"status":"ok"`, or a certificate with under 7 days left) | 1 |
 | `api-no-replica` | Container app metric `Replicas` | No running replica for 15 minutes | 1 |
 | `api-restarted` | Container app metric `RestartCount` | Any restart | 2 |
-| `api-memory` | Container app metric `WorkingSetBytes` | Over 80% of the 1 GiB limit | 2 |
-| `api-cpu` | Container app metric `UsageNanoCores` | Averages over 80% of 0.5 vCPU for 15 minutes | 3 |
+| `api-memory` | Container app metric `WorkingSetBytes` | Over 80% of the 0.5 GiB limit | 2 |
 | `api-error-burst` | API logs in Log Analytics | 5 or more ERROR lines in 15 minutes | 2 |
 
-An availability test run only counts as failed after three attempts in a row
-fail, and every alert resolves itself once the condition clears.
+Every alert is evaluated every 15 minutes. An availability test run only
+counts as failed after three attempts in a row fail, and every alert resolves
+itself once the condition clears. The site has no availability test by
+default - it is static files behind Cloudflare, and every deploy checks the
+live site serves the new build - but `siteTestLocations` turns one on.
 
 **The dashboard** is the *SmartProperty operations* workbook (Azure portal →
 Monitor → Workbooks, or the `workbookUrl` output of the deployment):
@@ -346,13 +347,43 @@ Analytics - there are no platform system logs - so restarts come from the
 notifications ("Free subscription not supported"), but real alerts email
 normally.
 
-**Cost**, at September 2026 retail prices: about $7 a month. Availability
+**Cost**, at September 2026 retail prices: about $2.55 a month. Availability
 test runs are $0.000645 each, so each probe location checked every 15 minutes
-is about $1.86 a month, and the three used here about $5.60. The six metric
-alerts cost $0.15 a month each at a 5-minute evaluation, the log alert $0.50,
-and the first 1,000 emails a month are free. The `testFrequency`,
-`apiTestLocations` and `siteTestLocations` parameters trade cost for
-detection speed.
+is about $1.86 a month. The four metric alerts cost $0.05 a month each at a
+15-minute evaluation, the log alert $0.50, and the first 1,000 emails a month
+are free. The `testFrequency`, `apiTestLocations` and `siteTestLocations`
+parameters trade cost for detection speed; see "Cost" below for why the
+defaults are this lean.
+
+## Cost
+
+The subscription is Azure for Students: $100 of credit, with the spending
+limit on, so when the credit runs out Azure disables the resources rather than
+billing anyone. The credit also expires, normally 12 months after activation;
+the balance and end date are at
+https://www.microsoftazuresponsorships.com/Balance. The aim is for the site to
+stay up until the credit expires, which means about $8 a month at most.
+
+Measured from Cost Management in September 2026:
+
+| Item | Monthly |
+|---|---|
+| API container, 0.25 vCPU / 0.5 GiB, one replica always on | ~$5.80 |
+| Monitoring (see above) | ~$2.55 |
+| Static site storage, Log Analytics (under the 5 GB free allowance), bandwidth | ~$0 |
+| Cosmos DB account from the original template (free tier, unused) | $0 |
+| **Total** | **~$8.40** |
+
+The container is billed per second for the CPU and memory it reserves, busy
+or idle, less a monthly free grant of 180,000 vCPU-seconds and 360,000
+GiB-seconds, which covers about 8 days at this size. At 0.5 vCPU / 1 GiB it
+cost about $13.70 a month; halving it used 253 MB of the 512 MB with no
+restarts. The `api-memory` alert says when to go back up.
+
+Scaling to zero replicas when idle would cost almost nothing, but the first
+visitor after a quiet spell would wait for the API to start, and the home page
+loads listings from it. For a site shown to visitors, one warm replica is
+worth the $5.80.
 
 ## Operational notes
 

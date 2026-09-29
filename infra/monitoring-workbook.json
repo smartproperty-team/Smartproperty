@@ -57,7 +57,7 @@
     {
       "type": 1,
       "content": {
-        "json": "## Availability\nProbes outside Azure every 15 minutes. The API check expects `\"status\":\"ok\"` from `/api/health`, the site check expects the page title, and both fail if the TLS certificate has under 7 days left."
+        "json": "## Availability\nA probe outside Azure checks the API every 15 minutes: it expects `\"status\":\"ok\"` from `/api/health` and fails if the TLS certificate has under 7 days left. The website is checked on every deploy."
       },
       "name": "availability-heading"
     },
@@ -158,7 +158,7 @@
     {
       "type": 1,
       "content": {
-        "json": "## API container\nPlatform metrics for the container app (0.5 vCPU, 1 GiB). The express environment reports no status codes or response times, so failures show up in the error logs below."
+        "json": "## API container\nPlatform metrics for the container app (0.25 vCPU, 0.5 GiB). The express environment reports no status codes or response times, so failures show up in the error logs below."
       },
       "name": "container-heading"
     },
@@ -252,7 +252,7 @@
             "aggregation": 4
           }
         ],
-        "title": "CPU (nanocores; 500M is the limit)",
+        "title": "CPU (nanocores; 250M is the limit)",
         "gridSettings": {
           "rowLimit": 10000
         }
@@ -283,7 +283,7 @@
             "aggregation": 3
           }
         ],
-        "title": "Memory working set (bytes; 1 GiB is the limit)",
+        "title": "Memory working set (bytes; 0.5 GiB is the limit)",
         "gridSettings": {
           "rowLimit": 10000
         }
