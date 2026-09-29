@@ -2,12 +2,12 @@
 # SmartProperty - Build and quality pipeline
 # ===========================================
 # Fast feedback on every push: typecheck, test with coverage, build both
-# applications, then send coverage and code quality to SonarQube Cloud.
+# applications, compile the Bicep templates, then send coverage and code
+# quality to SonarQube Cloud.
 #
 # Kept separate from security.yml so a slow image scan never delays the signal
-# a developer actually waits for, and separate from deploy.yml because
-# deployment is currently manual (the Entra tenant blocks the app registration
-# that Azure login requires).
+# a developer actually waits for, and separate from deploy.yml, which only
+# ships what has reached main.
 
 name: CI
 
@@ -197,10 +197,29 @@ jobs:
             echo "https://sonarcloud.io/project/overview?id=smartproperty-team_Smartproperty"
           } >> "$GITHUB_STEP_SUMMARY"
 
+  infra:
+    name: Infrastructure templates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and lint Bicep
+        # Compiles each template as ARM will receive it and fails on linter
+        # errors, so a broken template shows up here rather than when someone
+        # applies it by hand.
+        run: |
+          az bicep install
+          for f in infra/*.bicep; do
+            echo "::group::$f"
+            az bicep build --file "$f" --stdout > /dev/null
+            az bicep lint --file "$f"
+            echo "::endgroup::"
+          done
+
   summary:
     name: CI summary
     runs-on: ubuntu-latest
-    needs: [backend, frontend, sonar]
+    needs: [backend, frontend, infra, sonar]
     if: always()
     steps:
       - run: |
@@ -211,5 +230,6 @@ jobs:
             echo "|---|---|"
             echo "| Backend | ${{ needs.backend.result }} |"
             echo "| Frontend | ${{ needs.frontend.result }} |"
+            echo "| Infrastructure templates | ${{ needs.infra.result }} |"
             echo "| SonarQube Cloud | ${{ needs.sonar.result }} |"
           } >> "$GITHUB_STEP_SUMMARY"

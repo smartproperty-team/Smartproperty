@@ -178,6 +178,9 @@ All protected endpoints require a Bearer token in the Authorization header.
   logger.log(`🚀 SmartProperty API running on: http://localhost:${port}`);
   logger.log(`📚 API Documentation: http://localhost:${port}/api/docs`);
   logger.log(`🌍 Environment: ${nodeEnv}`);
+  // One line per container start with the build's commit: the monitoring
+  // workbook reads it to list deploys and restarts.
+  logger.log(`📦 Commit: ${process.env.GIT_COMMIT || 'unknown'}`);
 }
 
 void bootstrap();

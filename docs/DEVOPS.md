@@ -96,6 +96,16 @@ tokens on a public repository.
 To enable Dependabot alerts as well as its pull requests: **Settings → Code
 security → Dependabot alerts**.
 
+## Monitoring
+
+Production is watched from outside and from inside, all defined in
+`infra/monitoring.bicep` and checked by CI with the other templates:
+availability tests on the API and the site from probe locations in Europe,
+alerts on downtime, restarts, memory, CPU and bursts of logged errors, email
+to the on-call address, and the *SmartProperty operations* workbook with a
+deploy history built from each container start. The alert list, thresholds
+and cost (about $7 a month) are in `infra/README.md`, "Monitoring".
+
 ## ai-services is switched off
 
 The Python AI service is not deployed and not analysed. It powers
