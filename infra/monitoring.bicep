@@ -8,14 +8,15 @@
 //   az deployment group create  -g rg-smartproperty -f infra/monitoring.bicep -p alertEmail=<address>
 //
 // Creates an email action group; Application Insights on the existing Log
-// Analytics workspace, with availability tests for the API and the site;
-// alerts for downtime, restarts, memory, CPU and error bursts; and a workbook.
+// Analytics workspace, with an availability test on the API (and optionally
+// the site); alerts for downtime, restarts, memory and error bursts; and a
+// workbook.
 //
-// Cost at September 2026 retail prices: an availability test run is
-// $0.000645, so one probe location every 15 minutes is about $1.86 a month and
-// the defaults (three) about $5.60. Metric alerts are $0.15 a month each at a
-// 5-minute evaluation, the log alert $0.50 at 15 minutes, and the first 1,000
-// emails a month are free: about $7 a month in all.
+// Sized to last the Azure for Students credit. At September 2026 retail
+// prices an availability test run is $0.000645, so each probe location checked
+// every 15 minutes is about $1.86 a month; metric alerts are $0.05 a month each
+// at a 15-minute evaluation, the log alert $0.50, and the first 1,000 emails a
+// month are free. The defaults come to about $2.55 a month.
 
 targetScope = 'resourceGroup'
 
@@ -34,13 +35,19 @@ param siteUrl string = 'https://smartproperties.tech'
 param testFrequency int = 900
 
 @description('''
-Probe locations for the API check: West Europe and France Central. The alert
-needs all of them to fail, so one bad probe cannot page anyone.
+Probe locations for the API check. The alert needs all of them to fail. One
+location keeps the cost down; a failed run is retried before it counts, and a
+second location (e.g. 'emea-fr-pra-edge', France Central) rules out a bad probe
+for about $1.86 a month more.
 ''')
-param apiTestLocations array = ['emea-nl-ams-azr', 'emea-fr-pra-edge']
+param apiTestLocations array = ['emea-nl-ams-azr']
 
-@description('Probe locations for the site check: North Europe.')
-param siteTestLocations array = ['emea-gb-db3-azr']
+@description('''
+Probe locations for the site check, e.g. ['emea-gb-db3-azr'] (North Europe).
+Empty by default: the site is static files behind Cloudflare, and every deploy
+already checks the live site serves the new build.
+''')
+param siteTestLocations array = []
 
 resource api 'Microsoft.App/containerApps@2024-03-01' existing = {
   name: containerAppName
@@ -91,20 +98,24 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 // inside the loops rather than stored here.
 var apiHealthUrl = 'https://${api.properties.configuration.ingress.fqdn}/api/health'
 
-var tests = [
-  {
-    key: 'api'
-    title: 'API health'
-    expect: '"status":"ok"'
-    locations: apiTestLocations
-  }
-  {
-    key: 'site'
-    title: 'Website'
-    expect: '<title>SmartProperty'
-    locations: siteTestLocations
-  }
-]
+// A check with no probe locations is left out entirely.
+var tests = filter(
+  [
+    {
+      key: 'api'
+      title: 'API health'
+      expect: '"status":"ok"'
+      locations: apiTestLocations
+    }
+    {
+      key: 'site'
+      title: 'Website'
+      expect: '<title>SmartProperty'
+      locations: siteTestLocations
+    }
+  ],
+  t => !empty(t.locations)
+)
 
 resource webTests 'Microsoft.Insights/webtests@2022-06-15' = [
   for t in tests: {
@@ -157,7 +168,7 @@ resource downAlerts 'Microsoft.Insights/metricAlerts@2018-03-01' = [
         webTests[i].id
         appInsights.id
       ]
-      evaluationFrequency: 'PT5M'
+      evaluationFrequency: 'PT15M'
       // At least one run per location falls in the window at a 15-minute frequency.
       windowSize: 'PT15M'
       criteria: {
@@ -203,21 +214,12 @@ var containerAlerts = [
   }
   {
     key: 'memory'
-    description: 'The API container used over 80% of its 1 GiB memory. Past the limit it is killed and restarted.'
+    description: 'The API container used over 80% of its 0.5 GiB memory. Past the limit it is killed and restarted; go back to 1 GiB if this repeats.'
     metric: 'WorkingSetBytes'
     aggregation: 'Maximum'
     operator: 'GreaterThan'
-    threshold: 858993459
+    threshold: 429496729
     severity: 2
-  }
-  {
-    key: 'cpu'
-    description: 'The API container averaged over 80% of its 0.5 vCPU for 15 minutes.'
-    metric: 'UsageNanoCores'
-    aggregation: 'Average'
-    operator: 'GreaterThan'
-    threshold: 400000000
-    severity: 3
   }
 ]
 
@@ -232,7 +234,7 @@ resource containerMetricAlerts 'Microsoft.Insights/metricAlerts@2018-03-01' = [
       scopes: [
         api.id
       ]
-      evaluationFrequency: 'PT5M'
+      evaluationFrequency: 'PT15M'
       windowSize: 'PT15M'
       criteria: {
         'odata.type': 'Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria'

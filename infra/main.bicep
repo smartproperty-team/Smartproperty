@@ -6,7 +6,8 @@
 //
 // Sized for the Azure for Students $100 credit:
 //   - Static Web Apps Free tier          $0
-//   - Container Apps consumption         ~$3-5/mo warm
+//   - Container Apps consumption         ~$5.80/mo warm at 0.25 vCPU / 0.5 GiB
+//     (see "Cost" in infra/README.md)
 //   - Log Analytics (5 GB/mo free)       $0
 //   - No Redis: the backend registers no Bull queues.
 
@@ -187,9 +188,12 @@ resource backend 'Microsoft.App/containerApps@2024-03-01' = {
         {
           name: 'api'
           image: backendImage
+          // The smallest size allowed. Reserved CPU and memory are billed
+          // even when idle, so this halves the API's cost; it uses about half
+          // of the 0.5 GiB, and the api-memory alert says if that changes.
           resources: {
-            cpu: json('0.5')
-            memory: '1.0Gi'
+            cpu: json('0.25')
+            memory: '0.5Gi'
           }
           env: [
             // NODE_ENV must come from the real environment. main.ts also
