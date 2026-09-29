@@ -282,6 +282,8 @@ resource errorBurstAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = {
         {
           // A ''' string is verbatim - no ${} interpolation - which keeps the
           // regex backslashes intact, so the app name is swapped in by replace().
+          // what-if displays this query with one quote of '' missing; the
+          // deployed rule stores it intact (checked by reading it back).
           query: replace(
             '''
 ContainerAppConsoleLogs_CL
