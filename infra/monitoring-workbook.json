@@ -1,0 +1,366 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "content": {
+        "json": "# SmartProperty operations\n\nThe API and the site as seen from outside Azure, the API container's health, its errors, and its deploys and restarts. Alerts are defined in `infra/monitoring.bicep` and go to the on-call email."
+      },
+      "name": "title"
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "b3f1c2d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+            "version": "KqlParameterItem/1.0",
+            "name": "TimeRange",
+            "label": "Time range",
+            "type": 4,
+            "isRequired": true,
+            "value": {
+              "durationMs": 86400000
+            },
+            "typeSettings": {
+              "selectableValues": [
+                {
+                  "durationMs": 3600000
+                },
+                {
+                  "durationMs": 14400000
+                },
+                {
+                  "durationMs": 86400000
+                },
+                {
+                  "durationMs": 259200000
+                },
+                {
+                  "durationMs": 604800000
+                },
+                {
+                  "durationMs": 2592000000
+                }
+              ],
+              "allowCustom": true
+            }
+          }
+        ],
+        "style": "pills",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "name": "parameters"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## Availability\nProbes outside Azure every 15 minutes. The API check expects `\"status\":\"ok\"` from `/api/health`, the site check expects the page title, and both fail if the TLS certificate has under 7 days left."
+      },
+      "name": "availability-heading"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AppAvailabilityResults\n| summarize Availability = round(100.0 * countif(Success == true) / count(), 2), Runs = count() by Name",
+        "size": 0,
+        "title": "Availability",
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "__WORKSPACE_ID__"
+        ],
+        "visualization": "tiles",
+        "tileSettings": {
+          "titleContent": {
+            "columnMatch": "Name",
+            "formatter": 1
+          },
+          "leftContent": {
+            "columnMatch": "Availability",
+            "formatter": 12,
+            "formatOptions": {
+              "palette": "redGreen"
+            },
+            "numberFormat": {
+              "unit": 1,
+              "options": {
+                "style": "decimal",
+                "maximumFractionDigits": 2
+              }
+            }
+          },
+          "subtitleContent": {
+            "columnMatch": "Runs",
+            "formatter": 1
+          },
+          "showBorder": true
+        }
+      },
+      "name": "availability-tiles"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AppAvailabilityResults\n| summarize ['Success %'] = round(100.0 * countif(Success == true) / count(), 1) by bin(TimeGenerated, {TimeRange:grain}), Name",
+        "size": 0,
+        "title": "Successful checks (%)",
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "__WORKSPACE_ID__"
+        ],
+        "visualization": "timechart"
+      },
+      "name": "availability-chart"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AppAvailabilityResults\n| summarize ['Response ms'] = round(avg(DurationMs)) by bin(TimeGenerated, {TimeRange:grain}), Name",
+        "size": 0,
+        "title": "Response time seen by the probes (ms)",
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "__WORKSPACE_ID__"
+        ],
+        "visualization": "timechart"
+      },
+      "name": "availability-latency"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AppAvailabilityResults\n| where Success == false\n| project TimeGenerated, Name, Location, Message\n| order by TimeGenerated desc\n| take 50",
+        "size": 0,
+        "title": "Failed checks",
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "__WORKSPACE_ID__"
+        ],
+        "visualization": "table",
+        "noDataMessage": "No failed checks in this time range."
+      },
+      "name": "availability-failures"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## API container\nPlatform metrics for the container app (0.5 vCPU, 1 GiB). The express environment reports no status codes or response times, so failures show up in the error logs below."
+      },
+      "name": "container-heading"
+    },
+    {
+      "type": 10,
+      "content": {
+        "chartId": "workbook-requests",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.app/containerapps",
+        "metricScope": 0,
+        "resourceIds": [
+          "__CONTAINER_APP_ID__"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "metrics": [
+          {
+            "namespace": "microsoft.app/containerapps",
+            "metric": "microsoft.app/containerapps--Requests",
+            "aggregation": 1
+          }
+        ],
+        "title": "Requests",
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "customWidth": "50",
+      "name": "requests"
+    },
+    {
+      "type": 10,
+      "content": {
+        "chartId": "workbook-replicas",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.app/containerapps",
+        "metricScope": 0,
+        "resourceIds": [
+          "__CONTAINER_APP_ID__"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "metrics": [
+          {
+            "namespace": "microsoft.app/containerapps",
+            "metric": "microsoft.app/containerapps--Replicas",
+            "aggregation": 3
+          },
+          {
+            "namespace": "microsoft.app/containerapps",
+            "metric": "microsoft.app/containerapps--RestartCount",
+            "aggregation": 1
+          }
+        ],
+        "title": "Replicas and restarts",
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "customWidth": "50",
+      "name": "replicas"
+    },
+    {
+      "type": 10,
+      "content": {
+        "chartId": "workbook-cpu",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.app/containerapps",
+        "metricScope": 0,
+        "resourceIds": [
+          "__CONTAINER_APP_ID__"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "metrics": [
+          {
+            "namespace": "microsoft.app/containerapps",
+            "metric": "microsoft.app/containerapps--UsageNanoCores",
+            "aggregation": 4
+          }
+        ],
+        "title": "CPU (nanocores; 500M is the limit)",
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "customWidth": "50",
+      "name": "cpu"
+    },
+    {
+      "type": 10,
+      "content": {
+        "chartId": "workbook-memory",
+        "version": "MetricsItem/2.0",
+        "size": 0,
+        "chartType": 2,
+        "resourceType": "microsoft.app/containerapps",
+        "metricScope": 0,
+        "resourceIds": [
+          "__CONTAINER_APP_ID__"
+        ],
+        "timeContextFromParameter": "TimeRange",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "metrics": [
+          {
+            "namespace": "microsoft.app/containerapps",
+            "metric": "microsoft.app/containerapps--WorkingSetBytes",
+            "aggregation": 3
+          }
+        ],
+        "title": "Memory working set (bytes; 1 GiB is the limit)",
+        "gridSettings": {
+          "rowLimit": 10000
+        }
+      },
+      "customWidth": "50",
+      "name": "memory"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## Errors\nLines the API logged at ERROR level. An alert fires at 5 or more within 15 minutes."
+      },
+      "name": "errors-heading"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "ContainerAppConsoleLogs_CL\n| where ContainerAppName_s == '__APP_NAME__'\n| extend line = replace_regex(Log_s, @'\\x1b\\[[0-9;]*m', '')\n| where line matches regex @'\\bERROR\\b'\n| summarize Errors = count() by bin(TimeGenerated, {TimeRange:grain})",
+        "size": 0,
+        "title": "Errors logged",
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "__WORKSPACE_ID__"
+        ],
+        "visualization": "barchart"
+      },
+      "name": "errors-chart"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "ContainerAppConsoleLogs_CL\n| where ContainerAppName_s == '__APP_NAME__'\n| extend line = replace_regex(Log_s, @'\\x1b\\[[0-9;]*m', '')\n| where line matches regex @'\\bERROR\\b'\n| extend Source = extract(@'ERROR\\s+\\[([^\\]]+)\\]', 1, line), Message = substring(extract(@'ERROR\\s+\\[[^\\]]+\\]\\s*(.*)', 1, line), 0, 160)\n| summarize Count = count(), ['Last seen'] = max(TimeGenerated) by Source, Message\n| order by ['Last seen'] desc\n| take 50",
+        "size": 0,
+        "title": "Error messages",
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "__WORKSPACE_ID__"
+        ],
+        "visualization": "table",
+        "noDataMessage": "No errors in this time range."
+      },
+      "name": "errors-table"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## Deploys and restarts\nEvery start of the API container, with the commit it runs. A new commit is a deploy; the same commit again is a restart."
+      },
+      "name": "deploys-heading"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "ContainerAppConsoleLogs_CL\n| where ContainerAppName_s == '__APP_NAME__'\n| extend line = replace_regex(Log_s, @'\\x1b\\[[0-9;]*m', '')\n| where line has 'Nest application successfully started' or line has 'Commit:'\n| extend Commit = extract(@'Commit:\\s*(\\S+)', 1, line)\n| summarize Started = min(TimeGenerated), Commit = take_anyif(Commit, isnotempty(Commit)) by ContainerGroupId_g\n| project Started, Commit = iff(isempty(Commit), '(not logged)', substring(Commit, 0, 7)), Container = substring(ContainerGroupId_g, 0, 8)\n| order by Started desc",
+        "size": 0,
+        "title": "Container starts",
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "__WORKSPACE_ID__"
+        ],
+        "visualization": "table",
+        "noDataMessage": "No container starts in this time range."
+      },
+      "name": "starts"
+    }
+  ],
+  "fallbackResourceIds": [
+    "__WORKSPACE_ID__"
+  ],
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}

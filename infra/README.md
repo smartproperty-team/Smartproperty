@@ -302,6 +302,58 @@ Always deploy by digest. Container Apps caches `:latest`, and cycling replicas
 does not re-pull it. Changing the image restarts the container, unlike a secret
 change.
 
+## Monitoring
+
+`infra/monitoring.bicep` is applied on its own, next to the rest, and never
+touches the API or the site. Preview it, then apply it:
+
+```bash
+az deployment group what-if -g rg-smartproperty -f infra/monitoring.bicep -p alertEmail=<address>
+az deployment group create  -g rg-smartproperty -n monitoring -f infra/monitoring.bicep -p alertEmail=<address>
+```
+
+It needs the `microsoft.insights` and `Microsoft.AlertsManagement` resource
+providers, which a new subscription may not have registered
+(`az provider register -n <name>`). The workbook's queries live in
+`monitoring-workbook.json`, with placeholders the template fills in.
+
+**What is watched**, and what emails the on-call address:
+
+| Alert | Source | Fires when | Severity |
+|---|---|---|---|
+| `api-down` | Availability test on `/api/health` from West Europe and France Central | Both locations fail (bad status, no `"status":"ok"`, or a certificate with under 7 days left) | 1 |
+| `site-down` | Availability test on the site from North Europe | The page fails or lacks its title | 1 |
+| `api-no-replica` | Container app metric `Replicas` | No running replica for 15 minutes | 1 |
+| `api-restarted` | Container app metric `RestartCount` | Any restart | 2 |
+| `api-memory` | Container app metric `WorkingSetBytes` | Over 80% of the 1 GiB limit | 2 |
+| `api-cpu` | Container app metric `UsageNanoCores` | Averages over 80% of 0.5 vCPU for 15 minutes | 3 |
+| `api-error-burst` | API logs in Log Analytics | 5 or more ERROR lines in 15 minutes | 2 |
+
+An availability test run only counts as failed after three attempts in a row
+fail, and every alert resolves itself once the condition clears.
+
+**The dashboard** is the *SmartProperty operations* workbook (Azure portal →
+Monitor → Workbooks, or the `workbookUrl` output of the deployment):
+availability and probe response times, requests, replicas, restarts, CPU and
+memory, errors by message, and every container start with the commit it runs,
+which doubles as the deploy history.
+
+**Limits of this environment.** The express Container Apps environment
+reports no status codes or response times, so 5xx errors are caught from the
+logs, not metrics. It also ships only the app's console output to Log
+Analytics - there are no platform system logs - so restarts come from the
+`RestartCount` metric. On this student subscription Azure refuses *test*
+notifications ("Free subscription not supported"), but real alerts email
+normally.
+
+**Cost**, at September 2026 retail prices: about $7 a month. Availability
+test runs are $0.000645 each, so each probe location checked every 15 minutes
+is about $1.86 a month, and the three used here about $5.60. The six metric
+alerts cost $0.15 a month each at a 5-minute evaluation, the log alert $0.50,
+and the first 1,000 emails a month are free. The `testFrequency`,
+`apiTestLocations` and `siteTestLocations` parameters trade cost for
+detection speed.
+
 ## Operational notes
 
 **Changing a secret does not restart the container.** On the express
