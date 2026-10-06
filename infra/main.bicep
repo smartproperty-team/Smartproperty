@@ -6,7 +6,7 @@
 //
 // Sized for the Azure for Students $100 credit:
 //   - Static Web Apps Free tier          $0
-//   - Container Apps consumption         ~$5.80/mo warm at 0.25 vCPU / 0.5 GiB
+//   - Container Apps consumption         ~$7.90/mo warm at 0.25 vCPU / 0.5 GiB
 //     (see "Cost" in infra/README.md)
 //   - Log Analytics (5 GB/mo free)       $0
 //   - No Redis: the backend registers no Bull queues.

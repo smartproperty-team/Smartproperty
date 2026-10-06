@@ -16,7 +16,7 @@
 // prices an availability test run is $0.000645, so each probe location checked
 // every 15 minutes is about $1.86 a month; metric alerts are $0.05 a month each
 // at a 15-minute evaluation, the log alert $0.50, and the first 1,000 emails a
-// month are free. The defaults come to about $2.55 a month.
+// month are free. The defaults come to about $2.40 a month (measured).
 
 targetScope = 'resourceGroup'
 

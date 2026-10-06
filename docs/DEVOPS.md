@@ -104,7 +104,7 @@ an availability test on the API from outside Azure, alerts on downtime,
 restarts, memory and bursts of logged errors, email
 to the on-call address, and the *SmartProperty operations* workbook with a
 deploy history built from each container start. The alert list, thresholds
-and cost (about $2.55 a month) are in `infra/README.md`, "Monitoring"; the
+and cost (about $2.40 a month) are in `infra/README.md`, "Monitoring"; the
 whole system's cost, sized to last the student credit, is under "Cost".
 
 ## ai-services is switched off

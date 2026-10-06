@@ -31,7 +31,7 @@ Default region is `italynorth`, the closest permitted region to Tunisia.
 |---|---|---|
 | Log Analytics workspace | Container Apps requires one | $0 (5 GB/mo free) |
 | Container Apps environment | Networking and logging boundary | $0 |
-| Container App `ca-smartproperty-api` | The NestJS API | ~$5.80/mo warm (see Cost) |
+| Container App `ca-smartproperty-api` | The NestJS API | ~$7.90/mo warm (see Cost) |
 | Cosmos DB (MongoDB, RU, free tier) | Database, capped at 1000 RU/s | $0 |
 | Storage account `stweb…` | Static website for the React build | ~$0.05/mo |
 
@@ -347,13 +347,13 @@ Analytics - there are no platform system logs - so restarts come from the
 notifications ("Free subscription not supported"), but real alerts email
 normally.
 
-**Cost**, at September 2026 retail prices: about $2.55 a month. Availability
-test runs are $0.000645 each, so each probe location checked every 15 minutes
-is about $1.86 a month. The four metric alerts cost $0.05 a month each at a
-15-minute evaluation, the log alert $0.50, and the first 1,000 emails a month
-are free. The `testFrequency`, `apiTestLocations` and `siteTestLocations`
-parameters trade cost for detection speed; see "Cost" below for why the
-defaults are this lean.
+**Cost**: about $2.40 a month, measured at $0.078 a day in October 2026.
+Availability test runs are $0.000645 each, so each probe location checked
+every 15 minutes is about $1.86 a month. The four metric alerts cost $0.05 a
+month each at a 15-minute evaluation, the log alert $0.50, and the first 1,000
+emails a month are free. The `testFrequency`, `apiTestLocations` and
+`siteTestLocations` parameters trade cost for detection speed; see "Cost"
+below for why the defaults are this lean.
 
 ## Cost
 
@@ -362,28 +362,34 @@ limit on, so when the credit runs out Azure disables the resources rather than
 billing anyone. The credit also expires, normally 12 months after activation;
 the balance and end date are at
 https://www.microsoftazuresponsorships.com/Balance. The aim is for the site to
-stay up until the credit expires, which means about $8 a month at most.
+stay up until the credit expires.
 
-Measured from Cost Management in September 2026:
+Measured with Cost Management, 30 September to 5 October 2026:
 
-| Item | Monthly |
-|---|---|
-| API container, 0.25 vCPU / 0.5 GiB, one replica always on | ~$5.80 |
-| Monitoring (see above) | ~$2.55 |
-| Static site storage, Log Analytics (under the 5 GB free allowance), bandwidth | ~$0 |
-| Cosmos DB account from the original template (free tier, unused) | $0 |
-| **Total** | **~$8.40** |
+| Item | Per day | Per month |
+|---|---|---|
+| API container, 0.25 vCPU / 0.5 GiB, one replica always on | $0.26 | ~$7.90 |
+| Monitoring (see above) | $0.078 | ~$2.40 |
+| Static site storage, Log Analytics (under the 5 GB free allowance), bandwidth | ~$0 | ~$0 |
+| Cosmos DB account from the original template (free tier, unused) | $0 | $0 |
+| **Total** | **$0.34** | **~$10.30** |
+
+About $4.20 had been spent by 6 October, so at this rate the credit lasts
+until about mid-July 2027. If it expires later than that, replacing the
+remaining availability test with a free scheduled GitHub Actions check would
+bring the total to about $8.40 a month.
 
 The container is billed per second for the CPU and memory it reserves, busy
-or idle, less a monthly free grant of 180,000 vCPU-seconds and 360,000
-GiB-seconds, which covers about 8 days at this size. At 0.5 vCPU / 1 GiB it
-cost about $13.70 a month; halving it used 253 MB of the 512 MB with no
-restarts. The `api-memory` alert says when to go back up.
+or idle. The consumption plan's monthly free grant does not show up on this
+subscription's bill: 1 October was charged at the full daily rate. At
+0.5 vCPU / 1 GiB it cost $0.525 a day, about $16 a month; at half the size it
+peaks at 245-257 MB of the 512 MB with no restarts. The `api-memory` alert
+says when to go back up.
 
 Scaling to zero replicas when idle would cost almost nothing, but the first
 visitor after a quiet spell would wait for the API to start, and the home page
 loads listings from it. For a site shown to visitors, one warm replica is
-worth the $5.80.
+worth the $7.90.
 
 ## Operational notes
 
