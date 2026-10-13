@@ -118,6 +118,7 @@ export interface PropertyListResponse {
   total: number;
   page: number;
   limit: number;
+  mapPins?: PropertyMapPin[];
 }
 
 export interface PortfolioSummary {
@@ -180,10 +181,33 @@ export interface PropertyFilters {
   nearLat?: number;
   nearLng?: number;
   radiusKm?: number;
+  // Visible map area ("search as I move the map").
+  neLat?: number;
+  neLng?: number;
+  swLat?: number;
+  swLng?: number;
+  includeMapPins?: boolean;
   city?: string;
   search?: string;
   ownerId?: string;
   managerId?: string;
+}
+
+// Light marker for a listing that matches the search but may sit on another
+// results page. The map shows these as dots next to the page's price pills.
+export interface PropertyMapPin {
+  id: string;
+  title: string;
+  type: PropertyType;
+  status: PropertyStatus;
+  price: number;
+  currency: string;
+  city: string;
+  lat: number;
+  lng: number;
+  bedrooms?: number;
+  area?: number;
+  imageUrl?: string;
 }
 
 export interface PortfolioFilters {

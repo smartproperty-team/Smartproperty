@@ -15,13 +15,80 @@ import { UserRole, type UserLocationPreference } from "@/types/auth";
 import type {
   Property,
   PropertyFilters,
+  PropertyMapPin,
   PropertyStatus,
   PropertyType,
 } from "@/types/property";
 import { canManageFavorites, canManageProperties, isOwner } from "@/utils";
-import { useCallback, useEffect, useState } from "react";
+import { getMapBounds, type MapBounds } from "@/utils/mapSearch";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import "./properties.css";
+
+// ===========================================
+// URL <-> filters
+// ===========================================
+
+const parsePositiveIntegerParam = (
+  value: string | null,
+): number | undefined => {
+  if (!value) return undefined;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+};
+
+const parseNumberParam = (value: string | null): number | undefined => {
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const parsePositiveNumberParam = (
+  value: string | null,
+): number | undefined => {
+  const parsed = parseNumberParam(value);
+  return parsed !== undefined && parsed > 0 ? parsed : undefined;
+};
+
+const parseCategoryParam = (
+  value: string | null,
+): PropertyFilters["category"] => {
+  return value === "sale" || value === "rental" || value === "management"
+    ? value
+    : undefined;
+};
+
+const filtersFromSearchParams = (
+  searchParams: URLSearchParams,
+): PropertyFilters => ({
+  page: 1,
+  limit: 12,
+  type: (searchParams.get("type") as PropertyType) || undefined,
+  status: (searchParams.get("status") as PropertyStatus) || undefined,
+  category: parseCategoryParam(searchParams.get("category")),
+  bedrooms: parsePositiveIntegerParam(searchParams.get("bedrooms")),
+  bathrooms: parsePositiveIntegerParam(searchParams.get("bathrooms")),
+  nearLat: parseNumberParam(searchParams.get("nearLat")),
+  nearLng: parseNumberParam(searchParams.get("nearLng")),
+  radiusKm: parsePositiveNumberParam(searchParams.get("radiusKm")),
+  neLat: parseNumberParam(searchParams.get("neLat")),
+  neLng: parseNumberParam(searchParams.get("neLng")),
+  swLat: parseNumberParam(searchParams.get("swLat")),
+  swLng: parseNumberParam(searchParams.get("swLng")),
+  minPrice: parsePositiveNumberParam(searchParams.get("minPrice")),
+  maxPrice: parsePositiveNumberParam(searchParams.get("maxPrice")),
+  city: searchParams.get("city") || undefined,
+  search: searchParams.get("search") || undefined,
+});
+
+// A new place to look (city, nearby point) replaces the map area,
+// as a new destination does on Airbnb.
+const NO_MAP_AREA: Pick<PropertyFilters, keyof MapBounds> = {
+  neLat: undefined,
+  neLng: undefined,
+  swLat: undefined,
+  swLng: undefined,
+};
 
 // ===========================================
 // Icons
@@ -97,36 +164,14 @@ export default function PropertiesPage() {
   const canSeeMyPropertiesButton =
     canManage && user?.role !== UserRole.BRANCH_MANAGER;
   const [searchParams, setSearchParams] = useSearchParams();
-  const parsePositiveIntegerParam = (
-    value: string | null,
-  ): number | undefined => {
-    if (!value) return undefined;
-    const parsed = Number.parseInt(value, 10);
-    return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
-  };
-  const parseNumberParam = (value: string | null): number | undefined => {
-    if (!value) return undefined;
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  };
-  const parsePositiveNumberParam = (
-    value: string | null,
-  ): number | undefined => {
-    const parsed = parseNumberParam(value);
-    return parsed !== undefined && parsed > 0 ? parsed : undefined;
-  };
-  const parseCategoryParam = (
-    value: string | null,
-  ): PropertyFilters["category"] => {
-    return value === "sale" || value === "rental" || value === "management"
-      ? value
-      : undefined;
-  };
   const [showMap, setShowMap] = useState(true);
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(
     null,
   );
   const [properties, setProperties] = useState<Property[]>([]);
+  const [mapPins, setMapPins] = useState<PropertyMapPin[]>([]);
+  // Map moves can fire searches faster than they answer; keep the latest.
+  const latestRequestRef = useRef(0);
   const [comparisonIds, setComparisonIds] = useState<string[]>([]);
   const [comparisonError, setComparisonError] = useState<string | null>(null);
   const [shareNotice, setShareNotice] = useState<{
@@ -140,22 +185,10 @@ export default function PropertiesPage() {
   const [error, setError] = useState<"load" | null>(null);
   const [total, setTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [filters, setFilters] = useState<PropertyFilters>({
-    page: 1,
-    limit: 12,
-    type: (searchParams.get("type") as PropertyType) || undefined,
-    status: (searchParams.get("status") as PropertyStatus) || undefined,
-    category: parseCategoryParam(searchParams.get("category")),
-    bedrooms: parsePositiveIntegerParam(searchParams.get("bedrooms")),
-    bathrooms: parsePositiveIntegerParam(searchParams.get("bathrooms")),
-    nearLat: parseNumberParam(searchParams.get("nearLat")),
-    nearLng: parseNumberParam(searchParams.get("nearLng")),
-    radiusKm: parsePositiveNumberParam(searchParams.get("radiusKm")),
-    minPrice: parsePositiveNumberParam(searchParams.get("minPrice")),
-    maxPrice: parsePositiveNumberParam(searchParams.get("maxPrice")),
-    city: searchParams.get("city") || undefined,
-    search: searchParams.get("search") || undefined,
-  });
+  const [filters, setFilters] = useState<PropertyFilters>(() =>
+    filtersFromSearchParams(searchParams),
+  );
+  const mapBounds = getMapBounds(filters);
 
   // Local state for text inputs (not linked to API calls until form submit)
   const [searchText, setSearchText] = useState(filters.search || "");
@@ -229,6 +262,10 @@ export default function PropertiesPage() {
     left.nearLat === right.nearLat &&
     left.nearLng === right.nearLng &&
     left.radiusKm === right.radiusKm &&
+    left.neLat === right.neLat &&
+    left.neLng === right.neLng &&
+    left.swLat === right.swLat &&
+    left.swLng === right.swLng &&
     left.city === right.city &&
     left.search === right.search &&
     left.ownerId === right.ownerId &&
@@ -261,19 +298,28 @@ export default function PropertiesPage() {
 
   // Load properties
   const loadProperties = useCallback(async () => {
+    const requestId = ++latestRequestRef.current;
     setLoading(true);
     setError(null);
 
     try {
-      const response = await propertyService.getProperties(filters);
+      // One call brings the page of cards and the pins for the map, like
+      // Airbnb's StaysSearch.
+      const response = await propertyService.getProperties({
+        ...filters,
+        includeMapPins: true,
+      });
+      if (requestId !== latestRequestRef.current) return;
       setProperties(response.properties);
+      setMapPins(response.mapPins ?? []);
       setTotal(response.total);
       setCurrentPage(response.page);
     } catch (err) {
+      if (requestId !== latestRequestRef.current) return;
       console.error("Failed to load properties:", err);
       setError("load");
     } finally {
-      setLoading(false);
+      if (requestId === latestRequestRef.current) setLoading(false);
     }
   }, [filters]);
 
@@ -282,22 +328,7 @@ export default function PropertiesPage() {
   }, [loadProperties]);
 
   useEffect(() => {
-    const nextFilters: PropertyFilters = {
-      page: 1,
-      limit: 12,
-      type: (searchParams.get("type") as PropertyType) || undefined,
-      status: (searchParams.get("status") as PropertyStatus) || undefined,
-      category: parseCategoryParam(searchParams.get("category")),
-      bedrooms: parsePositiveIntegerParam(searchParams.get("bedrooms")),
-      bathrooms: parsePositiveIntegerParam(searchParams.get("bathrooms")),
-      nearLat: parseNumberParam(searchParams.get("nearLat")),
-      nearLng: parseNumberParam(searchParams.get("nearLng")),
-      radiusKm: parsePositiveNumberParam(searchParams.get("radiusKm")),
-      minPrice: parsePositiveNumberParam(searchParams.get("minPrice")),
-      maxPrice: parsePositiveNumberParam(searchParams.get("maxPrice")),
-      city: searchParams.get("city") || undefined,
-      search: searchParams.get("search") || undefined,
-    };
+    const nextFilters = filtersFromSearchParams(searchParams);
 
     setFilters((current) =>
       areFiltersEqual(current, nextFilters) ? current : nextFilters,
@@ -325,6 +356,13 @@ export default function PropertiesPage() {
       if (f.nearLat !== undefined) params.set("nearLat", String(f.nearLat));
       if (f.nearLng !== undefined) params.set("nearLng", String(f.nearLng));
       if (f.radiusKm !== undefined) params.set("radiusKm", String(f.radiusKm));
+      const bounds = getMapBounds(f);
+      if (bounds) {
+        params.set("neLat", String(bounds.neLat));
+        params.set("neLng", String(bounds.neLng));
+        params.set("swLat", String(bounds.swLat));
+        params.set("swLng", String(bounds.swLng));
+      }
       if (f.minPrice !== undefined) params.set("minPrice", String(f.minPrice));
       if (f.maxPrice !== undefined) params.set("maxPrice", String(f.maxPrice));
       if (f.city) params.set("city", f.city);
@@ -343,10 +381,12 @@ export default function PropertiesPage() {
 
   // Apply current advanced search bar values to filters
   const handleSearch = () => {
+    const city = cityText || undefined;
     const newFilters = {
       ...filters,
+      ...(city !== filters.city && NO_MAP_AREA),
       search: searchText || undefined,
-      city: cityText || undefined,
+      city,
       bedrooms: parsePositiveIntegerParam(bedroomsText),
       bathrooms: parsePositiveIntegerParam(bathroomsText),
       minPrice: parsePositiveNumberParam(minPriceText),
@@ -355,6 +395,23 @@ export default function PropertiesPage() {
     };
     setFilters(newFilters);
     updateUrlParams(newFilters);
+  };
+
+  // The user moved the map: search the visible area, from page 1.
+  const handleMapSearch = (bounds: MapBounds) => {
+    const nextFilters: PropertyFilters = { ...filters, ...bounds, page: 1 };
+    setFilters(nextFilters);
+    updateUrlParams(nextFilters);
+  };
+
+  const clearMapArea = () => {
+    const nextFilters: PropertyFilters = {
+      ...filters,
+      ...NO_MAP_AREA,
+      page: 1,
+    };
+    setFilters(nextFilters);
+    updateUrlParams(nextFilters);
   };
 
   // Handle reset filters
@@ -415,6 +472,7 @@ export default function PropertiesPage() {
 
     const nextFilters: PropertyFilters = {
       ...filters,
+      ...NO_MAP_AREA,
       nearLat: coords.lat,
       nearLng: coords.lng,
       radiusKm: nearbySelectionDraft?.radiusKm || 11,
@@ -530,6 +588,146 @@ export default function PropertiesPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // Changes for searches not made from the map, so the map refits to their
+  // results; paging and map moves keep the view where the user left it.
+  const mapFitKey = [
+    filters.type,
+    filters.status,
+    filters.category,
+    filters.minPrice,
+    filters.maxPrice,
+    filters.bedrooms,
+    filters.bathrooms,
+    filters.nearLat,
+    filters.nearLng,
+    filters.radiusKm,
+    filters.city,
+    filters.search,
+    mapBounds ? "map-area" : "",
+  ].join("|");
+
+  const pagination = totalPages > 1 && (
+    <nav className="pagination" aria-label="Pagination">
+      <button
+        className="pagination-btn"
+        disabled={currentPage === 1}
+        onClick={() => handlePageChange(currentPage - 1)}
+      >
+        {t.properties.previous}
+      </button>
+
+      {Array.from({ length: totalPages }, (_, i) => i + 1)
+        .filter((page) => {
+          const distance = Math.abs(page - currentPage);
+          return (
+            distance === 0 ||
+            distance === 1 ||
+            page === 1 ||
+            page === totalPages
+          );
+        })
+        .map((page, index, array) => (
+          <span key={page}>
+            {index > 0 && array[index - 1] !== page - 1 && (
+              <span className="pagination-info">...</span>
+            )}
+            <button
+              className={`pagination-btn ${page === currentPage ? "active" : ""}`}
+              onClick={() => handlePageChange(page)}
+            >
+              {page}
+            </button>
+          </span>
+        ))}
+
+      <button
+        className="pagination-btn"
+        disabled={currentPage === totalPages}
+        onClick={() => handlePageChange(currentPage + 1)}
+      >
+        {t.properties.next}
+      </button>
+    </nav>
+  );
+
+  // Results stay on screen while a new search loads, so moving the map
+  // does not blank the list or remount the map.
+  const results =
+    loading && properties.length === 0 ? (
+      <div className="loading-state">
+        <div className="loading-spinner" />
+        <p>{t.properties.loading}</p>
+      </div>
+    ) : error ? (
+      <div className="empty-state">
+        <p style={{ color: "#b91c1c" }}>{t.common.error}</p>
+        <button className="btn-filter primary" onClick={loadProperties}>
+          {t.properties.retry}
+        </button>
+      </div>
+    ) : properties.length === 0 ? (
+      <div className="empty-state">
+        <HomeIcon />
+        <h3>{t.properties.noProperties}</h3>
+        <p>
+          {mapBounds
+            ? t.properties.noPropertiesInArea
+            : filters.search || filters.type || filters.status || filters.city
+              ? t.properties.noPropertiesFiltered
+              : canAddProperty
+                ? t.properties.noPropertiesAdd
+                : t.properties.noPropertiesEmpty}
+        </p>
+        {mapBounds ? (
+          <button
+            type="button"
+            className="btn-filter secondary"
+            onClick={clearMapArea}
+          >
+            {t.properties.clearMapArea}
+          </button>
+        ) : (
+          canAddProperty && (
+            <Link to="/properties/new" className="btn-add-property">
+              <PlusIcon />
+              {t.properties.addProperty}
+            </Link>
+          )
+        )}
+      </div>
+    ) : (
+      <div
+        className={`properties-results${loading ? " is-updating" : ""}`}
+        aria-busy={loading}
+      >
+        <div className="properties-grid">
+          {properties.map((property) => (
+            <ListingCard
+              key={getPropertyId(property)}
+              property={property}
+              gallery
+              {...(showMap && {
+                highlighted: hoveredPropertyId === getPropertyId(property),
+                onMouseEnter: () =>
+                  setHoveredPropertyId(getPropertyId(property)),
+                onMouseLeave: () => setHoveredPropertyId(null),
+              })}
+              actions={
+                <CompareShareActions
+                  isCompared={comparisonIds.includes(getPropertyId(property))}
+                  compareFull={comparisonIds.length >= 3}
+                  isSharing={sharingPropertyId === getPropertyId(property)}
+                  onToggleCompare={() => handleToggleCompare(property)}
+                  onShare={() => handleQuickShare(property)}
+                />
+              }
+            />
+          ))}
+        </div>
+        {pagination}
+      </div>
+    );
+
   return (
     <div className="properties-page">
       <Navbar />
@@ -541,7 +739,17 @@ export default function PropertiesPage() {
             <div>
               <h1>{t.properties.title}</h1>
               <p>
-                {total} {t.properties.title.toLowerCase()} {t.properties.found}
+                {total} {t.properties.title.toLowerCase()}{" "}
+                {mapBounds ? t.properties.withinMapArea : t.properties.found}
+                {mapBounds && (
+                  <button
+                    type="button"
+                    className="btn-clear-map-area"
+                    onClick={clearMapArea}
+                  >
+                    {t.properties.clearMapArea}
+                  </button>
+                )}
               </p>
             </div>
             <div className="header-cta-group">
@@ -862,191 +1070,26 @@ export default function PropertiesPage() {
           </section>
         )}
 
-        {/* Content */}
-        {loading ? (
-          <div className="loading-state">
-            <div className="loading-spinner" />
-            <p>{t.properties.loading}</p>
-          </div>
-        ) : error ? (
-          <div className="empty-state">
-            <p style={{ color: "#b91c1c" }}>{t.common.error}</p>
-            <button className="btn-filter primary" onClick={loadProperties}>
-              {t.properties.retry}
-            </button>
-          </div>
-        ) : properties.length === 0 ? (
-          <div className="empty-state">
-            <HomeIcon />
-            <h3>{t.properties.noProperties}</h3>
-            <p>
-              {filters.search || filters.type || filters.status || filters.city
-                ? t.properties.noPropertiesFiltered
-                : canAddProperty
-                  ? t.properties.noPropertiesAdd
-                  : t.properties.noPropertiesEmpty}
-            </p>
-            {canAddProperty && (
-              <Link to="/properties/new" className="btn-add-property">
-                <PlusIcon />
-                {t.properties.addProperty}
-              </Link>
-            )}
-          </div>
-        ) : showMap ? (
-          /* Split layout: list left, map right */
+        {/* Content: list left, map right (Airbnb split layout) */}
+        {showMap ? (
           <div className="properties-split-layout">
-            <div className="properties-list-panel">
-              <div className="properties-grid">
-                {properties.map((property) => (
-                  <ListingCard
-                    key={getPropertyId(property)}
-                    property={property}
-                    gallery
-                    highlighted={hoveredPropertyId === getPropertyId(property)}
-                    onMouseEnter={() =>
-                      setHoveredPropertyId(getPropertyId(property))
-                    }
-                    onMouseLeave={() => setHoveredPropertyId(null)}
-                    actions={
-                      <CompareShareActions
-                        isCompared={comparisonIds.includes(
-                          getPropertyId(property),
-                        )}
-                        compareFull={comparisonIds.length >= 3}
-                        isSharing={
-                          sharingPropertyId === getPropertyId(property)
-                        }
-                        onToggleCompare={() => handleToggleCompare(property)}
-                        onShare={() => handleQuickShare(property)}
-                      />
-                    }
-                  />
-                ))}
-              </div>
-
-              {totalPages > 1 && (
-                <nav className="pagination" aria-label="Pagination">
-                  <button
-                    className="pagination-btn"
-                    disabled={currentPage === 1}
-                    onClick={() => handlePageChange(currentPage - 1)}
-                  >
-                    {t.properties.previous}
-                  </button>
-
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter((page) => {
-                      const distance = Math.abs(page - currentPage);
-                      return (
-                        distance === 0 ||
-                        distance === 1 ||
-                        page === 1 ||
-                        page === totalPages
-                      );
-                    })
-                    .map((page, index, array) => (
-                      <span key={page}>
-                        {index > 0 && array[index - 1] !== page - 1 && (
-                          <span className="pagination-info">...</span>
-                        )}
-                        <button
-                          className={`pagination-btn ${page === currentPage ? "active" : ""}`}
-                          onClick={() => handlePageChange(page)}
-                        >
-                          {page}
-                        </button>
-                      </span>
-                    ))}
-
-                  <button
-                    className="pagination-btn"
-                    disabled={currentPage === totalPages}
-                    onClick={() => handlePageChange(currentPage + 1)}
-                  >
-                    {t.properties.next}
-                  </button>
-                </nav>
-              )}
-            </div>
+            <div className="properties-list-panel">{results}</div>
 
             <div className="properties-map-panel">
               <PropertyMapView
                 properties={properties}
+                mapPins={mapPins}
                 hoveredPropertyId={hoveredPropertyId}
                 onPropertyHover={setHoveredPropertyId}
+                searchBounds={mapBounds}
+                fitKey={mapFitKey}
+                onSearchArea={handleMapSearch}
+                loading={loading}
               />
             </div>
           </div>
         ) : (
-          <>
-            {/* Properties Grid */}
-            <div className="properties-grid">
-              {properties.map((property) => (
-                <ListingCard
-                  key={getPropertyId(property)}
-                  property={property}
-                  gallery
-                  actions={
-                    <CompareShareActions
-                      isCompared={comparisonIds.includes(
-                        getPropertyId(property),
-                      )}
-                      compareFull={comparisonIds.length >= 3}
-                      isSharing={sharingPropertyId === getPropertyId(property)}
-                      onToggleCompare={() => handleToggleCompare(property)}
-                      onShare={() => handleQuickShare(property)}
-                    />
-                  }
-                />
-              ))}
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <nav className="pagination" aria-label="Pagination">
-                <button
-                  className="pagination-btn"
-                  disabled={currentPage === 1}
-                  onClick={() => handlePageChange(currentPage - 1)}
-                >
-                  {t.properties.previous}
-                </button>
-
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter((page) => {
-                    const distance = Math.abs(page - currentPage);
-                    return (
-                      distance === 0 ||
-                      distance === 1 ||
-                      page === 1 ||
-                      page === totalPages
-                    );
-                  })
-                  .map((page, index, array) => (
-                    <span key={page}>
-                      {index > 0 && array[index - 1] !== page - 1 && (
-                        <span className="pagination-info">...</span>
-                      )}
-                      <button
-                        className={`pagination-btn ${page === currentPage ? "active" : ""}`}
-                        onClick={() => handlePageChange(page)}
-                      >
-                        {page}
-                      </button>
-                    </span>
-                  ))}
-
-                <button
-                  className="pagination-btn"
-                  disabled={currentPage === totalPages}
-                  onClick={() => handlePageChange(currentPage + 1)}
-                >
-                  {t.properties.next}
-                </button>
-              </nav>
-            )}
-          </>
+          results
         )}
       </main>
 

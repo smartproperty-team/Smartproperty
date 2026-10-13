@@ -46,11 +46,48 @@ export interface FindPropertiesOptions {
   nearLat?: number;
   nearLng?: number;
   radiusKm?: number;
+  // Visible map area, as Airbnb's search sends it (ne_lat, sw_lng, ...).
+  neLat?: number;
+  neLng?: number;
+  swLat?: number;
+  swLng?: number;
+  // Also return a light pin for every match, not only the current page.
+  includeMapPins?: boolean | string;
   city?: string;
   ownerId?: string;
   managerId?: string;
   search?: string;
 }
+
+export interface PropertyMapPin {
+  id: string;
+  title: string;
+  type: PropertyType;
+  status: PropertyStatus;
+  price: number;
+  currency: string;
+  city: string;
+  lat: number;
+  lng: number;
+  bedrooms?: number;
+  area?: number;
+  imageUrl?: string;
+}
+
+// Enough pins to fill a city-sized map without shipping the whole catalogue.
+export const MAX_MAP_PINS = 300;
+
+const MAP_PIN_FIELDS: (keyof Property)[] = [
+  '_id',
+  'title',
+  'type',
+  'status',
+  'price',
+  'currency',
+  'address',
+  'features',
+  'images',
+];
 
 export interface PortfolioFilters {
   type?: PropertyType;
@@ -376,6 +413,91 @@ export class PropertiesService {
   /** Escape special regex characters in user input */
   private escapeRegex(str: string): string {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  /**
+   * Mongo conditions keeping listings inside a map viewport. Longitudes are
+   * wrapped into [-180, 180], so a map panned across the antimeridian still
+   * matches both sides.
+   */
+  private buildMapBoundsFilter(bounds: {
+    neLat: number;
+    neLng: number;
+    swLat: number;
+    swLng: number;
+  }): Record<string, any> {
+    const filter: Record<string, any> = {
+      'address.coordinates.lat': {
+        $gte: Math.max(bounds.swLat, -90),
+        $lte: Math.min(bounds.neLat, 90),
+      },
+    };
+
+    // Zoomed out past a full turn: every longitude is visible.
+    if (bounds.neLng - bounds.swLng >= 360) {
+      return filter;
+    }
+
+    // Only touch out-of-range values: the modulo adds float noise otherwise.
+    const wrap = (lng: number) =>
+      lng >= -180 && lng <= 180
+        ? lng
+        : ((((lng + 180) % 360) + 360) % 360) - 180;
+    const west = wrap(bounds.swLng);
+    const east = wrap(bounds.neLng);
+
+    if (west <= east) {
+      filter['address.coordinates.lng'] = { $gte: west, $lte: east };
+    } else {
+      filter.$and = [
+        {
+          $or: [
+            { 'address.coordinates.lng': { $gte: west } },
+            { 'address.coordinates.lng': { $lte: east } },
+          ],
+        },
+      ];
+    }
+
+    return filter;
+  }
+
+  private toMapPin(property: Property): PropertyMapPin | null {
+    const coords = property.address?.coordinates;
+    if (
+      !coords ||
+      !Number.isFinite(coords.lat) ||
+      !Number.isFinite(coords.lng)
+    ) {
+      return null;
+    }
+
+    // Same cover photo as the listing card: primary first, then by order.
+    const [cover] = [...(property.images ?? [])].sort((a, b) => {
+      if (!!a.isPrimary !== !!b.isPrimary) return a.isPrimary ? -1 : 1;
+      return (a.order ?? 0) - (b.order ?? 0);
+    });
+
+    return {
+      id: property._id.toHexString(),
+      title: property.title,
+      type: property.type,
+      status: property.status,
+      price: property.price,
+      currency: property.currency,
+      city: property.address.city,
+      lat: coords.lat,
+      lng: coords.lng,
+      bedrooms: property.features?.bedrooms,
+      area: property.features?.area,
+      imageUrl: cover?.url,
+    };
+  }
+
+  private toMapPins(properties: Property[]): PropertyMapPin[] {
+    return properties
+      .map((property) => this.toMapPin(property))
+      .filter((pin): pin is PropertyMapPin => pin !== null);
   }
 
   private calculateDistanceKm(
@@ -1141,6 +1263,7 @@ export class PropertiesService {
     total: number;
     page: number;
     limit: number;
+    mapPins?: PropertyMapPin[];
   }> {
     const parseIntSafe = (value: unknown, fallback: number): number => {
       const parsed = Number.parseInt(String(value), 10);
@@ -1201,6 +1324,24 @@ export class PropertiesService {
     const nearLat = parseNumber(options.nearLat);
     const nearLng = parseNumber(options.nearLng);
     const radiusKm = parseNumber(options.radiusKm) ?? 5;
+    const neLat = parseNumber(options.neLat);
+    const neLng = parseNumber(options.neLng);
+    const swLat = parseNumber(options.swLat);
+    const swLng = parseNumber(options.swLng);
+    const includeMapPins = String(options.includeMapPins) === 'true';
+
+    if (
+      neLat !== undefined &&
+      neLng !== undefined &&
+      swLat !== undefined &&
+      swLng !== undefined &&
+      swLat <= neLat
+    ) {
+      Object.assign(
+        where,
+        this.buildMapBoundsFilter({ neLat, neLng, swLat, swLng }),
+      );
+    }
 
     if (minPrice !== undefined || maxPrice !== undefined) {
       where.price = {
@@ -1290,15 +1431,37 @@ export class PropertiesService {
         total,
         page,
         limit,
+        ...(includeMapPins && {
+          mapPins: this.toMapPins(filtered.slice(0, MAX_MAP_PINS)),
+        }),
       };
     }
 
-    const [properties, total] = await this.propertyRepository.findAndCount({
-      where: effectiveWhere,
-      skip,
-      take: limit,
-      order: { createdAt: 'DESC' },
-    });
+    // A bounds filter already implies coordinates; otherwise skip listings
+    // that cannot be placed on the map.
+    const pinWhere: Record<string, any> = {
+      'address.coordinates.lat': { $exists: true },
+      ...effectiveWhere,
+    };
+
+    // The list page and the map pins come back in one response, like
+    // Airbnb's StaysSearch carrying both a list and a map request.
+    const [[properties, total], pinSource] = await Promise.all([
+      this.propertyRepository.findAndCount({
+        where: effectiveWhere,
+        skip,
+        take: limit,
+        order: { createdAt: 'DESC' },
+      }),
+      includeMapPins
+        ? this.propertyRepository.find({
+            where: pinWhere,
+            select: MAP_PIN_FIELDS,
+            take: MAX_MAP_PINS,
+            order: { createdAt: 'DESC' },
+          })
+        : Promise.resolve([] as Property[]),
+    ]);
 
     const serializedProperties =
       await this.mapPropertiesWithOwnerSummary(properties);
@@ -1308,6 +1471,7 @@ export class PropertiesService {
       total,
       page,
       limit,
+      ...(includeMapPins && { mapPins: this.toMapPins(pinSource) }),
     };
   }
 

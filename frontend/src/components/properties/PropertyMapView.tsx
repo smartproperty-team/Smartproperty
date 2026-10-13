@@ -1,12 +1,25 @@
 // ===========================================
 // PropertyMapView - Airbnb-style property map
 // ===========================================
+// Price pills for the listings on the current results page, small dots for
+// the other matches, and "search as I move the map" using the same settle,
+// distance and debounce rules as Airbnb (see utils/mapSearch.ts).
 
+import { useTranslation } from "@/i18n";
+import type { Property, PropertyMapPin } from "@/types/property";
+import {
+  boundsShiftRatio,
+  MAP_SEARCH_DEBOUNCE_MS,
+  MAP_SEARCH_MIN_SHIFT,
+  MAP_SEARCH_PADDING_PX,
+  roundBounds,
+  sameBounds,
+  type MapBounds,
+} from "@/utils/mapSearch";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import type { Property } from "../../types/property";
 
 const DEFAULT_CENTER = { lat: 36.8065, lng: 10.1815 };
 const DEFAULT_ZOOM = 11;
@@ -23,20 +36,108 @@ function formatPrice(price: number, currency: string): string {
   return `${price.toLocaleString()} ${currency}`;
 }
 
+function escapeHtml(text: string): string {
+  return text.replace(
+    /[&<>"']/g,
+    (char) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        char
+      ]!,
+  );
+}
+
 function getPropertyId(p: Property): string {
   return p.id || p._id || "";
 }
 
-function buildIcon(price: number, currency: string, selected: boolean, hovered: boolean) {
-  const label = formatPrice(price, currency);
-  const cls = ["property-price-marker", selected ? "selected" : hovered ? "highlighted" : ""]
-    .filter(Boolean)
-    .join(" ");
+/** Everything a marker and its preview card need. */
+interface MapPin {
+  id: string;
+  title: string;
+  type: string;
+  status: string;
+  city: string;
+  price: number;
+  currency: string;
+  lat: number;
+  lng: number;
+  bedrooms?: number;
+  area?: number;
+  imageUrl?: string;
+  // On the current results page: drawn as a price pill, otherwise as a dot
+  // (Airbnb's FULL_PIN and MINI_PIN).
+  full: boolean;
+}
+
+function pinFromProperty(property: Property): MapPin | null {
+  const coords = property.address.coordinates;
+  const id = getPropertyId(property);
+  if (!coords || !id) return null;
+
+  // Same cover photo as the listing card: primary first, then by order.
+  const [cover] = [...(property.images ?? [])].sort((a, b) => {
+    if (a.isPrimary !== b.isPrimary) return a.isPrimary ? -1 : 1;
+    return (a.order ?? 0) - (b.order ?? 0);
+  });
+
+  return {
+    id,
+    title: property.title,
+    type: property.type,
+    status: property.status,
+    city: property.address.city,
+    price: property.price,
+    currency: property.currency,
+    lat: coords.lat,
+    lng: coords.lng,
+    bedrooms: property.features?.bedrooms,
+    area: property.features?.area,
+    imageUrl: cover?.url,
+    full: true,
+  };
+}
+
+function buildPins(properties: Property[], mapPins: PropertyMapPin[] = []) {
+  const pins = properties
+    .map(pinFromProperty)
+    .filter((pin): pin is MapPin => pin !== null);
+  const onPage = new Set(pins.map((pin) => pin.id));
+
+  for (const pin of mapPins) {
+    if (!onPage.has(pin.id)) pins.push({ ...pin, full: false });
+  }
+  return pins;
+}
+
+function buildIcon(pin: MapPin) {
+  const cls = pin.full ? "property-price-marker" : "property-mini-marker";
+  const label = escapeHtml(formatPrice(pin.price, pin.currency));
   return L.divIcon({
     className: "",
-    html: `<div class="${cls}">${label}</div>`,
+    html: `<div class="${cls}"><span>${label}</span></div>`,
     iconSize: [0, 0],
     iconAnchor: [0, 0],
+  });
+}
+
+/** The visible area minus Airbnb's 16 px edge padding, rounded for URLs. */
+function readSearchBounds(map: L.Map): MapBounds {
+  const pixels = map.getPixelBounds();
+  const zoom = map.getZoom();
+  const pad = MAP_SEARCH_PADDING_PX;
+  const sw = map.unproject(
+    L.point(pixels.min!.x + pad, pixels.max!.y - pad),
+    zoom,
+  );
+  const ne = map.unproject(
+    L.point(pixels.max!.x - pad, pixels.min!.y + pad),
+    zoom,
+  );
+  return roundBounds({
+    neLat: ne.lat,
+    neLng: ne.lng,
+    swLat: sw.lat,
+    swLng: sw.lng,
   });
 }
 
@@ -78,19 +179,16 @@ function clampPopupPos(
 // ─── Popup card ──────────────────────────────────────────────────────────────
 
 function PropertyPopupCard({
-  property,
+  pin,
   pos,
   onClose,
 }: {
-  property: Property;
+  pin: MapPin;
   pos: { left: number; top: number };
   onClose: () => void;
 }) {
-  const id = getPropertyId(property);
-  const primaryImage =
-    property.images?.find((img) => img.isPrimary) || property.images?.[0];
-  const imageUrl = primaryImage?.url || "/placeholder-property.svg";
-  const typeLabel = property.type.charAt(0).toUpperCase() + property.type.slice(1);
+  const imageUrl = pin.imageUrl || "/placeholder-property.svg";
+  const typeLabel = pin.type.charAt(0).toUpperCase() + pin.type.slice(1);
 
   return (
     <div
@@ -99,6 +197,9 @@ function PropertyPopupCard({
       style={{ left: pos.left, top: pos.top }}
       // Prevent map click from closing the popup when clicking inside the card
       onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
     >
       <button
         type="button"
@@ -110,7 +211,7 @@ function PropertyPopupCard({
       </button>
 
       <Link
-        to={`/properties/${id}`}
+        to={`/properties/${pin.id}`}
         className="map-popup-link"
         target="_blank"
         rel="noopener noreferrer"
@@ -118,37 +219,32 @@ function PropertyPopupCard({
         <div className="map-popup-image">
           <img
             src={imageUrl}
-            alt={property.title}
+            alt={pin.title}
             onError={(e) => {
               (e.target as HTMLImageElement).src = "/placeholder-property.svg";
             }}
           />
-          <span className={`property-badge ${property.status}`}>
-            {property.status}
-          </span>
+          <span className={`property-badge ${pin.status}`}>{pin.status}</span>
         </div>
 
         <div className="map-popup-body">
           <p className="map-popup-type">
-            {typeLabel} · {property.address.city}
+            {typeLabel} · {pin.city}
           </p>
-          <h3 className="map-popup-title">{property.title}</h3>
+          <h3 className="map-popup-title">{pin.title}</h3>
 
-          {(property.features?.bedrooms !== undefined ||
-            property.features?.area !== undefined) && (
+          {(pin.bedrooms !== undefined || pin.area !== undefined) && (
             <p className="map-popup-features">
-              {property.features?.bedrooms !== undefined &&
-                `${property.features.bedrooms} bed${property.features.bedrooms !== 1 ? "s" : ""}`}
-              {property.features?.bedrooms !== undefined &&
-                property.features?.area !== undefined &&
-                " · "}
-              {property.features?.area !== undefined && `${property.features.area} m²`}
+              {pin.bedrooms !== undefined &&
+                `${pin.bedrooms} bed${pin.bedrooms !== 1 ? "s" : ""}`}
+              {pin.bedrooms !== undefined && pin.area !== undefined && " · "}
+              {pin.area !== undefined && `${pin.area} m²`}
             </p>
           )}
 
           <p className="map-popup-price">
-            {property.price.toLocaleString()}{" "}
-            <span className="map-popup-currency">{property.currency}</span>
+            {pin.price.toLocaleString()}{" "}
+            <span className="map-popup-currency">{pin.currency}</span>
           </p>
         </div>
       </Link>
@@ -159,49 +255,63 @@ function PropertyPopupCard({
 // ─── Main component ──────────────────────────────────────────────────────────
 
 interface PropertyMapViewProps {
+  /** Listings on the current results page (price pills). */
   properties: Property[];
+  /** Every match the search returned pins for; the rest show as dots. */
+  mapPins?: PropertyMapPin[];
   hoveredPropertyId?: string | null;
   onPropertyHover?: (id: string | null) => void;
-}
-
-interface PopupState {
-  id: string;
-  pos: { left: number; top: number };
+  /** Map area the results are limited to, if any. */
+  searchBounds?: MapBounds;
+  /** Changes when a search not made from the map changes the results. */
+  fitKey?: string;
+  /** Called after the user moves the map and it settles. */
+  onSearchArea?: (bounds: MapBounds) => void;
+  loading?: boolean;
 }
 
 export default function PropertyMapView({
   properties,
-  hoveredPropertyId,
+  mapPins,
+  hoveredPropertyId = null,
   onPropertyHover,
+  searchBounds,
+  fitKey = "",
+  onSearchArea,
+  loading = false,
 }: PropertyMapViewProps) {
+  const t = useTranslation();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<Map<string, L.Marker>>(new Map());
+  const markersRef = useRef(
+    new Map<string, { marker: L.Marker; signature: string; full: boolean }>(),
+  );
 
-  // Stable refs so Leaflet event handlers never go stale
-  const hoveredIdRef = useRef<string | null>(null);
-  const popupRef = useRef<PopupState | null>(null);
-  const propertiesRef = useRef<Property[]>(properties);
-  const hasFitBoundsRef = useRef(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [autoSearch, setAutoSearch] = useState(true);
+  // Moved far enough to search while auto-search is off.
+  const [areaChanged, setAreaChanged] = useState(false);
+  // Bumped while the map moves so an open preview card follows its pin.
+  const [, setViewVersion] = useState(0);
 
-  const [popup, setPopup] = useState<PopupState | null>(null);
+  // Leaflet handlers are bound once; they read the latest values from refs.
+  const latest = useRef({ onSearchArea, onPropertyHover, autoSearch });
+  latest.current = { onSearchArea, onPropertyHover, autoSearch };
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
 
-  // Keep refs in sync each render
-  hoveredIdRef.current = hoveredPropertyId ?? null;
-  popupRef.current = popup;
-  propertiesRef.current = properties;
+  // Set before fitting the map ourselves, so the move is not taken as the
+  // user's (Airbnb only searches on reason === "user-interaction").
+  const programmaticMoveRef = useRef(false);
+  // The area the shown results were searched for.
+  const searchedBoundsRef = useRef<MapBounds | undefined>(undefined);
+  const fittedKeyRef = useRef<string | null>(null);
+  const searchTimerRef = useRef<number | undefined>(undefined);
 
-  // ── Rebuild icon for a single marker ─────────────────────────────────────
-  function refreshIcon(id: string) {
-    const marker = markersRef.current.get(id);
-    if (!marker) return;
-    const property = propertiesRef.current.find((p) => getPropertyId(p) === id);
-    if (!property) return;
-    const sel = popupRef.current?.id === id;
-    const hov = hoveredIdRef.current === id;
-    marker.setIcon(buildIcon(property.price, property.currency, sel, hov));
-    marker.setZIndexOffset(sel || hov ? 1000 : 0);
-  }
+  const pins = useMemo(
+    () => buildPins(properties, mapPins),
+    [properties, mapPins],
+  );
 
   // ── Initialize map once ───────────────────────────────────────────────────
   useEffect(() => {
@@ -230,129 +340,239 @@ export default function PropertyMapView({
     }).addTo(map);
 
     // Clicking the map background closes the popup
-    map.on("click", () => {
-      setPopup((prev) => {
-        if (prev) {
-          // Refresh the previously selected marker back to normal
-          setTimeout(() => refreshIcon(prev.id), 0);
-        }
-        return null;
-      });
+    map.on("click", () => setSelectedId(null));
+
+    // A new move cancels a search still waiting for the map to settle.
+    map.on("movestart", () => window.clearTimeout(searchTimerRef.current));
+
+    // A window resize also moves the view, but it is not the user exploring
+    // the map. Leaflet fires "resize" before the debounced "moveend".
+    map.on("resize", () => {
+      programmaticMoveRef.current = true;
+    });
+
+    map.on("move", () => {
+      if (selectedIdRef.current) setViewVersion((v) => v + 1);
+    });
+
+    map.on("moveend", () => {
+      if (selectedIdRef.current) setViewVersion((v) => v + 1);
+      const current = readSearchBounds(map);
+
+      if (programmaticMoveRef.current) {
+        programmaticMoveRef.current = false;
+        searchedBoundsRef.current = current;
+        return;
+      }
+
+      const previous = searchedBoundsRef.current;
+      const zoom = map.getZoom();
+      if (
+        previous &&
+        boundsShiftRatio(previous, current, (lat, lng) =>
+          map.project([lat, lng], zoom),
+        ) <= MAP_SEARCH_MIN_SHIFT
+      ) {
+        return;
+      }
+
+      if (!latest.current.autoSearch) {
+        setAreaChanged(true);
+        return;
+      }
+
+      searchTimerRef.current = window.setTimeout(() => {
+        searchedBoundsRef.current = current;
+        latest.current.onSearchArea?.(current);
+      }, MAP_SEARCH_DEBOUNCE_MS);
     });
 
     mapRef.current = map;
+    const markers = markersRef.current;
 
     return () => {
+      window.clearTimeout(searchTimerRef.current);
       map.remove();
       mapRef.current = null;
-      markersRef.current.clear();
-      hasFitBoundsRef.current = false;
+      markers.clear();
+      fittedKeyRef.current = null;
+      searchedBoundsRef.current = undefined;
     };
   }, []);
 
-  // ── Add / remove markers when properties change ───────────────────────────
+  // ── Follow a map area that did not come from this map (link, Back) ───────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !searchBounds) return;
+    if (sameBounds(searchBounds, searchedBoundsRef.current)) return;
+
+    programmaticMoveRef.current = true;
+    map.fitBounds(
+      [
+        [searchBounds.swLat, searchBounds.swLng],
+        [searchBounds.neLat, searchBounds.neLng],
+      ],
+      { padding: [MAP_SEARCH_PADDING_PX, MAP_SEARCH_PADDING_PX], animate: false },
+    );
+    // Values, not the object: a new object with the same edges is no move.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    searchBounds?.neLat,
+    searchBounds?.neLng,
+    searchBounds?.swLat,
+    searchBounds?.swLng,
+  ]);
+
+  // ── Fit to the results of a new, non-map search ──────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || loading || searchBounds || fittedKeyRef.current === fitKey) {
+      return;
+    }
+    if (pins.length === 0) return;
+
+    fittedKeyRef.current = fitKey;
+    programmaticMoveRef.current = true;
+    if (pins.length === 1) {
+      map.setView([pins[0].lat, pins[0].lng], DEFAULT_ZOOM + 2, {
+        animate: false,
+      });
+    } else {
+      map.fitBounds(
+        pins.map((pin) => [pin.lat, pin.lng] as [number, number]),
+        { padding: [50, 50], maxZoom: 15, animate: false },
+      );
+    }
+  }, [pins, loading, searchBounds, fitKey]);
+
+  // ── Add / update / remove markers ────────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
     const incoming = new Set<string>();
-    const bounds: [number, number][] = [];
+    for (const pin of pins) {
+      incoming.add(pin.id);
+      const signature = `${pin.full}|${pin.price}|${pin.currency}`;
+      const existing = markersRef.current.get(pin.id);
 
-    for (const property of properties) {
-      const coords = property.address.coordinates;
-      if (!coords) continue;
-      const id = getPropertyId(property);
-      if (!id) continue;
-
-      incoming.add(id);
-      bounds.push([coords.lat, coords.lng]);
-
-      if (!markersRef.current.has(id)) {
-        const marker = L.marker([coords.lat, coords.lng], {
-          icon: buildIcon(property.price, property.currency, false, false),
-        });
-
-        marker.on("click", (e) => {
-          L.DomEvent.stopPropagation(e);
-
-          const prevPopup = popupRef.current;
-          const isAlreadySelected = prevPopup?.id === id;
-
-          // Deselect if clicking the same marker again
-          if (isAlreadySelected) {
-            setPopup(null);
-            setTimeout(() => refreshIcon(id), 0);
-            return;
-          }
-
-          // Convert marker lat/lng to pixel coords inside the map container
-          const latlng = L.latLng(coords.lat, coords.lng);
-          const point = map.latLngToContainerPoint(latlng);
-          const mapSize = map.getSize();
-          const pos = clampPopupPos(point.x, point.y, mapSize.x, mapSize.y);
-
-          setPopup({ id, pos });
-
-          // Refresh old selected marker back to normal, then new one as selected
-          if (prevPopup) setTimeout(() => refreshIcon(prevPopup.id), 0);
-          setTimeout(() => refreshIcon(id), 0);
-        });
-
-        marker.on("mouseover", () => onPropertyHover?.(id));
-        marker.on("mouseout", () => onPropertyHover?.(null));
-
-        marker.addTo(map);
-        markersRef.current.set(id, marker);
+      if (existing?.signature === signature) {
+        existing.marker.setLatLng([pin.lat, pin.lng]);
+        continue;
       }
+      if (existing) map.removeLayer(existing.marker);
+
+      const marker = L.marker([pin.lat, pin.lng], {
+        icon: buildIcon(pin),
+        keyboard: true,
+      });
+      marker.on("click", (e) => {
+        L.DomEvent.stopPropagation(e);
+        setSelectedId((current) => (current === pin.id ? null : pin.id));
+      });
+      marker.on("mouseover", () => latest.current.onPropertyHover?.(pin.id));
+      marker.on("mouseout", () => latest.current.onPropertyHover?.(null));
+      marker.addTo(map);
+      marker
+        .getElement()
+        ?.setAttribute(
+          "aria-label",
+          `${pin.title}, ${pin.price.toLocaleString()} ${pin.currency}`,
+        );
+      markersRef.current.set(pin.id, { marker, signature, full: pin.full });
     }
 
-    // Remove stale markers
-    for (const [id, marker] of markersRef.current) {
+    for (const [id, { marker }] of markersRef.current) {
       if (!incoming.has(id)) {
         map.removeLayer(marker);
         markersRef.current.delete(id);
       }
     }
+  }, [pins]);
 
-    // Fit bounds only on first load
-    if (!hasFitBoundsRef.current && bounds.length > 0) {
-      hasFitBoundsRef.current = true;
-      if (bounds.length === 1) {
-        map.setView(bounds[0], DEFAULT_ZOOM);
-      } else {
-        map.fitBounds(bounds as L.LatLngBoundsExpression, { padding: [50, 50] });
-      }
+  // ── Hover / selection styling ────────────────────────────────────────────
+  useEffect(() => {
+    for (const [id, { marker, full }] of markersRef.current) {
+      const selected = id === selectedId;
+      const hovered = id === hoveredPropertyId;
+      const bubble = marker.getElement()?.firstElementChild;
+      bubble?.classList.toggle("selected", selected);
+      bubble?.classList.toggle("highlighted", hovered && !selected);
+      marker.setZIndexOffset(
+        selected ? 2000 : hovered ? 1000 : full ? 100 : 0,
+      );
     }
-  }, [properties, onPropertyHover]);
+  }, [pins, hoveredPropertyId, selectedId]);
 
-  // ── Refresh icons when hover changes ─────────────────────────────────────
-  useEffect(() => {
-    for (const id of markersRef.current.keys()) refreshIcon(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hoveredPropertyId]);
+  const searchCurrentArea = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    const current = readSearchBounds(map);
+    searchedBoundsRef.current = current;
+    setAreaChanged(false);
+    onSearchArea?.(current);
+  };
 
-  // ── Refresh icons when popup changes ─────────────────────────────────────
-  useEffect(() => {
-    for (const id of markersRef.current.keys()) refreshIcon(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [popup?.id]);
+  const toggleAutoSearch = (enabled: boolean) => {
+    setAutoSearch(enabled);
+    if (enabled && areaChanged) searchCurrentArea();
+  };
 
-  const selectedProperty = popup
-    ? (properties.find((p) => getPropertyId(p) === popup.id) ?? null)
-    : null;
+  // Keep the preview card next to its pin; hide it while the pin is off-map.
+  const selectedPin = pins.find((pin) => pin.id === selectedId) ?? null;
+  let popupPos: { left: number; top: number } | null = null;
+  const map = mapRef.current;
+  if (selectedPin && map) {
+    const point = map.latLngToContainerPoint([selectedPin.lat, selectedPin.lng]);
+    const size = map.getSize();
+    if (point.x >= 0 && point.y >= 0 && point.x <= size.x && point.y <= size.y) {
+      popupPos = clampPopupPos(point.x, point.y, size.x, size.y);
+    }
+  }
 
   return (
-    <div className="property-map-container">
+    <div
+      className="property-map-container"
+      role="region"
+      aria-label={t.properties.mapRegionLabel.replace(
+        "{{count}}",
+        String(pins.length),
+      )}
+    >
       <div ref={containerRef} className="property-map" />
 
-      {selectedProperty && popup && (
+      <div className="map-search-controls">
+        {areaChanged && !autoSearch ? (
+          <button
+            type="button"
+            className="map-search-area-btn"
+            onClick={searchCurrentArea}
+          >
+            {t.properties.searchThisArea}
+          </button>
+        ) : (
+          <label className="map-search-toggle">
+            <input
+              type="checkbox"
+              checked={autoSearch}
+              onChange={(e) => toggleAutoSearch(e.target.checked)}
+            />
+            {t.properties.searchAsMapMoves}
+          </label>
+        )}
+      </div>
+
+      {loading && (
+        <div className="map-loading-pill" role="status">
+          {t.properties.mapUpdating}
+        </div>
+      )}
+
+      {selectedPin && popupPos && (
         <PropertyPopupCard
-          property={selectedProperty}
-          pos={popup.pos}
-          onClose={() => {
-            setPopup(null);
-            setTimeout(() => refreshIcon(popup.id), 0);
-          }}
+          pin={selectedPin}
+          pos={popupPos}
+          onClose={() => setSelectedId(null)}
         />
       )}
     </div>

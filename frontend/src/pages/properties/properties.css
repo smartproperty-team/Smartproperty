@@ -926,6 +926,7 @@
 
 /* Map container */
 .property-map-container {
+  position: relative;
   width: 100%;
   height: 100%;
 }
@@ -975,6 +976,127 @@
   border-color: #1e293b;
   transform: translate(-50%, -50%) scale(1.1);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.32);
+}
+
+/* Matches on other result pages: a dot that opens into a price pill on
+   hover or selection (Airbnb's MINI_PIN). */
+.property-mini-marker {
+  transform: translate(-50%, -50%);
+  min-width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: white;
+  border: 1.5px solid rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.property-mini-marker span {
+  display: none;
+}
+
+.property-mini-marker.highlighted,
+.property-mini-marker.selected {
+  height: auto;
+  padding: 6px 12px;
+  background: #1e293b;
+  border-color: #1e293b;
+  color: white;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.property-mini-marker.highlighted span,
+.property-mini-marker.selected span {
+  display: inline;
+}
+
+/* Map overlay: "Search as I move the map" / "Search this area" */
+.map-search-controls {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 900;
+}
+
+.map-search-toggle,
+.map-search-area-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+}
+
+.map-search-toggle {
+  background: white;
+  color: #1e293b;
+}
+
+.map-search-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #1e293b;
+  cursor: pointer;
+}
+
+.map-search-area-btn {
+  border: none;
+  background: #1e293b;
+  color: white;
+}
+
+.map-search-area-btn:hover {
+  background: #0f172a;
+}
+
+.map-loading-pill {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 900;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  background: white;
+  color: #1e293b;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+}
+
+/* Previous results stay visible, dimmed, while a new search loads */
+.properties-results {
+  transition: opacity 0.15s ease;
+}
+
+.properties-results.is-updating {
+  opacity: 0.55;
+}
+
+.btn-clear-map-area {
+  margin-left: 0.75rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-primary, #3b82f6);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 /* Highlighted card in list */
