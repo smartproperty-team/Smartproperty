@@ -85,6 +85,15 @@ export const propertyService = {
       params.append("nearLng", filters.nearLng.toString());
     if (filters.radiusKm !== undefined)
       params.append("radiusKm", filters.radiusKm.toString());
+    if (filters.neLat !== undefined)
+      params.append("neLat", filters.neLat.toString());
+    if (filters.neLng !== undefined)
+      params.append("neLng", filters.neLng.toString());
+    if (filters.swLat !== undefined)
+      params.append("swLat", filters.swLat.toString());
+    if (filters.swLng !== undefined)
+      params.append("swLng", filters.swLng.toString());
+    if (filters.includeMapPins) params.append("includeMapPins", "true");
     if (filters.city) params.append("city", filters.city);
     if (filters.search) params.append("search", filters.search);
     if (filters.ownerId) params.append("ownerId", filters.ownerId);

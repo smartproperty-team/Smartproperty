@@ -101,6 +101,16 @@ export class PropertiesController {
   @ApiQuery({ name: 'nearLat', required: false, type: Number })
   @ApiQuery({ name: 'nearLng', required: false, type: Number })
   @ApiQuery({ name: 'radiusKm', required: false, type: Number })
+  @ApiQuery({ name: 'neLat', required: false, type: Number })
+  @ApiQuery({ name: 'neLng', required: false, type: Number })
+  @ApiQuery({ name: 'swLat', required: false, type: Number })
+  @ApiQuery({ name: 'swLng', required: false, type: Number })
+  @ApiQuery({
+    name: 'includeMapPins',
+    required: false,
+    type: Boolean,
+    description: 'Also return a light map pin for every match (max 300)',
+  })
   @ApiQuery({ name: 'city', required: false, type: String })
   @ApiQuery({ name: 'ownerId', required: false, type: String })
   @ApiQuery({ name: 'managerId', required: false, type: String })

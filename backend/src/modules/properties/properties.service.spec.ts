@@ -17,6 +17,8 @@ describe('PropertiesService', () => {
     create: jest.fn(),
     save: jest.fn(),
     findOne: jest.fn(),
+    find: jest.fn(),
+    findAndCount: jest.fn(),
   } as any;
 
   const usersRepository = {
@@ -156,5 +158,142 @@ describe('PropertiesService', () => {
 
     expect(propertyRepository.save).toHaveBeenCalledTimes(1);
     expect(updated.virtualTour).toBeUndefined();
+  });
+
+  describe('findAll map search', () => {
+    const pinnable = (overrides: Record<string, unknown> = {}) =>
+      ({
+        _id: new ObjectId('507f1f77bcf86cd799439011'),
+        title: 'Marina flat',
+        type: PropertyType.APARTMENT,
+        status: PropertyStatus.AVAILABLE,
+        price: 1750,
+        currency: 'TND',
+        address: {
+          city: 'Tunis',
+          coordinates: { lat: 36.85, lng: 10.3 },
+        },
+        features: { bedrooms: 2, area: 80 },
+        images: [
+          { url: '/second.webp', order: 2 },
+          { url: '/first.webp', order: 1 },
+        ],
+        ...overrides,
+      }) as any;
+
+    beforeEach(() => {
+      propertyRepository.findAndCount.mockResolvedValue([[], 0]);
+      propertyRepository.find.mockResolvedValue([]);
+    });
+
+    it('keeps results inside the visible map area', async () => {
+      await service.findAll({
+        neLat: 36.9,
+        neLng: 10.4,
+        swLat: 36.8,
+        swLng: 10.2,
+      });
+
+      const { where } = propertyRepository.findAndCount.mock.calls[0][0];
+      expect(where['address.coordinates.lat']).toEqual({
+        $gte: 36.8,
+        $lte: 36.9,
+      });
+      expect(where['address.coordinates.lng']).toEqual({
+        $gte: 10.2,
+        $lte: 10.4,
+      });
+    });
+
+    it('matches both sides of a map panned across the antimeridian', async () => {
+      await service.findAll({
+        neLat: 10,
+        neLng: -170,
+        swLat: -10,
+        swLng: 170,
+      } as any);
+
+      const { where } = propertyRepository.findAndCount.mock.calls[0][0];
+      expect(where['address.coordinates.lng']).toBeUndefined();
+      expect(where.$and).toEqual([
+        {
+          $or: [
+            { 'address.coordinates.lng': { $gte: 170 } },
+            { 'address.coordinates.lng': { $lte: -170 } },
+          ],
+        },
+      ]);
+    });
+
+    it('accepts bounds as query-string values and ignores partial ones', async () => {
+      await service.findAll({
+        neLat: '36.9',
+        neLng: '10.4',
+        swLat: '36.8',
+        swLng: '10.2',
+      } as any);
+      expect(
+        propertyRepository.findAndCount.mock.calls[0][0].where[
+          'address.coordinates.lat'
+        ],
+      ).toEqual({ $gte: 36.8, $lte: 36.9 });
+
+      await service.findAll({ neLat: 36.9, neLng: 10.4 });
+      expect(
+        propertyRepository.findAndCount.mock.calls[1][0].where[
+          'address.coordinates.lat'
+        ],
+      ).toBeUndefined();
+    });
+
+    it('returns light pins for every match when asked', async () => {
+      propertyRepository.find.mockResolvedValue([
+        pinnable(),
+        pinnable({
+          _id: new ObjectId('507f1f77bcf86cd799439012'),
+          address: { city: 'Tunis' },
+        }),
+      ]);
+
+      const result = await service.findAll({
+        includeMapPins: 'true',
+        neLat: 36.9,
+        neLng: 10.4,
+        swLat: 36.8,
+        swLng: 10.2,
+      });
+
+      const pinQuery = propertyRepository.find.mock.calls[0][0];
+      expect(pinQuery.take).toBe(300);
+      expect(pinQuery.select).toContain('price');
+      // The bounds condition wins over the "has coordinates" default.
+      expect(pinQuery.where['address.coordinates.lat']).toEqual({
+        $gte: 36.8,
+        $lte: 36.9,
+      });
+      expect(result.mapPins).toEqual([
+        {
+          id: '507f1f77bcf86cd799439011',
+          title: 'Marina flat',
+          type: PropertyType.APARTMENT,
+          status: PropertyStatus.AVAILABLE,
+          price: 1750,
+          currency: 'TND',
+          city: 'Tunis',
+          lat: 36.85,
+          lng: 10.3,
+          bedrooms: 2,
+          area: 80,
+          imageUrl: '/first.webp',
+        },
+      ]);
+    });
+
+    it('skips the pin query unless asked', async () => {
+      const result = await service.findAll({});
+
+      expect(propertyRepository.find).not.toHaveBeenCalled();
+      expect(result).not.toHaveProperty('mapPins');
+    });
   });
 });

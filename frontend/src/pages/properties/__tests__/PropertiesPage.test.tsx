@@ -14,9 +14,11 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Property } from "../../../types/property";
+import type { MapBounds } from "../../../utils/mapSearch";
 
 const getProperties = vi.fn();
 const getPropertyShareData = vi.fn();
+const mapView = { props: {} as Record<string, unknown>, mounts: 0 };
 
 vi.mock("@/services/property.service", () => ({
   propertyService: {
@@ -24,10 +26,35 @@ vi.mock("@/services/property.service", () => ({
     getPropertyShareData: (...args: unknown[]) => getPropertyShareData(...args),
   },
 }));
-// Leaflet maps are not what these tests are about.
-vi.mock("@/components/properties/PropertyMapView", () => ({
-  default: () => null,
-}));
+// Leaflet is covered by PropertyMapView's own tests; this stand-in records
+// what the page gives the map and lets a test "move" it.
+vi.mock("@/components/properties/PropertyMapView", async () => {
+  const { useEffect } = await import("react");
+  function MapStandIn(props: { onSearchArea: (bounds: MapBounds) => void }) {
+    useEffect(() => {
+      mapView.props = props;
+    });
+    useEffect(() => {
+      mapView.mounts += 1;
+    }, []);
+    return (
+      <button
+        type="button"
+        onClick={() =>
+          props.onSearchArea({
+            neLat: 36.9,
+            neLng: 10.4,
+            swLat: 36.8,
+            swLng: 10.2,
+          })
+        }
+      >
+        Move map
+      </button>
+    );
+  }
+  return { default: MapStandIn };
+});
 vi.mock("@/components/settings/LocationPreferenceMap", () => ({
   default: () => null,
 }));
@@ -218,5 +245,152 @@ describe("PropertiesPage", () => {
       await screen.findByRole("link", { name: "Marina flat" })
     ).closest("article")!;
     expect(card.querySelector("img")!.getAttribute("src")).toBe("/b.webp");
+  });
+
+  describe("map area search", () => {
+    const area = "neLat=36.9&neLng=10.4&swLat=36.8&swLng=10.2";
+
+    beforeEach(() => {
+      mapView.mounts = 0;
+    });
+
+    it("searches the visible area from page 1 when the map moves", async () => {
+      renderPage("?type=apartment");
+      await screen.findByRole("link", { name: "Marina flat" });
+
+      fireEvent.click(screen.getByRole("button", { name: "Move map" }));
+
+      await waitFor(() =>
+        expect(getProperties).toHaveBeenLastCalledWith(
+          expect.objectContaining({
+            type: "apartment",
+            neLat: 36.9,
+            neLng: 10.4,
+            swLat: 36.8,
+            swLng: 10.2,
+            page: 1,
+            includeMapPins: true,
+          }),
+        ),
+      );
+      expect(screen.getByTestId("url").textContent).toContain(area);
+      expect(screen.getByText(/within map area/)).toBeTruthy();
+    });
+
+    it("restores a shared map area and can clear it", async () => {
+      renderPage(`?${area}`);
+      await screen.findByRole("link", { name: "Marina flat" });
+
+      expect(mapView.props.searchBounds).toEqual({
+        neLat: 36.9,
+        neLng: 10.4,
+        swLat: 36.8,
+        swLng: 10.2,
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: "Clear map area" }));
+
+      await waitFor(() =>
+        expect(screen.getByTestId("url").textContent).not.toContain("neLat"),
+      );
+      expect(mapView.props.searchBounds).toBeUndefined();
+    });
+
+    it("drops the map area when the user searches another city", async () => {
+      renderPage(`?${area}`);
+      await screen.findByRole("link", { name: "Marina flat" });
+
+      fireEvent.click(screen.getByRole("button", { name: "Filters" }));
+      fireEvent.change(screen.getByLabelText("City"), {
+        target: { value: "Sousse" },
+      });
+      fireEvent.click(screen.getAllByRole("button", { name: "Search" })[0]);
+
+      await waitFor(() =>
+        expect(screen.getByTestId("url").textContent).toContain("city=Sousse"),
+      );
+      expect(screen.getByTestId("url").textContent).not.toContain("neLat");
+    });
+
+    it("gives the map pins for every match", async () => {
+      const pins = [
+        {
+          id: "p9",
+          title: "Far flat",
+          type: "apartment",
+          status: "available",
+          price: 900,
+          currency: "TND",
+          city: "Sousse",
+          lat: 35.8,
+          lng: 10.6,
+        },
+      ];
+      getProperties.mockResolvedValue({
+        properties: [listing("p1", "Marina flat", 1750)],
+        total: 13,
+        mapPins: pins,
+      });
+      renderPage("");
+      await screen.findByRole("link", { name: "Marina flat" });
+
+      expect(mapView.props.mapPins).toEqual(pins);
+    });
+
+    it("keeps the list and the map on screen while the next search loads", async () => {
+      renderPage("");
+      await screen.findByRole("link", { name: "Marina flat" });
+      getProperties.mockReturnValue(new Promise(() => {}));
+
+      fireEvent.click(screen.getByRole("button", { name: "Move map" }));
+
+      await waitFor(() => expect(mapView.props.loading).toBe(true));
+      expect(screen.getByRole("link", { name: "Marina flat" })).toBeTruthy();
+      expect(mapView.mounts).toBe(1);
+    });
+
+    it("shows the newest search when an older one answers last", async () => {
+      renderPage("");
+      await screen.findByRole("link", { name: "Marina flat" });
+
+      let answerOlder!: (value: unknown) => void;
+      getProperties.mockReturnValueOnce(
+        new Promise((resolve) => (answerOlder = resolve)),
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Move map" }));
+      await waitFor(() => expect(getProperties).toHaveBeenCalledTimes(2));
+
+      getProperties.mockResolvedValueOnce({
+        properties: [listing("p3", "Newest result", 1300)],
+        total: 1,
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Clear map area" }));
+      await screen.findByRole("link", { name: "Newest result" });
+
+      answerOlder({
+        properties: [listing("p4", "Stale result", 1100)],
+        total: 1,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(screen.queryByRole("link", { name: "Stale result" })).toBeNull();
+      expect(screen.getByRole("link", { name: "Newest result" })).toBeTruthy();
+    });
+
+    it("explains an empty map area and offers to clear it", async () => {
+      getProperties.mockResolvedValue({ properties: [], total: 0 });
+      renderPage(`?${area}`);
+
+      expect(
+        await screen.findByText(
+          "No properties in this map area. Try zooming out or moving the map.",
+        ),
+      ).toBeTruthy();
+      // Still there, so the user can move somewhere else.
+      expect(screen.getByRole("button", { name: "Move map" })).toBeTruthy();
+      expect(
+        screen.getAllByRole("button", { name: "Clear map area" }),
+      ).toHaveLength(2);
+    });
   });
 });
