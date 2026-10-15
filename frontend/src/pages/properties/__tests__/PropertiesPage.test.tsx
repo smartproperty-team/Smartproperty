@@ -19,6 +19,8 @@ import type { MapBounds } from "../../../utils/mapSearch";
 
 const getProperties = vi.fn();
 const getPropertyShareData = vi.fn();
+const countProperties = vi.fn();
+const getSearchSuggestions = vi.fn();
 const mapView = {
   props: {} as Record<string, unknown>,
   mounts: 0,
@@ -30,6 +32,9 @@ vi.mock("@/services/property.service", () => ({
   propertyService: {
     getProperties: (...args: unknown[]) => getProperties(...args),
     getPropertyShareData: (...args: unknown[]) => getPropertyShareData(...args),
+    countProperties: (...args: unknown[]) => countProperties(...args),
+    getSearchSuggestions: (...args: unknown[]) =>
+      getSearchSuggestions(...args),
   },
 }));
 // Leaflet is covered by PropertyMapView's own tests; this stand-in records
@@ -126,6 +131,13 @@ describe("PropertiesPage", () => {
       ],
       total: 2,
     });
+    countProperties.mockReset();
+    countProperties.mockResolvedValue({
+      total: 5,
+      priceHistogram: { min: 500, max: 3000, median: 1200, buckets: [1, 3, 1] },
+    });
+    getSearchSuggestions.mockReset();
+    getSearchSuggestions.mockResolvedValue([]);
   });
 
   afterEach(cleanup);
@@ -133,14 +145,15 @@ describe("PropertiesPage", () => {
   it("shows and applies a price range that came in the URL", async () => {
     renderPage("?category=rental&minPrice=1000&maxPrice=2000");
 
-    // The filter panel opens by itself, with the range filled in.
+    // Each filter in the URL shows as a removable chip.
     expect(
-      (screen.getByLabelText("Min price (TND)") as HTMLInputElement).value,
-    ).toBe("1000");
+      screen.getByRole("button", {
+        name: "Remove filter: 1,000–2,000 TND",
+      }),
+    ).toBeTruthy();
     expect(
-      (screen.getByLabelText("Max price (TND)") as HTMLInputElement).value,
-    ).toBe("2000");
-
+      screen.getByRole("button", { name: "Remove filter: Rent" }),
+    ).toBeTruthy();
     await waitFor(() =>
       expect(getProperties).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -155,15 +168,20 @@ describe("PropertiesPage", () => {
   it("searches with an edited price range and keeps it in the URL", async () => {
     renderPage("?minPrice=1000&maxPrice=2000");
 
-    fireEvent.change(screen.getByLabelText("Max price (TND)"), {
-      target: { value: "1500" },
-    });
-    fireEvent.click(screen.getAllByRole("button", { name: "Search" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Filters, 1 applied" }));
+    const dialog = await screen.findByRole("dialog", { name: "Filters" });
+    const max = within(dialog).getByLabelText("Maximum");
+    fireEvent.change(max, { target: { value: "1500" } });
+    fireEvent.blur(max);
+    fireEvent.click(
+      await within(dialog).findByRole("button", { name: "Show 5 properties" }),
+    );
 
     await waitFor(() =>
       expect(screen.getByTestId("url").textContent).toContain("maxPrice=1500"),
     );
     expect(screen.getByTestId("url").textContent).toContain("minPrice=1000");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("renders each result as a listing card with compare and share", async () => {
@@ -186,19 +204,72 @@ describe("PropertiesPage", () => {
   });
 
   it("clears the price range with the other filters", async () => {
-    renderPage("?minPrice=1000&maxPrice=2000");
+    renderPage("?minPrice=1000&maxPrice=2000&furnished=1&search=sea");
 
-    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
 
-    expect(
-      (screen.getByLabelText("Min price (TND)") as HTMLInputElement).value,
-    ).toBe("");
-    expect(
-      (screen.getByLabelText("Max price (TND)") as HTMLInputElement).value,
-    ).toBe("");
     await waitFor(() =>
       expect(screen.getByTestId("url").textContent).not.toContain("Price"),
     );
+    expect(screen.getByTestId("url").textContent).not.toContain("furnished");
+    // The place to look is not a filter; it stays.
+    expect(screen.getByTestId("url").textContent).toContain("search=sea");
+    expect(screen.queryByRole("button", { name: /^Remove filter/ })).toBeNull();
+  });
+
+  it("applies a quick filter straight away", async () => {
+    renderPage("");
+    await screen.findByRole("link", { name: "Marina flat" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Pet friendly" }));
+
+    await waitFor(() =>
+      expect(getProperties).toHaveBeenLastCalledWith(
+        expect.objectContaining({ petFriendly: true, page: 1 }),
+      ),
+    );
+    expect(screen.getByTestId("url").textContent).toContain("pets=1");
+    expect(
+      screen.getByRole("button", { name: "Remove filter: Pet friendly" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Filters, 1 applied" })).toBeTruthy();
+  });
+
+  it("reads old links: type= and bedrooms= mean one type and at least N rooms", async () => {
+    renderPage("?type=villa&bedrooms=2");
+
+    await waitFor(() =>
+      expect(getProperties).toHaveBeenCalledWith(
+        expect.objectContaining({ types: ["villa"], minBedrooms: 2 }),
+      ),
+    );
+    expect(screen.getByRole("button", { name: "Filters, 2 applied" })).toBeTruthy();
+  });
+
+  it("opens the map picker when the home page asks for it", async () => {
+    renderPage("?nearby=pick");
+
+    expect(
+      await screen.findByRole("button", { name: "Validate & Next" }),
+    ).toBeTruthy();
+  });
+
+  it("searches a place picked from the suggestions", async () => {
+    getSearchSuggestions.mockResolvedValue([
+      { label: "Sousse", kind: "city", count: 4 },
+    ]);
+    renderPage("");
+
+    const where = screen.getByRole("combobox", { name: "Where" });
+    fireEvent.focus(where);
+    fireEvent.change(where, { target: { value: "Sou" } });
+    fireEvent.click(await screen.findByRole("option", { name: /Sousse/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("url").textContent).toContain("city=Sousse"),
+    );
+    expect(screen.getByTestId("url").textContent).not.toContain("search=");
   });
 
   it("highlights a card while the pointer is over it", async () => {
@@ -250,16 +321,6 @@ describe("PropertiesPage", () => {
     ).toBeTruthy();
   });
 
-  it("asks for at least the bedrooms the home page's menu offered", async () => {
-    renderPage("?bedrooms=2");
-
-    await waitFor(() =>
-      expect(getProperties).toHaveBeenCalledWith(
-        expect.objectContaining({ minBedrooms: 2, bedrooms: undefined }),
-      ),
-    );
-  });
-
   it("orders photos by their position when none is primary", async () => {
     renderPage("");
     const card = (
@@ -284,7 +345,7 @@ describe("PropertiesPage", () => {
       await waitFor(() =>
         expect(getProperties).toHaveBeenLastCalledWith(
           expect.objectContaining({
-            type: "apartment",
+            types: ["apartment"],
             neLat: 36.9,
             neLng: 10.4,
             swLat: 36.8,
@@ -321,11 +382,14 @@ describe("PropertiesPage", () => {
       renderPage(`?${area}`);
       await screen.findByRole("link", { name: "Marina flat" });
 
-      fireEvent.click(screen.getByRole("button", { name: "Filters" }));
-      fireEvent.change(screen.getByLabelText("City"), {
-        target: { value: "Sousse" },
-      });
-      fireEvent.click(screen.getAllByRole("button", { name: "Search" })[0]);
+      getSearchSuggestions.mockResolvedValue([
+        { label: "Sousse", kind: "city", count: 4 },
+      ]);
+      const where = screen.getByRole("combobox", { name: "Where" });
+      fireEvent.focus(where);
+      fireEvent.change(where, { target: { value: "Sou" } });
+      fireEvent.click(await screen.findByRole("option", { name: /Sousse/ }));
+      fireEvent.click(screen.getByRole("button", { name: "Search" }));
 
       await waitFor(() =>
         expect(screen.getByTestId("url").textContent).toContain("city=Sousse"),
@@ -367,7 +431,7 @@ describe("PropertiesPage", () => {
       );
       const before = mapView.renders.length;
 
-      fireEvent.click(screen.getByRole("button", { name: "Move map" }));
+      fireEvent.click(screen.getByRole("button", { name: "Pet friendly" }));
       await waitFor(() => expect(getProperties).toHaveBeenCalledTimes(2));
       const newKey = mapView.renders[mapView.renders.length - 1].fitKey;
       const whileLoading = mapView.renders
@@ -378,7 +442,7 @@ describe("PropertiesPage", () => {
       expect(whileLoading.every((render) => render.loading)).toBe(true);
 
       await act(async () => {
-        answer({ properties: [listing("p5", "Area flat", 900)], total: 1 });
+        answer({ properties: [listing("p5", "Pet flat", 900)], total: 1 });
       });
       await waitFor(() => expect(mapView.props.loading).toBe(false));
     });

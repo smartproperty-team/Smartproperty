@@ -18,6 +18,7 @@ import type {
   PropertyFilters,
   PropertyImage,
   PropertyListResponse,
+  PropertySearchSuggestion,
   StagingJob,
   StagingStyle,
   UpdatePropertyDto,
@@ -77,8 +78,6 @@ export const propertyService = {
       params.append("maxPrice", filters.maxPrice.toString());
     if (filters.bedrooms !== undefined)
       params.append("bedrooms", filters.bedrooms.toString());
-    if (filters.minBedrooms)
-      params.append("minBedrooms", filters.minBedrooms.toString());
     if (filters.bathrooms !== undefined)
       params.append("bathrooms", filters.bathrooms.toString());
     if (filters.nearLat !== undefined)
@@ -96,6 +95,19 @@ export const propertyService = {
     if (filters.swLng !== undefined)
       params.append("swLng", filters.swLng.toString());
     if (filters.includeMapPins) params.append("includeMapPins", "true");
+    if (filters.types?.length) params.append("types", filters.types.join(","));
+    if (filters.minBedrooms)
+      params.append("minBedrooms", filters.minBedrooms.toString());
+    if (filters.minBathrooms)
+      params.append("minBathrooms", filters.minBathrooms.toString());
+    if (filters.amenities?.length)
+      params.append("amenities", filters.amenities.join(","));
+    if (filters.furnished) params.append("furnished", "true");
+    if (filters.petFriendly) params.append("petFriendly", "true");
+    if (filters.hasParking) params.append("hasParking", "true");
+    if (filters.countOnly) params.append("countOnly", "true");
+    if (filters.includePriceHistogram)
+      params.append("includePriceHistogram", "true");
     if (filters.city) params.append("city", filters.city);
     if (filters.search) params.append("search", filters.search);
     if (filters.ownerId) params.append("ownerId", filters.ownerId);
@@ -103,6 +115,36 @@ export const propertyService = {
 
     const response = await api.get<PropertyListResponse>(
       `/properties?${params.toString()}`,
+    );
+    return response.data;
+  },
+
+  /**
+   * Number of matches (and optionally their price spread) without fetching
+   * any listing - for the filter panel's live "Show N properties" button.
+   */
+  async countProperties(
+    filters: PropertyFilters,
+    withPriceHistogram = false,
+  ): Promise<Pick<PropertyListResponse, "total" | "priceHistogram">> {
+    const { total, priceHistogram } = await this.getProperties({
+      ...filters,
+      page: undefined,
+      limit: undefined,
+      includeMapPins: false,
+      countOnly: true,
+      includePriceHistogram: withPriceHistogram,
+    });
+    return { total, priceHistogram };
+  },
+
+  /** Cities and regions with listings, for the search bar's "Where". */
+  async getSearchSuggestions(
+    query: string,
+  ): Promise<PropertySearchSuggestion[]> {
+    const response = await api.get<PropertySearchSuggestion[]>(
+      "/properties/suggestions",
+      { params: { q: query } },
     );
     return response.data;
   },

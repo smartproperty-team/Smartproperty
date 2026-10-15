@@ -97,12 +97,6 @@ export class PropertiesController {
   @ApiQuery({ name: 'minPrice', required: false, type: Number })
   @ApiQuery({ name: 'maxPrice', required: false, type: Number })
   @ApiQuery({ name: 'bedrooms', required: false, type: Number })
-  @ApiQuery({
-    name: 'minBedrooms',
-    required: false,
-    type: Number,
-    description: 'At least this many bedrooms',
-  })
   @ApiQuery({ name: 'bathrooms', required: false, type: Number })
   @ApiQuery({ name: 'nearLat', required: false, type: Number })
   @ApiQuery({ name: 'nearLng', required: false, type: Number })
@@ -117,6 +111,35 @@ export class PropertiesController {
     type: Boolean,
     description: 'Also return a light map pin for every match (max 300)',
   })
+  @ApiQuery({
+    name: 'types',
+    required: false,
+    type: String,
+    description: 'Comma-separated property types; any of them matches',
+  })
+  @ApiQuery({ name: 'minBedrooms', required: false, type: Number })
+  @ApiQuery({ name: 'minBathrooms', required: false, type: Number })
+  @ApiQuery({
+    name: 'amenities',
+    required: false,
+    type: String,
+    description: 'Comma-separated amenities; all must be present',
+  })
+  @ApiQuery({ name: 'furnished', required: false, type: Boolean })
+  @ApiQuery({ name: 'petFriendly', required: false, type: Boolean })
+  @ApiQuery({ name: 'hasParking', required: false, type: Boolean })
+  @ApiQuery({
+    name: 'countOnly',
+    required: false,
+    type: Boolean,
+    description: 'Return only the number of matches',
+  })
+  @ApiQuery({
+    name: 'includePriceHistogram',
+    required: false,
+    type: Boolean,
+    description: 'Also return how the matches are priced, ignoring min/max',
+  })
   @ApiQuery({ name: 'city', required: false, type: String })
   @ApiQuery({ name: 'ownerId', required: false, type: String })
   @ApiQuery({ name: 'managerId', required: false, type: String })
@@ -124,6 +147,17 @@ export class PropertiesController {
   @ApiResponse({ status: 200, description: 'List of properties' })
   async findAll(@Query() options: FindPropertiesOptions) {
     return this.propertiesService.findAll(options);
+  }
+
+  @Public()
+  @Get('suggestions')
+  @ApiOperation({ summary: 'Places for the search bar, busiest first' })
+  @ApiQuery({ name: 'q', required: false, type: String })
+  @ApiResponse({ status: 200, description: 'Cities and regions with counts' })
+  async getSearchSuggestions(@Query('q') q?: string) {
+    return this.propertiesService.getSearchSuggestions(
+      typeof q === 'string' ? q : '',
+    );
   }
 
   // ===========================================
