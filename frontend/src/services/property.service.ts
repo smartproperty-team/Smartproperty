@@ -77,6 +77,8 @@ export const propertyService = {
       params.append("maxPrice", filters.maxPrice.toString());
     if (filters.bedrooms !== undefined)
       params.append("bedrooms", filters.bedrooms.toString());
+    if (filters.minBedrooms)
+      params.append("minBedrooms", filters.minBedrooms.toString());
     if (filters.bathrooms !== undefined)
       params.append("bathrooms", filters.bathrooms.toString());
     if (filters.nearLat !== undefined)

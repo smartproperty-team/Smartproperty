@@ -97,6 +97,12 @@ export class PropertiesController {
   @ApiQuery({ name: 'minPrice', required: false, type: Number })
   @ApiQuery({ name: 'maxPrice', required: false, type: Number })
   @ApiQuery({ name: 'bedrooms', required: false, type: Number })
+  @ApiQuery({
+    name: 'minBedrooms',
+    required: false,
+    type: Number,
+    description: 'At least this many bedrooms',
+  })
   @ApiQuery({ name: 'bathrooms', required: false, type: Number })
   @ApiQuery({ name: 'nearLat', required: false, type: Number })
   @ApiQuery({ name: 'nearLng', required: false, type: Number })

@@ -42,6 +42,8 @@ export interface FindPropertiesOptions {
   minPrice?: number;
   maxPrice?: number;
   bedrooms?: number;
+  // At least this many bedrooms ("2+").
+  minBedrooms?: number;
   bathrooms?: number;
   nearLat?: number;
   nearLng?: number;
@@ -1320,6 +1322,7 @@ export class PropertiesService {
     const minPrice = parseNumber(options.minPrice);
     const maxPrice = parseNumber(options.maxPrice);
     const bedrooms = parseNumber(options.bedrooms);
+    const minBedrooms = parseNumber(options.minBedrooms);
     const bathrooms = parseNumber(options.bathrooms);
     const nearLat = parseNumber(options.nearLat);
     const nearLng = parseNumber(options.nearLng);
@@ -1352,6 +1355,8 @@ export class PropertiesService {
 
     if (bedrooms !== undefined) {
       where['features.bedrooms'] = bedrooms;
+    } else if (minBedrooms !== undefined && minBedrooms > 0) {
+      where['features.bedrooms'] = { $gte: minBedrooms };
     }
 
     if (bathrooms !== undefined) {

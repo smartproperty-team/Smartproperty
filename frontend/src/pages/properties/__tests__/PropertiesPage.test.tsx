@@ -3,6 +3,7 @@
 // ===========================================
 
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -18,7 +19,12 @@ import type { MapBounds } from "../../../utils/mapSearch";
 
 const getProperties = vi.fn();
 const getPropertyShareData = vi.fn();
-const mapView = { props: {} as Record<string, unknown>, mounts: 0 };
+const mapView = {
+  props: {} as Record<string, unknown>,
+  mounts: 0,
+  // Every render the map saw, to catch a fit to stale pins.
+  renders: [] as { fitKey: string; loading: boolean }[],
+};
 
 vi.mock("@/services/property.service", () => ({
   propertyService: {
@@ -33,6 +39,11 @@ vi.mock("@/components/properties/PropertyMapView", async () => {
   function MapStandIn(props: { onSearchArea: (bounds: MapBounds) => void }) {
     useEffect(() => {
       mapView.props = props;
+      const { fitKey, loading } = props as unknown as {
+        fitKey: string;
+        loading: boolean;
+      };
+      mapView.renders.push({ fitKey, loading });
     });
     useEffect(() => {
       mapView.mounts += 1;
@@ -239,6 +250,16 @@ describe("PropertiesPage", () => {
     ).toBeTruthy();
   });
 
+  it("asks for at least the bedrooms the home page's menu offered", async () => {
+    renderPage("?bedrooms=2");
+
+    await waitFor(() =>
+      expect(getProperties).toHaveBeenCalledWith(
+        expect.objectContaining({ minBedrooms: 2, bedrooms: undefined }),
+      ),
+    );
+  });
+
   it("orders photos by their position when none is primary", async () => {
     renderPage("");
     const card = (
@@ -335,6 +356,31 @@ describe("PropertiesPage", () => {
       await screen.findByRole("link", { name: "Marina flat" });
 
       expect(mapView.props.mapPins).toEqual(pins);
+    });
+
+    it("tells the map its pins are stale until the new search answers", async () => {
+      renderPage("");
+      await screen.findByRole("link", { name: "Marina flat" });
+      let answer!: (value: unknown) => void;
+      getProperties.mockReturnValueOnce(
+        new Promise((resolve) => (answer = resolve)),
+      );
+      const before = mapView.renders.length;
+
+      fireEvent.click(screen.getByRole("button", { name: "Move map" }));
+      await waitFor(() => expect(getProperties).toHaveBeenCalledTimes(2));
+      const newKey = mapView.renders[mapView.renders.length - 1].fitKey;
+      const whileLoading = mapView.renders
+        .slice(before)
+        .filter((render) => render.fitKey === newKey);
+      expect(whileLoading.length).toBeGreaterThan(0);
+      // Not one render with the new search and the old pins claims ready.
+      expect(whileLoading.every((render) => render.loading)).toBe(true);
+
+      await act(async () => {
+        answer({ properties: [listing("p5", "Area flat", 900)], total: 1 });
+      });
+      await waitFor(() => expect(mapView.props.loading).toBe(false));
     });
 
     it("keeps the list and the map on screen while the next search loads", async () => {

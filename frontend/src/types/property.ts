@@ -177,6 +177,8 @@ export interface PropertyFilters {
   minPrice?: number;
   maxPrice?: number;
   bedrooms?: number;
+  // At least this many bedrooms ("2+").
+  minBedrooms?: number;
   bathrooms?: number;
   nearLat?: number;
   nearLng?: number;
