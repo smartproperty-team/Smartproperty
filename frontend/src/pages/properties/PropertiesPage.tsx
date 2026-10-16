@@ -5,7 +5,15 @@
 import { CompareShareActions } from "@/components/properties/CompareShareActions";
 import { ListingCard } from "@/components/properties/ListingCard";
 import { HomeFooter, Navbar } from "@/components/layout";
-import AdvancedPropertySearchBar from "@/components/properties/AdvancedPropertySearchBar";
+import { FilterBar } from "@/components/properties/search/FilterBar";
+import {
+  FiltersDialog,
+  type CountFetcher,
+} from "@/components/properties/search/FiltersDialog";
+import {
+  ListingSearchBar,
+  type ListingSearchValue,
+} from "@/components/properties/search/ListingSearchBar";
 import PropertyMapView from "@/components/properties/PropertyMapView";
 import LocationPreferenceMap from "@/components/settings/LocationPreferenceMap";
 import { useTranslation } from "@/i18n";
@@ -20,74 +28,28 @@ import type {
   PropertyType,
 } from "@/types/property";
 import { canManageFavorites, canManageProperties, isOwner } from "@/utils";
+import {
+  clearPanelFilters,
+  countPanelFilters,
+  filtersFromSearchParams,
+  filtersToSearchParams,
+  sameFilters,
+  type PanelFilters,
+} from "@/utils/listingFilters";
 import { getMapBounds, type MapBounds } from "@/utils/mapSearch";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import "./properties.css";
 
-// ===========================================
-// URL <-> filters
-// ===========================================
+// Module-level so the filters dialog gets a stable function.
+const fetchListingCount: CountFetcher = (filters, withPriceHistogram) =>
+  propertyService.countProperties(filters, withPriceHistogram);
 
-const parsePositiveIntegerParam = (
-  value: string | null,
-): number | undefined => {
-  if (!value) return undefined;
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
-};
+const fetchPlaceSuggestions = (query: string) =>
+  propertyService.getSearchSuggestions(query);
 
-const parseNumberParam = (value: string | null): number | undefined => {
-  if (!value) return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
-};
-
-const parsePositiveNumberParam = (
-  value: string | null,
-): number | undefined => {
-  const parsed = parseNumberParam(value);
-  return parsed !== undefined && parsed > 0 ? parsed : undefined;
-};
-
-const parseCategoryParam = (
-  value: string | null,
-): PropertyFilters["category"] => {
-  return value === "sale" || value === "rental" || value === "management"
-    ? value
-    : undefined;
-};
-
-const filtersFromSearchParams = (
-  searchParams: URLSearchParams,
-): PropertyFilters => ({
-  page: 1,
-  limit: 12,
-  type: (searchParams.get("type") as PropertyType) || undefined,
-  status: (searchParams.get("status") as PropertyStatus) || undefined,
-  category: parseCategoryParam(searchParams.get("category")),
-  bedrooms: parsePositiveIntegerParam(searchParams.get("bedrooms")),
-  bathrooms: parsePositiveIntegerParam(searchParams.get("bathrooms")),
-  nearLat: parseNumberParam(searchParams.get("nearLat")),
-  nearLng: parseNumberParam(searchParams.get("nearLng")),
-  radiusKm: parsePositiveNumberParam(searchParams.get("radiusKm")),
-  neLat: parseNumberParam(searchParams.get("neLat")),
-  neLng: parseNumberParam(searchParams.get("neLng")),
-  swLat: parseNumberParam(searchParams.get("swLat")),
-  swLng: parseNumberParam(searchParams.get("swLng")),
-  minPrice: parsePositiveNumberParam(searchParams.get("minPrice")),
-  maxPrice: parsePositiveNumberParam(searchParams.get("maxPrice")),
-  city: searchParams.get("city") || undefined,
-  search: searchParams.get("search") || undefined,
-});
-
-// The same search whatever order its fields were set in.
 const resultsKey = (filters: PropertyFilters) =>
-  JSON.stringify(
-    Object.entries(filters)
-      .filter(([, value]) => value !== undefined)
-      .sort(([a], [b]) => a.localeCompare(b)),
-  );
+  `${filtersToSearchParams(filters)}|${filters.page ?? 1}`;
 
 // A new place to look (city, nearby point) replaces the map area,
 // as a new destination does on Airbnb.
@@ -201,24 +163,11 @@ export default function PropertiesPage() {
   );
   const mapBounds = getMapBounds(filters);
 
-  // Local state for text inputs (not linked to API calls until form submit)
-  const [searchText, setSearchText] = useState(filters.search || "");
-  const [cityText, setCityText] = useState(filters.city || "");
-  const [bedroomsText, setBedroomsText] = useState(
-    filters.bedrooms?.toString() || "",
-  );
-  const [bathroomsText, setBathroomsText] = useState(
-    filters.bathrooms?.toString() || "",
-  );
-  // Seeded from the URL, so a price chosen on the home page is visible here.
-  const [minPriceText, setMinPriceText] = useState(
-    filters.minPrice?.toString() || "",
-  );
-  const [maxPriceText, setMaxPriceText] = useState(
-    filters.maxPrice?.toString() || "",
-  );
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [showNearbyPanel, setShowNearbyPanel] = useState(
-    filters.nearLat !== undefined && filters.nearLng !== undefined,
+    (filters.nearLat !== undefined && filters.nearLng !== undefined) ||
+      // "Near a point on the map", chosen in the home page's search bar.
+      searchParams.get("nearby") === "pick",
   );
   const [nearbySelectionDraft, setNearbySelectionDraft] = useState<
     UserLocationPreference | undefined
@@ -260,28 +209,6 @@ export default function PropertiesPage() {
               ? t.properties.typeCondo
               : t.properties.typeLand;
 
-  const areFiltersEqual = (left: PropertyFilters, right: PropertyFilters) =>
-    left.page === right.page &&
-    left.limit === right.limit &&
-    left.type === right.type &&
-    left.status === right.status &&
-    left.category === right.category &&
-    left.minPrice === right.minPrice &&
-    left.maxPrice === right.maxPrice &&
-    left.bedrooms === right.bedrooms &&
-    left.bathrooms === right.bathrooms &&
-    left.nearLat === right.nearLat &&
-    left.nearLng === right.nearLng &&
-    left.radiusKm === right.radiusKm &&
-    left.neLat === right.neLat &&
-    left.neLng === right.neLng &&
-    left.swLat === right.swLat &&
-    left.swLng === right.swLng &&
-    left.city === right.city &&
-    left.search === right.search &&
-    left.ownerId === right.ownerId &&
-    left.managerId === right.managerId;
-
   const comparedProperties = properties.filter((property) =>
     comparisonIds.includes(getPropertyId(property)),
   );
@@ -318,10 +245,6 @@ export default function PropertiesPage() {
       // Airbnb's StaysSearch.
       const response = await propertyService.getProperties({
         ...filters,
-        // The home page's rooms menu offers "1+", "2+"...: a minimum, not
-        // the exact count the API reads from bedrooms.
-        bedrooms: undefined,
-        minBedrooms: filters.bedrooms,
         includeMapPins: true,
       });
       if (requestId !== latestRequestRef.current) return;
@@ -347,7 +270,7 @@ export default function PropertiesPage() {
     const nextFilters = filtersFromSearchParams(searchParams);
 
     setFilters((current) =>
-      areFiltersEqual(current, nextFilters) ? current : nextFilters,
+      sameFilters(current, nextFilters) ? current : nextFilters,
     );
   }, [searchParams]);
 
@@ -361,56 +284,26 @@ export default function PropertiesPage() {
 
   // Sync URL params with current filters
   const updateUrlParams = useCallback(
-    (f: PropertyFilters) => {
-      const params = new URLSearchParams();
-      if (f.type) params.set("type", f.type);
-      if (f.status) params.set("status", f.status);
-      if (f.category) params.set("category", f.category);
-      if (f.bedrooms !== undefined) params.set("bedrooms", String(f.bedrooms));
-      if (f.bathrooms !== undefined)
-        params.set("bathrooms", String(f.bathrooms));
-      if (f.nearLat !== undefined) params.set("nearLat", String(f.nearLat));
-      if (f.nearLng !== undefined) params.set("nearLng", String(f.nearLng));
-      if (f.radiusKm !== undefined) params.set("radiusKm", String(f.radiusKm));
-      const bounds = getMapBounds(f);
-      if (bounds) {
-        params.set("neLat", String(bounds.neLat));
-        params.set("neLng", String(bounds.neLng));
-        params.set("swLat", String(bounds.swLat));
-        params.set("swLng", String(bounds.swLng));
-      }
-      if (f.minPrice !== undefined) params.set("minPrice", String(f.minPrice));
-      if (f.maxPrice !== undefined) params.set("maxPrice", String(f.maxPrice));
-      if (f.city) params.set("city", f.city);
-      if (f.search) params.set("search", f.search);
-      setSearchParams(params);
-    },
+    (f: PropertyFilters) => setSearchParams(filtersToSearchParams(f)),
     [setSearchParams],
   );
 
-  // Handle dropdown filter changes (triggers API immediately)
-  const handleFilterChange = (key: keyof PropertyFilters, value: string) => {
-    const newFilters = { ...filters, [key]: value || undefined, page: 1 };
-    setFilters(newFilters);
-    updateUrlParams(newFilters);
+  const applyFilters = (next: PropertyFilters) => {
+    const nextFilters = { ...next, page: 1 };
+    setFilters(nextFilters);
+    updateUrlParams(nextFilters);
   };
 
-  // Apply current advanced search bar values to filters
-  const handleSearch = () => {
-    const city = cityText || undefined;
-    const newFilters = {
-      ...filters,
-      ...(city !== filters.city && NO_MAP_AREA),
-      search: searchText || undefined,
-      city,
-      bedrooms: parsePositiveIntegerParam(bedroomsText),
-      bathrooms: parsePositiveIntegerParam(bathroomsText),
-      minPrice: parsePositiveNumberParam(minPriceText),
-      maxPrice: parsePositiveNumberParam(maxPriceText),
-      page: 1,
-    };
-    setFilters(newFilters);
-    updateUrlParams(newFilters);
+  // Search bar: a new place to look replaces the map area.
+  const handleSearchBar = (next: ListingSearchValue) => {
+    const placeChanged =
+      next.city !== filters.city || next.search !== filters.search;
+    applyFilters({ ...filters, ...(placeChanged && NO_MAP_AREA), ...next });
+  };
+
+  const handleApplyPanel = (panel: PanelFilters) => {
+    setFiltersOpen(false);
+    applyFilters({ ...clearPanelFilters(filters), ...panel });
   };
 
   // The user moved the map: search the visible area, from page 1.
@@ -432,12 +325,6 @@ export default function PropertiesPage() {
 
   // Handle reset filters
   const handleResetFilters = () => {
-    setSearchText("");
-    setCityText("");
-    setBedroomsText("");
-    setBathroomsText("");
-    setMinPriceText("");
-    setMaxPriceText("");
     setShowNearbyPanel(false);
     setNearbySelectionDraft(undefined);
     setNearbyLocationDraft("");
@@ -606,21 +493,9 @@ export default function PropertiesPage() {
 
   // Changes for searches not made from the map, so the map refits to their
   // results; paging and map moves keep the view where the user left it.
-  const mapFitKey = [
-    filters.type,
-    filters.status,
-    filters.category,
-    filters.minPrice,
-    filters.maxPrice,
-    filters.bedrooms,
-    filters.bathrooms,
-    filters.nearLat,
-    filters.nearLng,
-    filters.radiusKm,
-    filters.city,
-    filters.search,
-    mapBounds ? "map-area" : "",
-  ].join("|");
+  const mapFitKey = `${filtersToSearchParams({ ...filters, ...NO_MAP_AREA })}|${
+    mapBounds ? "map-area" : ""
+  }`;
 
   const pagination = totalPages > 1 && (
     <nav className="pagination" aria-label="Pagination">
@@ -666,6 +541,12 @@ export default function PropertiesPage() {
     </nav>
   );
 
+  const hasAnyFilter =
+    countPanelFilters(filters) > 0 ||
+    !!filters.search ||
+    !!filters.city ||
+    filters.nearLat !== undefined;
+
   // Results stay on screen while a new search loads, so moving the map
   // does not blank the list or remount the map.
   const results =
@@ -688,7 +569,7 @@ export default function PropertiesPage() {
         <p>
           {mapBounds
             ? t.properties.noPropertiesInArea
-            : filters.search || filters.type || filters.status || filters.city
+            : hasAnyFilter
               ? t.properties.noPropertiesFiltered
               : canAddProperty
                 ? t.properties.noPropertiesAdd
@@ -701,6 +582,14 @@ export default function PropertiesPage() {
             onClick={clearMapArea}
           >
             {t.properties.clearMapArea}
+          </button>
+        ) : hasAnyFilter ? (
+          <button
+            type="button"
+            className="btn-filter secondary"
+            onClick={handleResetFilters}
+          >
+            {t.listingSearch.clearAllFilters}
           </button>
         ) : (
           canAddProperty && (
@@ -795,73 +684,44 @@ export default function PropertiesPage() {
                 {showMap ? "Hide map" : "Show map"}
               </button>
             </div>
-            <AdvancedPropertySearchBar
-              searchQuery={searchText}
-              onSearchQueryChange={setSearchText}
-              cityValue={cityText}
-              onCityChange={setCityText}
-              typeValue={filters.type}
-              onTypeChange={(value) => handleFilterChange("type", value)}
-              statusValue={filters.status}
-              onStatusChange={(value) => handleFilterChange("status", value)}
-              bedroomsValue={bedroomsText}
-              onBedroomsChange={setBedroomsText}
-              bathroomsValue={bathroomsText}
-              onBathroomsChange={setBathroomsText}
-              minPriceValue={minPriceText}
-              onMinPriceChange={setMinPriceText}
-              maxPriceValue={maxPriceText}
-              onMaxPriceChange={setMaxPriceText}
-              defaultFiltersOpen={
-                filters.minPrice !== undefined || filters.maxPrice !== undefined
-              }
-              onSearch={handleSearch}
-              onReset={handleResetFilters}
-              onOpenNearbyMap={() => setShowNearbyPanel(true)}
-              onClearNearby={clearNearbyFilter}
-              hasNearbySelection={
-                filters.nearLat !== undefined && filters.nearLng !== undefined
-              }
-              nearbySummary={
-                nearbyLocationDraft ||
-                (nearbySelectionDraft?.coordinates
-                  ? `${nearbySelectionDraft.coordinates.lat.toFixed(4)}, ${nearbySelectionDraft.coordinates.lng.toFixed(4)}`
-                  : "")
-              }
-              nearbyHint={t.properties.nearbyHint}
-              labels={{
-                searchPlaceholder: t.properties.searchShortPlaceholder,
-                filters: t.properties.filters,
-                search: t.properties.searchBtn,
-                type: t.properties.typeLabel,
-                status: t.properties.statusLabel,
-                city: t.properties.cityShortPlaceholder,
-                bedrooms: t.properties.form.labels.bedrooms,
-                bathrooms: t.properties.form.labels.bathrooms,
-                nearby: t.properties.nearbyLabel,
-                nearbyTrigger: t.properties.openNearbyMap,
-                nearbyPlaceholder: t.properties.nearbyPlaceholder,
-                any: t.properties.anyOption,
-                minPrice: t.properties.minPrice,
-                maxPrice: t.properties.maxPrice,
-                allTypes: t.properties.allTypes,
-                allStatuses: t.properties.allStatuses,
-                available: t.properties.available,
-                rented: t.properties.rented,
-                maintenance: t.properties.maintenance,
-                unlisted: t.properties.unlisted,
-                typeApartment: t.properties.typeApartment,
-                typeHouse: t.properties.typeHouse,
-                typeVilla: t.properties.typeVilla,
-                typeStudio: t.properties.typeStudio,
-                typeCondo: t.properties.typeCondo,
-                typeLand: t.properties.typeLand,
-                reset: t.properties.reset,
-                clearNearby: t.properties.clearNearby,
-              }}
-            />
           </div>
+          <ListingSearchBar
+            key={filtersToSearchParams({
+              search: filters.search,
+              city: filters.city,
+              category: filters.category,
+              types: filters.types,
+            }).toString()}
+            search={filters.search}
+            city={filters.city}
+            category={filters.category}
+            types={filters.types}
+            onSearch={handleSearchBar}
+            fetchSuggestions={fetchPlaceSuggestions}
+            nearbyLabel={
+              filters.nearLat !== undefined && filters.nearLng !== undefined
+                ? nearbyLocationDraft ||
+                  `${filters.nearLat.toFixed(4)}, ${filters.nearLng.toFixed(4)}`
+                : undefined
+            }
+            onOpenNearby={() => setShowNearbyPanel(true)}
+            onClearNearby={clearNearbyFilter}
+          />
+          <FilterBar
+            filters={filters}
+            onChange={applyFilters}
+            onOpenFilters={() => setFiltersOpen(true)}
+          />
         </div>
+
+        {filtersOpen && (
+          <FiltersDialog
+            filters={filters}
+            fetchCount={fetchListingCount}
+            onApply={handleApplyPanel}
+            onClose={() => setFiltersOpen(false)}
+          />
+        )}
 
         {showNearbyPanel && (
           <section

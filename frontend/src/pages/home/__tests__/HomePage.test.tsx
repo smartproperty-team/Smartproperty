@@ -15,11 +15,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Property } from "../../../types/property";
 
 const getProperties = vi.fn();
+const getSearchSuggestions = vi.fn().mockResolvedValue([]);
 
 vi.mock("@/services/property.service", () => ({
   propertyService: {
     getProperties: (...args: unknown[]) => getProperties(...args),
     getBestMatchRecommendations: vi.fn(),
+    getSearchSuggestions: (...args: unknown[]) => getSearchSuggestions(...args),
   },
 }));
 
@@ -143,41 +145,60 @@ describe("HomePage", () => {
     vi.unstubAllGlobals();
   });
 
-  it("searches rentals with the parameters the listings page reads", async () => {
+  it("searches with the listings page's search bar and its URL", async () => {
+    getSearchSuggestions.mockResolvedValue([
+      { label: "La Marsa", kind: "city", count: 3 },
+    ]);
     renderHome();
 
-    fireEvent.click(screen.getByRole("button", { name: "Rent" }));
-    expect(
-      screen.getByRole("button", { name: "Rent" }).getAttribute("aria-pressed"),
-    ).toBe("true");
-    fireEvent.change(screen.getByLabelText("Location"), {
-      target: { value: "La Marsa" },
-    });
-    fireEvent.change(screen.getByLabelText("Monthly rent"), {
-      target: { value: "1000-2000" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Search homes" }));
+    const where = screen.getByRole("combobox", { name: "Where" });
+    fireEvent.focus(where);
+    fireEvent.change(where, { target: { value: "mar" } });
+    fireEvent.click(await screen.findByRole("option", { name: /La Marsa/ }));
+    // Picking a place moves on to "Looking to", as on /properties.
+    fireEvent.click(screen.getByRole("radio", { name: /^Rent/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Villa" }));
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
 
     const params = new URLSearchParams(
       (await screen.findByTestId("listings-url")).textContent ?? "",
     );
     expect(Object.fromEntries(params)).toEqual({
+      city: "La Marsa",
       category: "rental",
-      search: "La Marsa",
-      minPrice: "1000",
-      maxPrice: "2000",
+      types: "villa",
     });
   });
 
-  it("offers prices in TND, on a monthly scale for rent", () => {
+  it("no longer has the old form", () => {
     renderHome();
-    const budget = screen.getByLabelText("Budget") as HTMLSelectElement;
-    expect([...budget.options].map((o) => o.text)).toContain(
-      "200,000 – 500,000 TND",
+
+    expect(screen.getAllByRole("search")).toHaveLength(1);
+    expect(screen.queryByLabelText("Budget")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Search homes" })).toBeNull();
+  });
+
+  it("sends a typed place as a keyword", async () => {
+    renderHome();
+    const where = screen.getByRole("combobox", { name: "Where" });
+
+    fireEvent.change(where, { target: { value: "Sea view" } });
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+
+    expect((await screen.findByTestId("listings-url")).textContent).toBe(
+      "?search=Sea+view",
+    );
+  });
+
+  it("sends the map option to the listings page's picker", async () => {
+    renderHome();
+    fireEvent.focus(screen.getByRole("combobox", { name: "Where" }));
+    fireEvent.click(
+      await screen.findByRole("option", { name: /Near a point on the map/ }),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Rent" }));
-    const rent = screen.getByLabelText("Monthly rent") as HTMLSelectElement;
-    expect([...rent.options].map((o) => o.text)).toContain("Up to 1,000 TND");
+    expect((await screen.findByTestId("listings-url")).textContent).toBe(
+      "?nearby=pick",
+    );
   });
 });

@@ -8,7 +8,7 @@ import { ObjectId } from 'mongodb';
 import { UserRole } from '../users/entities/user.entity';
 import { CreatePropertyDto, UpdatePropertyDto } from './dto/property.dto';
 import { PropertyStatus, PropertyType } from './entities/property.entity';
-import { PropertiesService } from './properties.service';
+import { computePriceHistogram, PropertiesService } from './properties.service';
 
 describe('PropertiesService', () => {
   let service: PropertiesService;
@@ -297,29 +297,213 @@ describe('PropertiesService', () => {
     });
   });
 
-  describe('findAll rooms', () => {
+  describe('findAll filters panel', () => {
     beforeEach(() => {
       propertyRepository.findAndCount.mockResolvedValue([[], 0]);
+      propertyRepository.find.mockResolvedValue([]);
     });
 
-    it('reads minBedrooms as at least that many', async () => {
-      await service.findAll({ minBedrooms: '2' } as any);
+    const lastWhere = () =>
+      propertyRepository.findAndCount.mock.calls.at(-1)[0].where;
 
-      expect(
-        propertyRepository.findAndCount.mock.calls[0][0].where[
-          'features.bedrooms'
-        ],
-      ).toEqual({ $gte: 2 });
+    it('matches any of several types and ignores unknown ones', async () => {
+      await service.findAll({ types: 'villa,house,castle' });
+
+      expect(lastWhere().type).toEqual({ $in: ['villa', 'house'] });
     });
 
-    it('keeps an exact bedrooms count when one is given', async () => {
+    it('reads rooms as minimums, but keeps exact counts for old links', async () => {
+      await service.findAll({ minBedrooms: '2', minBathrooms: 1 } as any);
+      expect(lastWhere()['features.bedrooms']).toEqual({ $gte: 2 });
+      expect(lastWhere()['features.bathrooms']).toEqual({ $gte: 1 });
+
       await service.findAll({ bedrooms: 3, minBedrooms: 2 });
+      expect(lastWhere()['features.bedrooms']).toBe(3);
+    });
+
+    it('needs every amenity, whatever its case', async () => {
+      await service.findAll({ amenities: 'WiFi,Air conditioning' });
+
+      const [wifi, airConditioning] = lastWhere()['features.amenities'].$all;
+      expect(wifi.test('wifi')).toBe(true);
+      expect(wifi.test('wifi router')).toBe(false);
+      expect(airConditioning.test('AIR CONDITIONING')).toBe(true);
+    });
+
+    it('accepts furnished and parking from either the feature or an amenity', async () => {
+      await service.findAll({
+        furnished: 'true',
+        hasParking: '1',
+        petFriendly: true,
+        search: 'pool',
+      });
+
+      const where = lastWhere();
+      expect(where['features.petFriendly']).toBe(true);
+      expect(where.$and).toHaveLength(2);
+      const [furnished, parking] = where.$and;
+      expect(furnished.$or[0]).toEqual({ 'features.furnished': true });
+      expect(furnished.$or[1]['features.amenities'].test('Furnished')).toBe(
+        true,
+      );
+      expect(parking.$or[0]).toEqual({
+        'features.parkingSpaces': { $gte: 1 },
+      });
+      expect(
+        parking.$or[1]['features.amenities'].$in.some((r: RegExp) =>
+          r.test('garage'),
+        ),
+      ).toBe(true);
+      // The search keeps its own $or, now including the address.
+      expect(where.$or.map((c: object) => Object.keys(c)[0])).toEqual([
+        'title',
+        'description',
+        'address.city',
+        'address.state',
+        'address.street',
+      ]);
+    });
+
+    it('only counts when asked for a count', async () => {
+      propertyRepository.findAndCount.mockResolvedValue([[{}], 7]);
+
+      const result = await service.findAll({
+        countOnly: 'true',
+        category: 'rental' as any,
+        includeMapPins: 'true',
+      });
+
+      expect(result).toEqual({ properties: [], total: 7, page: 1, limit: 12 });
+      const query = propertyRepository.findAndCount.mock.calls[0][0];
+      expect(query.take).toBe(1);
+      expect(query.select).toEqual(['_id']);
+      expect(propertyRepository.find).not.toHaveBeenCalled();
+      expect(usersRepository.find).not.toHaveBeenCalled();
+    });
+
+    it('builds the price histogram without the price filter', async () => {
+      propertyRepository.find.mockResolvedValue([
+        { price: 800 },
+        { price: 1200 },
+        { price: 2000 },
+      ]);
+
+      const result = await service.findAll({
+        includePriceHistogram: 'true',
+        minPrice: 1000,
+        maxPrice: 1500,
+        category: 'rental' as any,
+      });
+
+      const histogramQuery = propertyRepository.find.mock.calls[0][0];
+      expect(histogramQuery.where.price).toBeUndefined();
+      expect(histogramQuery.where.category).toBe('rental');
+      expect(histogramQuery.select).toEqual(['price']);
+      expect(lastWhere().price).toEqual({ $gte: 1000, $lte: 1500 });
+      expect(result.priceHistogram).toMatchObject({ min: 800, median: 1200 });
+    });
+  });
+
+  describe('computePriceHistogram', () => {
+    it('buckets prices evenly on a square-root scale', () => {
+      // 0..400: a quarter of the way in price is half way along the slider.
+      const histogram = computePriceHistogram([0, 100, 400], 2)!;
+
+      expect(histogram.min).toBe(0);
+      expect(histogram.max).toBe(400);
+      expect(histogram.buckets).toEqual([1, 2]);
+      expect(histogram.median).toBe(100);
+    });
+
+    it('puts the most expensive 2% in the last bucket', () => {
+      const prices = [...Array.from({ length: 99 }, (_, i) => 1000 + i), 1e6];
+      const histogram = computePriceHistogram(prices, 10)!;
+
+      expect(histogram.max).toBeLessThan(2000);
+      expect(histogram.buckets.reduce((a, b) => a + b)).toBe(100);
+      expect(histogram.buckets.at(-1)).toBeGreaterThanOrEqual(1);
+    });
+
+    it('rounds the range outwards and survives a single price', () => {
+      expect(computePriceHistogram([1234, 5678])).toMatchObject({
+        min: 1200,
+        max: 5700,
+      });
+      // A lone price sits inside a usable range, not at its edge.
+      expect(computePriceHistogram([1750])).toMatchObject({
+        min: 1400,
+        max: 2100,
+        median: 1750,
+      });
+      expect(computePriceHistogram([])).toBeNull();
+      // Free listings must not divide by a zero-wide range.
+      expect(computePriceHistogram([0, 0])!.buckets[0]).toBe(2);
+    });
+  });
+
+  describe('getSearchSuggestions', () => {
+    it('suggests cities and regions by word start, busiest first', async () => {
+      propertyRepository.find.mockResolvedValue([
+        { address: { city: 'Sousse', state: 'Sousse' } },
+        { address: { city: 'Sousse', state: 'Sousse' } },
+        { address: { city: 'Hammam Sousse', state: 'Sousse' } },
+        { address: { city: 'Tunis', state: 'Tunis' } },
+      ]);
+
+      const suggestions = await service.getSearchSuggestions('sou');
+
+      // The Sousse region would repeat the Sousse city, so only the city shows.
+      expect(suggestions).toEqual([
+        { label: 'Sousse', kind: 'city', count: 2 },
+        { label: 'Hammam Sousse', kind: 'city', count: 1 },
+      ]);
+      const pattern = propertyRepository.find.mock.calls[0][0].where.$or[0][
+        'address.city'
+      ] as RegExp;
+      expect(pattern.test('Hammam Sousse')).toBe(true);
+      expect(pattern.test('Ksour')).toBe(false);
+    });
+
+    it('counts a region over all its listings', async () => {
+      propertyRepository.find.mockResolvedValue([
+        { address: { city: 'Hammamet', state: 'Nabeul' } },
+        { address: { city: 'Nabeul', state: 'Nabeul' } },
+        { address: { city: 'Kelibia', state: 'Nabeul' } },
+      ]);
+
+      expect(await service.getSearchSuggestions('ham')).toEqual([
+        { label: 'Hammamet', kind: 'city', count: 1 },
+      ]);
+      // "Nabeul" is also a city, so the region gives way to it.
+      expect(await service.getSearchSuggestions('nab')).toEqual([
+        { label: 'Nabeul', kind: 'city', count: 1 },
+      ]);
+      propertyRepository.find.mockResolvedValue([
+        { address: { city: 'Hammamet', state: 'Nabeul' } },
+        { address: { city: 'Kelibia', state: 'Nabeul' } },
+      ]);
+      expect(await service.getSearchSuggestions('nab')).toEqual([
+        { label: 'Nabeul', kind: 'region', count: 2 },
+      ]);
+    });
+
+    it('lists the busiest places when nothing is typed', async () => {
+      propertyRepository.find.mockResolvedValue([
+        { address: { city: 'Tunis', state: 'Tunis' } },
+        { address: { city: 'La Marsa', state: 'Tunis' } },
+        { address: { city: 'La Marsa', state: 'Tunis' } },
+      ]);
+
+      const suggestions = await service.getSearchSuggestions('');
 
       expect(
-        propertyRepository.findAndCount.mock.calls[0][0].where[
-          'features.bedrooms'
-        ],
-      ).toBe(3);
+        propertyRepository.find.mock.calls[0][0].where.$or,
+      ).toBeUndefined();
+      expect(suggestions[0]).toEqual({
+        label: 'La Marsa',
+        kind: 'city',
+        count: 2,
+      });
     });
   });
 });

@@ -119,6 +119,7 @@ export interface PropertyListResponse {
   page: number;
   limit: number;
   mapPins?: PropertyMapPin[];
+  priceHistogram?: PriceHistogram | null;
 }
 
 export interface PortfolioSummary {
@@ -177,8 +178,6 @@ export interface PropertyFilters {
   minPrice?: number;
   maxPrice?: number;
   bedrooms?: number;
-  // At least this many bedrooms ("2+").
-  minBedrooms?: number;
   bathrooms?: number;
   nearLat?: number;
   nearLng?: number;
@@ -189,10 +188,40 @@ export interface PropertyFilters {
   swLat?: number;
   swLng?: number;
   includeMapPins?: boolean;
+  // Filters panel: any of these types, at least this many rooms, every
+  // listed amenity, and feature toggles.
+  types?: PropertyType[];
+  minBedrooms?: number;
+  minBathrooms?: number;
+  amenities?: string[];
+  furnished?: boolean;
+  petFriendly?: boolean;
+  hasParking?: boolean;
+  // Ask only for the number of matches (the "Show N properties" button).
+  countOnly?: boolean;
+  includePriceHistogram?: boolean;
   city?: string;
   search?: string;
   ownerId?: string;
   managerId?: string;
+}
+
+/**
+ * How the matches are priced, ignoring the price filter. Buckets are even on
+ * a square-root scale between min and max (the price slider's scale), and
+ * prices above max count in the last one.
+ */
+export interface PriceHistogram {
+  min: number;
+  max: number;
+  median: number;
+  buckets: number[];
+}
+
+export interface PropertySearchSuggestion {
+  label: string;
+  kind: "city" | "region";
+  count: number;
 }
 
 // Light marker for a listing that matches the search but may sit on another

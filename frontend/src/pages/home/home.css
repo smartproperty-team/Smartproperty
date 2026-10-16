@@ -158,6 +158,9 @@
 
 .hero {
   position: relative;
+  /* Above the sections after it, so the search suggestions can hang over
+     the listings below instead of under them. */
+  z-index: 2;
   isolation: isolate;
   display: flex;
   align-items: center;
@@ -236,136 +239,22 @@
 
 /* ---------- Hero search ---------- */
 
+/* The listings page's search bar (components/properties/search), here
+   lifted off the hero photo with a stronger shadow. */
 .hero-search {
+  position: relative;
+  /* Above the row after it: both animate in, so each is its own layer and
+     the later one would otherwise cover the suggestions. */
+  z-index: 3;
   max-width: 1000px;
-  padding: 0.5rem;
-  border: 1px solid rgba(26, 50, 99, 0.08);
-  border-radius: var(--radius-panel);
-  background: var(--home-surface);
+}
+
+.hero-search form.lsx {
+  margin-top: 0;
+}
+
+.hero-search .lsx-search {
   box-shadow: var(--shadow-panel);
-}
-
-.search-mode {
-  display: inline-flex;
-  gap: 0.25rem;
-  margin: 0.35rem 0.35rem 0.6rem;
-  padding: 0.25rem;
-  border-radius: var(--radius-pill);
-  background: var(--home-sand);
-}
-
-.search-mode-btn {
-  min-height: 40px;
-  padding: 0 1.25rem;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--home-muted);
-  font: inherit;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background-color 200ms ease,
-    color 200ms ease;
-}
-
-.search-mode-btn:hover {
-  color: var(--home-navy);
-}
-
-.search-mode-btn[aria-pressed="true"] {
-  background: var(--home-navy);
-  color: #ffffff;
-}
-
-.search-fields {
-  display: grid;
-  grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr)) auto;
-  align-items: stretch;
-}
-
-.search-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 0;
-  padding: 0.55rem 1rem 0.65rem;
-  border-left: 1px solid var(--home-line);
-  border-radius: var(--radius-control);
-  transition: background-color 200ms ease;
-}
-
-.search-field:first-child {
-  border-left: 0;
-}
-
-.search-field:focus-within {
-  background: #f5f7fb;
-  box-shadow: inset 0 0 0 2px var(--home-navy);
-}
-
-.search-field label {
-  color: var(--home-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.search-field input,
-.search-field select {
-  width: 100%;
-  min-height: 28px;
-  padding: 0;
-  border: 0;
-  background-color: transparent;
-  color: var(--home-ink);
-  font: inherit;
-  font-size: 1rem;
-  font-weight: 500;
-  text-overflow: ellipsis;
-}
-
-/* The field container shows the focus; the control itself does not. */
-.search-field :is(input, select):focus-visible {
-  box-shadow: none;
-}
-
-.search-field input::placeholder {
-  color: #7d8b9c;
-  font-weight: 400;
-}
-
-.search-field select {
-  appearance: none;
-  padding-right: 1.25rem;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234f6478' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-position: right center;
-  background-repeat: no-repeat;
-  cursor: pointer;
-}
-
-.search-submit {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  min-height: 56px;
-  margin: 0.2rem;
-  padding: 0 1.6rem;
-  border: 0;
-  border-radius: 14px;
-  background: var(--home-navy);
-  color: #ffffff;
-  font: inherit;
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background-color 200ms ease;
-}
-
-.search-submit:hover {
-  background: var(--home-navy-deep);
 }
 
 .hero-secondary {
@@ -821,26 +710,6 @@
 /* ---------- Responsive ---------- */
 
 @media (max-width: 1023px) {
-  .search-fields {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.5rem;
-    padding: 0 0.35rem 0.35rem;
-  }
-
-  .search-field,
-  .search-field:first-child {
-    border: 1px solid var(--home-line);
-  }
-
-  .search-field--location,
-  .search-submit {
-    grid-column: 1 / -1;
-  }
-
-  .search-submit {
-    margin: 0.25rem 0 0;
-  }
-
   .split {
     grid-template-columns: 1fr;
   }
@@ -896,35 +765,7 @@
   }
 }
 
-@media (max-width: 599px) {
-  .search-fields {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .search-field:has(#search-price) {
-    grid-column: 1 / -1;
-  }
-
-  .search-field {
-    padding: 0.45rem 0.8rem 0.5rem;
-  }
-}
-
-@media (max-width: 359px) {
-  .search-fields {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 479px) {
-  .search-mode {
-    display: flex;
-  }
-
-  .search-mode-btn {
-    flex: 1;
-  }
-
   .hero-secondary {
     flex-direction: column;
     align-items: flex-start;

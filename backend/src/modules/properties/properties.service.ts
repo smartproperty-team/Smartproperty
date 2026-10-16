@@ -42,8 +42,6 @@ export interface FindPropertiesOptions {
   minPrice?: number;
   maxPrice?: number;
   bedrooms?: number;
-  // At least this many bedrooms ("2+").
-  minBedrooms?: number;
   bathrooms?: number;
   nearLat?: number;
   nearLng?: number;
@@ -55,10 +53,93 @@ export interface FindPropertiesOptions {
   swLng?: number;
   // Also return a light pin for every match, not only the current page.
   includeMapPins?: boolean | string;
+  // Filters panel, as on Airbnb: any of several types, at least N rooms,
+  // amenities that must all be present, and feature toggles. Lists may come
+  // as arrays or comma-separated query values.
+  types?: string | string[];
+  minBedrooms?: number;
+  minBathrooms?: number;
+  amenities?: string | string[];
+  furnished?: boolean | string;
+  petFriendly?: boolean | string;
+  hasParking?: boolean | string;
+  // Only the number of matches, for the live "Show N properties" button
+  // (Airbnb's DynamicFilters request with metadataOnly).
+  countOnly?: boolean | string;
+  // How the matches' prices are spread, ignoring the price filter itself.
+  includePriceHistogram?: boolean | string;
   city?: string;
   ownerId?: string;
   managerId?: string;
   search?: string;
+}
+
+/**
+ * Prices of the matches, in buckets that are even on a square-root scale:
+ * bucket i covers prices whose sqrt((price - min) / (max - min)) falls in
+ * [i / n, (i + 1) / n). Airbnb's price slider uses the same scale, so each
+ * bar sits under the slider positions it counts and cheap listings, where
+ * most of them are, get more room. Prices above max land in the last bucket.
+ */
+export interface PriceHistogram {
+  min: number;
+  max: number;
+  median: number;
+  buckets: number[];
+}
+
+export const PRICE_HISTOGRAM_BUCKETS = 40;
+
+// Prices read for the histogram; enough for a stable shape.
+const PRICE_HISTOGRAM_SAMPLE = 5000;
+
+/** Rounds a range outwards to two significant digits of its width. */
+function niceRange(low: number, high: number): [number, number] {
+  const step = 10 ** Math.max(0, Math.floor(Math.log10(high - low)) - 1);
+  return [Math.floor(low / step) * step, Math.ceil(high / step) * step];
+}
+
+export function computePriceHistogram(
+  rawPrices: number[],
+  bucketCount = PRICE_HISTOGRAM_BUCKETS,
+): PriceHistogram | null {
+  const prices = rawPrices
+    .filter((price) => Number.isFinite(price) && price >= 0)
+    .sort((a, b) => a - b);
+  if (prices.length === 0) return null;
+
+  // The top 2% would stretch the scale for everyone else; like Airbnb's
+  // "$700+", the last bucket and the slider's end take them instead.
+  // (Only from 50 prices on does that drop anything.)
+  const top = prices[Math.ceil(0.98 * prices.length) - 1];
+  let low = prices[0];
+  let high = top;
+  // One price, or nearly: give the slider room on both sides of it instead
+  // of a scale from 1,750 to 1,751.
+  if (high - low < 0.1 * high) {
+    low *= 0.8;
+    high *= 1.2;
+  }
+  const [min, max] = niceRange(low, Math.max(high, low + 1));
+
+  const buckets = new Array<number>(bucketCount).fill(0);
+  for (const price of prices) {
+    const share = Math.min(1, Math.max(0, (price - min) / (max - min)));
+    buckets[
+      Math.min(bucketCount - 1, Math.floor(Math.sqrt(share) * bucketCount))
+    ] += 1;
+  }
+
+  const middle = (prices.length - 1) / 2;
+  const median = (prices[Math.floor(middle)] + prices[Math.ceil(middle)]) / 2;
+
+  return { min, max, median, buckets };
+}
+
+export interface PropertySearchSuggestion {
+  label: string;
+  kind: 'city' | 'region';
+  count: number;
 }
 
 export interface PropertyMapPin {
@@ -1266,6 +1347,7 @@ export class PropertiesService {
     page: number;
     limit: number;
     mapPins?: PropertyMapPin[];
+    priceHistogram?: PriceHistogram | null;
   }> {
     const parseIntSafe = (value: unknown, fallback: number): number => {
       const parsed = Number.parseInt(String(value), 10);
@@ -1294,7 +1376,30 @@ export class PropertiesService {
     );
     const managerAgencyId = await this.getAgencyIdForUser(options.managerId);
 
-    if (options.type) {
+    const parseList = (value: unknown): string[] =>
+      (Array.isArray(value) ? value : String(value ?? '').split(','))
+        .map((item) => String(item).trim())
+        .filter(Boolean);
+
+    const isOn = (value: unknown) =>
+      value === true || value === 'true' || value === '1';
+
+    // Whole-name, case-insensitive: seed data says "wifi" where the property
+    // form suggests "WiFi".
+    const amenityPattern = (name: string) =>
+      new RegExp(`^${this.escapeRegex(name)}$`, 'i');
+
+    // Conditions that need an $or of their own, kept apart from the search's.
+    const andConditions: Record<string, any>[] = [];
+
+    const validTypes = Object.values(PropertyType) as string[];
+    const types = parseList(options.types).filter((type) =>
+      validTypes.includes(type),
+    );
+
+    if (types.length > 0) {
+      where.type = { $in: types };
+    } else if (options.type) {
       where.type = options.type;
     }
 
@@ -1322,8 +1427,10 @@ export class PropertiesService {
     const minPrice = parseNumber(options.minPrice);
     const maxPrice = parseNumber(options.maxPrice);
     const bedrooms = parseNumber(options.bedrooms);
-    const minBedrooms = parseNumber(options.minBedrooms);
     const bathrooms = parseNumber(options.bathrooms);
+    const minBedrooms = parseNumber(options.minBedrooms);
+    const minBathrooms = parseNumber(options.minBathrooms);
+    const amenities = parseList(options.amenities);
     const nearLat = parseNumber(options.nearLat);
     const nearLng = parseNumber(options.nearLng);
     const radiusKm = parseNumber(options.radiusKm) ?? 5;
@@ -1332,6 +1439,8 @@ export class PropertiesService {
     const swLat = parseNumber(options.swLat);
     const swLng = parseNumber(options.swLng);
     const includeMapPins = String(options.includeMapPins) === 'true';
+    const includePriceHistogram = isOn(options.includePriceHistogram);
+    const countOnly = isOn(options.countOnly);
 
     if (
       neLat !== undefined &&
@@ -1361,22 +1470,71 @@ export class PropertiesService {
 
     if (bathrooms !== undefined) {
       where['features.bathrooms'] = bathrooms;
+    } else if (minBathrooms !== undefined && minBathrooms > 0) {
+      where['features.bathrooms'] = { $gte: minBathrooms };
+    }
+
+    if (amenities.length > 0) {
+      where['features.amenities'] = { $all: amenities.map(amenityPattern) };
+    }
+
+    if (isOn(options.petFriendly)) {
+      where['features.petFriendly'] = true;
+    }
+
+    // Furnished and parking are recorded as a feature or as an amenity,
+    // depending on who entered the listing; either counts.
+    if (isOn(options.furnished)) {
+      andConditions.push({
+        $or: [
+          { 'features.furnished': true },
+          { 'features.amenities': amenityPattern('furnished') },
+        ],
+      });
+    }
+
+    if (isOn(options.hasParking)) {
+      andConditions.push({
+        $or: [
+          { 'features.parkingSpaces': { $gte: 1 } },
+          {
+            'features.amenities': {
+              $in: ['parking', 'garage'].map(amenityPattern),
+            },
+          },
+        ],
+      });
     }
 
     if (options.search) {
       const safeSearch = this.escapeRegex(options.search);
+      const pattern = { $regex: safeSearch, $options: 'i' };
+      // The address too, so a place typed in the search bar finds the
+      // listings there and not only the ones that mention it.
       where.$or = [
-        { title: { $regex: safeSearch, $options: 'i' } },
-        { description: { $regex: safeSearch, $options: 'i' } },
+        { title: pattern },
+        { description: pattern },
+        { 'address.city': pattern },
+        { 'address.state': pattern },
+        { 'address.street': pattern },
       ];
     }
 
-    let effectiveWhere: Record<string, any> = where;
+    if (andConditions.length > 0) {
+      where.$and = [...(where.$and ?? []), ...andConditions];
+    }
 
-    if (
-      options.managerId &&
-      (managerAgencyOwnerIds.length > 0 || !!managerAgencyId)
-    ) {
+    // A manager sees their own listings plus their agency's.
+    const applyManagerScope = (
+      base: Record<string, any>,
+    ): Record<string, any> => {
+      if (
+        !options.managerId ||
+        (managerAgencyOwnerIds.length === 0 && !managerAgencyId)
+      ) {
+        return base;
+      }
+
       const managerScopeOr: Record<string, any>[] = [
         { managerId: options.managerId },
       ];
@@ -1389,24 +1547,67 @@ export class PropertiesService {
         managerScopeOr.push({ agencyId: managerAgencyId });
       }
 
-      const baseWhere = { ...where };
+      const baseWhere = { ...base };
       const existingSearchOr = baseWhere.$or;
       delete baseWhere.$or;
       delete baseWhere.managerId;
 
-      if (existingSearchOr) {
-        effectiveWhere = {
-          $and: [baseWhere, { $or: existingSearchOr }, { $or: managerScopeOr }],
-        };
-      } else {
-        effectiveWhere = {
-          ...baseWhere,
-          $or: managerScopeOr,
-        };
-      }
-    }
+      return existingSearchOr
+        ? {
+            $and: [
+              baseWhere,
+              { $or: existingSearchOr },
+              { $or: managerScopeOr },
+            ],
+          }
+        : { ...baseWhere, $or: managerScopeOr };
+    };
+
+    const effectiveWhere = applyManagerScope(where);
 
     const hasNearbyFilter = nearLat !== undefined && nearLng !== undefined;
+    const isNearby = (property: Property) => {
+      const coords = property.address?.coordinates;
+      return (
+        !!coords &&
+        this.calculateDistanceKm(
+          { lat: nearLat as number, lng: nearLng as number },
+          coords,
+        ) <= radiusKm
+      );
+    };
+
+    let priceHistogram: PriceHistogram | null | undefined;
+    if (includePriceHistogram) {
+      const withoutPrice = { ...where };
+      delete withoutPrice.price;
+      priceHistogram = await this.buildPriceHistogram(
+        applyManagerScope(withoutPrice),
+        hasNearbyFilter ? isNearby : undefined,
+      );
+    }
+    const histogramField =
+      priceHistogram !== undefined ? { priceHistogram } : {};
+
+    if (countOnly) {
+      let total: number;
+      if (hasNearbyFilter) {
+        const candidates = await this.propertyRepository.find({
+          where: effectiveWhere,
+          select: ['_id', 'address'],
+        });
+        total = candidates.filter(isNearby).length;
+      } else {
+        // Repository.count would take { where } itself as the Mongo filter;
+        // findAndCount counts with the real one. One _id keeps it light.
+        [, total] = await this.propertyRepository.findAndCount({
+          where: effectiveWhere,
+          select: ['_id'],
+          take: 1,
+        });
+      }
+      return { properties: [], total, page, limit, ...histogramField };
+    }
 
     if (hasNearbyFilter) {
       const allMatching = await this.propertyRepository.find({
@@ -1414,16 +1615,7 @@ export class PropertiesService {
         order: { createdAt: 'DESC' },
       });
 
-      const center = { lat: nearLat, lng: nearLng };
-      const filtered = allMatching.filter((property) => {
-        const coords = property.address?.coordinates;
-        if (!coords) {
-          return false;
-        }
-
-        const distance = this.calculateDistanceKm(center, coords);
-        return distance <= radiusKm;
-      });
+      const filtered = allMatching.filter(isNearby);
 
       const total = filtered.length;
       const properties = filtered.slice(skip, skip + limit);
@@ -1439,6 +1631,7 @@ export class PropertiesService {
         ...(includeMapPins && {
           mapPins: this.toMapPins(filtered.slice(0, MAX_MAP_PINS)),
         }),
+        ...histogramField,
       };
     }
 
@@ -1477,7 +1670,95 @@ export class PropertiesService {
       page,
       limit,
       ...(includeMapPins && { mapPins: this.toMapPins(pinSource) }),
+      ...histogramField,
     };
+  }
+
+  /** Price spread of the listings matching `where`, for the filter panel. */
+  private async buildPriceHistogram(
+    where: Record<string, any>,
+    keep?: (property: Property) => boolean,
+  ): Promise<PriceHistogram | null> {
+    const rows = await this.propertyRepository.find({
+      where,
+      select: keep ? ['price', 'address'] : ['price'],
+      take: PRICE_HISTOGRAM_SAMPLE,
+    });
+
+    return computePriceHistogram(
+      rows.filter((row) => !keep || keep(row)).map((row) => row.price),
+    );
+  }
+
+  /**
+   * Places for the search bar's "Where" field: cities and regions that have
+   * listings, busiest first. A query matches the start of any word, so
+   * "sou" finds both Sousse and Hammam Sousse, as on Airbnb.
+   */
+  async getSearchSuggestions(
+    query = '',
+    // Airbnb asks its autocomplete for 5 (num_results=5).
+    limit = 5,
+  ): Promise<PropertySearchSuggestion[]> {
+    const trimmed = query.trim().slice(0, 60);
+    const wordStart = trimmed
+      ? new RegExp(`(^|[\\s-])${this.escapeRegex(trimmed)}`, 'i')
+      : null;
+
+    const where: Record<string, any> = { deletedAt: null };
+    if (wordStart) {
+      where.$or = [
+        { 'address.city': wordStart },
+        { 'address.state': wordStart },
+      ];
+    }
+
+    const rows = await this.propertyRepository.find({
+      where,
+      select: ['address'],
+      take: 2000,
+    });
+
+    const cities = new Map<string, PropertySearchSuggestion>();
+    const regions = new Map<string, PropertySearchSuggestion>();
+    const add = (
+      found: Map<string, PropertySearchSuggestion>,
+      label: string,
+      kind: PropertySearchSuggestion['kind'],
+    ) => {
+      const key = label.toLowerCase();
+      const entry = found.get(key) ?? { label, kind, count: 0 };
+      entry.count += 1;
+      found.set(key, entry);
+    };
+
+    for (const { address } of rows) {
+      const city = address?.city?.trim();
+      const region = address?.state?.trim();
+      if (city && (!wordStart || wordStart.test(city))) {
+        add(cities, city, 'city');
+      }
+      if (region && (!wordStart || wordStart.test(region))) {
+        add(regions, region, 'region');
+      }
+    }
+
+    // A region named like a city ("Sousse") would show the same word twice;
+    // the city, the more precise of the two, stays.
+    const kindOrder = { city: 0, region: 1 };
+    return [
+      ...cities.values(),
+      ...[...regions.values()].filter(
+        ({ label }) => !cities.has(label.toLowerCase()),
+      ),
+    ]
+      .sort(
+        (a, b) =>
+          b.count - a.count ||
+          kindOrder[a.kind] - kindOrder[b.kind] ||
+          a.label.localeCompare(b.label),
+      )
+      .slice(0, limit);
   }
 
   async findById(id: string): Promise<Property> {

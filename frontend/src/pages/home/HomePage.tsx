@@ -2,7 +2,7 @@
 // SmartProperty - Home Page
 // ===========================================
 
-import type { CSSProperties, FormEvent, ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -19,14 +19,16 @@ import type { Property } from "@/types/property";
 import "../../styles/motion.css";
 import { ListingCard } from "@/components/properties/ListingCard";
 import {
-  PRICE_BANDS,
-  buildHomeSearchParams,
-  formatPriceBand,
-  topCities,
-  type CityCount,
-  type ListingMode,
-} from "./homeSearch";
+  ListingSearchBar,
+  type ListingSearchValue,
+} from "@/components/properties/search/ListingSearchBar";
+import { filtersToSearchParams } from "@/utils/listingFilters";
+import { topCities, type CityCount } from "./homeSearch";
 import "./home.css";
+
+// Module-level so the search bar gets a stable function.
+const fetchPlaceSuggestions = (query: string) =>
+  propertyService.getSearchSuggestions(query);
 
 /** Delay for the page-load entrance sequence (see motion.css). */
 const enterDelay = (ms: number) =>
@@ -119,11 +121,6 @@ export default function HomePage() {
   const mainContentRef = useRef<HTMLElement>(null);
 
   // Search
-  const [mode, setMode] = useState<ListingMode>("sale");
-  const [location, setLocation] = useState("");
-  const [propertyType, setPropertyType] = useState("");
-  const [rooms, setRooms] = useState("");
-  const [price, setPrice] = useState("");
 
   // Listings
   const [latest, setLatest] = useState<Property[]>([]);
@@ -254,25 +251,14 @@ export default function HomePage() {
     t,
   ]);
 
-  const changeMode = (next: ListingMode) => {
-    setMode(next);
-    // Sale and rent bands differ; a band from the other mode means nothing.
-    setPrice("");
-  };
-
+  // The same search bar as the listings page: searching goes there, with
+  // the choices in the URL it reads.
   const handleSearch = useCallback(
-    (e: FormEvent) => {
-      e.preventDefault();
-      const params = buildHomeSearchParams({
-        mode,
-        location,
-        type: propertyType,
-        rooms,
-        price,
-      });
-      navigate(`/properties?${params.toString()}`);
+    (value: ListingSearchValue) => {
+      const params = filtersToSearchParams(value).toString();
+      navigate(params ? `/properties?${params}` : "/properties");
     },
-    [mode, location, propertyType, rooms, price, navigate],
+    [navigate],
   );
 
   const scrollToContent = useCallback((focus = false) => {
@@ -284,8 +270,6 @@ export default function HomePage() {
     });
     if (focus) main.focus({ preventScroll: true });
   }, []);
-
-  const priceLabels = { upTo: t.home.priceUpTo, currency: t.home.currency };
 
   return (
     <div className="home-page">
@@ -327,112 +311,13 @@ export default function HomePage() {
             {t.home.heroLede}
           </p>
 
-          <form
-            className="hero-search enter-rise"
-            style={enterDelay(420)}
-            onSubmit={handleSearch}
-            role="search"
-            aria-label={t.home.searchNow}
-          >
-            <div
-              className="search-mode"
-              role="group"
-              aria-label={t.home.modeLabel}
-            >
-              {(["sale", "rent"] as const).map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  className="search-mode-btn"
-                  aria-pressed={mode === value}
-                  onClick={() => changeMode(value)}
-                >
-                  {value === "sale" ? t.home.modeBuy : t.home.modeRent}
-                </button>
-              ))}
-            </div>
-
-            <div className="search-fields">
-              <div className="search-field search-field--location">
-                <label htmlFor="search-location">{t.home.fieldLocation}</label>
-                <input
-                  id="search-location"
-                  type="text"
-                  autoComplete="off"
-                  placeholder={t.home.locationPlaceholder}
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                />
-              </div>
-
-              <div className="search-field">
-                <label htmlFor="search-type">{t.home.fieldType}</label>
-                <select
-                  id="search-type"
-                  value={propertyType}
-                  onChange={(e) => setPropertyType(e.target.value)}
-                >
-                  <option value="">{t.home.allProperties}</option>
-                  <option value="apartment">{t.home.apartment}</option>
-                  <option value="house">{t.home.house}</option>
-                  <option value="villa">{t.home.villa}</option>
-                  <option value="studio">{t.home.studio}</option>
-                </select>
-              </div>
-
-              <div className="search-field">
-                <label htmlFor="search-rooms">{t.home.fieldRooms}</label>
-                <select
-                  id="search-rooms"
-                  value={rooms}
-                  onChange={(e) => setRooms(e.target.value)}
-                >
-                  <option value="">{t.home.anyRooms}</option>
-                  <option value="1">1+</option>
-                  <option value="2">2+</option>
-                  <option value="3">3+</option>
-                  <option value="4">4+</option>
-                  <option value="5">5+</option>
-                </select>
-              </div>
-
-              <div className="search-field">
-                <label htmlFor="search-price">
-                  {mode === "rent"
-                    ? t.home.fieldMonthlyBudget
-                    : t.home.fieldBudget}
-                </label>
-                <select
-                  id="search-price"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                >
-                  <option value="">{t.home.anyPrice}</option>
-                  {PRICE_BANDS[mode].map((band) => (
-                    <option key={band.value} value={band.value}>
-                      {formatPriceBand(band, priceLabels)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <button type="submit" className="search-submit">
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  aria-hidden="true"
-                >
-                  <circle cx="11" cy="11" r="7" />
-                  <path d="m20 20-3.5-3.5" />
-                </svg>
-                {t.home.searchNow}
-              </button>
-            </div>
-          </form>
+          <div className="hero-search enter-rise" style={enterDelay(420)}>
+            <ListingSearchBar
+              onSearch={handleSearch}
+              fetchSuggestions={fetchPlaceSuggestions}
+              onOpenNearby={() => navigate("/properties?nearby=pick")}
+            />
+          </div>
 
           <div className="hero-secondary enter-rise" style={enterDelay(520)}>
             <Link to="/properties" className="text-link">

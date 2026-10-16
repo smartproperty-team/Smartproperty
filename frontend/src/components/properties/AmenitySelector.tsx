@@ -2,6 +2,7 @@
 // SmartProperty - Amenity selector
 // ===========================================
 
+import { PROPERTY_AMENITIES } from "@/utils/listingFilters";
 import { useMemo, useState } from "react";
 
 /**
@@ -11,26 +12,10 @@ import { useMemo, useState } from "react";
  * escape hatch for anything unusual.
  *
  * The value stays a comma-separated string so nothing downstream changes: the
- * DTO, the API and the seed data all keep the shape they already had.
+ * DTO, the API and the seed data all keep the shape they already had. The
+ * options are the ones the listings page filters by.
  */
-const SUGGESTED_AMENITIES = [
-  "Air conditioning",
-  "Heating",
-  "WiFi",
-  "Parking",
-  "Elevator",
-  "Balcony",
-  "Terrace",
-  "Garden",
-  "Pool",
-  "Sea view",
-  "Furnished",
-  "Equipped kitchen",
-  "Washing machine",
-  "Dishwasher",
-  "Security",
-  "Concierge",
-] as const;
+const SUGGESTED_AMENITIES = PROPERTY_AMENITIES;
 
 export interface AmenitySelectorProps {
   /** Comma-separated list, as stored on the form. */
