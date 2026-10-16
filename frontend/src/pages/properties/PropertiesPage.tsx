@@ -81,6 +81,14 @@ const filtersFromSearchParams = (
   search: searchParams.get("search") || undefined,
 });
 
+// The same search whatever order its fields were set in.
+const resultsKey = (filters: PropertyFilters) =>
+  JSON.stringify(
+    Object.entries(filters)
+      .filter(([, value]) => value !== undefined)
+      .sort(([a], [b]) => a.localeCompare(b)),
+  );
+
 // A new place to look (city, nearby point) replaces the map area,
 // as a new destination does on Airbnb.
 const NO_MAP_AREA: Pick<PropertyFilters, keyof MapBounds> = {
@@ -182,6 +190,9 @@ export default function PropertiesPage() {
     null,
   );
   const [loading, setLoading] = useState(true);
+  // The search the shown results answer. Until the new answer arrives the
+  // map must not fit itself to the previous results' pins.
+  const [resultsFor, setResultsFor] = useState<string | null>(null);
   const [error, setError] = useState<"load" | null>(null);
   const [total, setTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -307,6 +318,10 @@ export default function PropertiesPage() {
       // Airbnb's StaysSearch.
       const response = await propertyService.getProperties({
         ...filters,
+        // The home page's rooms menu offers "1+", "2+"...: a minimum, not
+        // the exact count the API reads from bedrooms.
+        bedrooms: undefined,
+        minBedrooms: filters.bedrooms,
         includeMapPins: true,
       });
       if (requestId !== latestRequestRef.current) return;
@@ -314,6 +329,7 @@ export default function PropertiesPage() {
       setMapPins(response.mapPins ?? []);
       setTotal(response.total);
       setCurrentPage(response.page);
+      setResultsFor(resultsKey(filters));
     } catch (err) {
       if (requestId !== latestRequestRef.current) return;
       console.error("Failed to load properties:", err);
@@ -1084,7 +1100,7 @@ export default function PropertiesPage() {
                 searchBounds={mapBounds}
                 fitKey={mapFitKey}
                 onSearchArea={handleMapSearch}
-                loading={loading}
+                loading={loading || resultsFor !== resultsKey(filters)}
               />
             </div>
           </div>

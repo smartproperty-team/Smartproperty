@@ -296,4 +296,30 @@ describe('PropertiesService', () => {
       expect(result).not.toHaveProperty('mapPins');
     });
   });
+
+  describe('findAll rooms', () => {
+    beforeEach(() => {
+      propertyRepository.findAndCount.mockResolvedValue([[], 0]);
+    });
+
+    it('reads minBedrooms as at least that many', async () => {
+      await service.findAll({ minBedrooms: '2' } as any);
+
+      expect(
+        propertyRepository.findAndCount.mock.calls[0][0].where[
+          'features.bedrooms'
+        ],
+      ).toEqual({ $gte: 2 });
+    });
+
+    it('keeps an exact bedrooms count when one is given', async () => {
+      await service.findAll({ bedrooms: 3, minBedrooms: 2 });
+
+      expect(
+        propertyRepository.findAndCount.mock.calls[0][0].where[
+          'features.bedrooms'
+        ],
+      ).toBe(3);
+    });
+  });
 });
